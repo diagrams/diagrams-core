@@ -1,3 +1,6 @@
+
+Notes from Nov. 13 2009 brainstorming session
+
 * General system architecture
 
   At the package level, the system is composed of layers

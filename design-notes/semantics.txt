@@ -1,0 +1,85 @@
+This file documents the current understanding of the *semantics* for
+diagrams.  Note that this does not necessarily mean that the diagrams
+library will *implement* things in exactly this way, but it does mean
+that the implementation should respect and preserve these semantics,
+and that it should be possible to write documentation which uses these
+semantics to give intuition to users of the library.
+
+We take as given some set of names N, where a name can be either an
+"atomic name" or a sequence of atomic names.  We also take as given a
+set of "primitives" which can be rendered by various rendering
+backends.  The semantics of primitives themselves is not the concern
+of this document.
+
+The semantic type "Layout" takes two parameters; the first parameter
+'t' indicates a set of affine transformations which form a monoid
+under composition; the second parameter 'a' is the type of primitive
+elements which are to be laid out in the vector space corresponding to
+'t'.  (Note that this allows easy generalization to 3D diagrams and
+maybe other things as well.)
+
+  Layout t a = [({N} + a, t)]
+
+That is, a layout is a list of pairs; the first element of each pair
+is either a set of names or a primitive, and the second is an affine
+transformation.  Intuitively, the affine transformation tells how to
+get from the local coordinate system of the layout to the local
+coordinate system of the primitive/set of names.  The set of names is
+so that we can refer to particular local coordinate systems.  The list
+expresses the stacking order: when rendered, the primitives should be
+drawn from first to last, so that the last primitive will end up "on
+top". 
+
+Layouts are composed using the primitive operation
+
+  compose :: [(Layout t a, t)] -> Layout t a
+
+which works as follows:
+
+  - for each (l, t) pair of the input, compose t 
+    with the transformation in each element of l to produce a new
+    layout l'.
+
+  - concatenate all the transformed l' into one big list, and cull
+    duplicate names (i.e. if any name occurs in more than one set in
+    the list, remove it entirely).  If any set of names becomes empty,
+    remove the entire pair containing it.
+
+For example, suppose we have
+
+  l1 = [(Square, t1), ({brent, conal}, t1), ({vilhelm}, t2)]
+  l2 = [(Triangle, t3)]
+  l3 = [({brent}, t4), (Rectangle, t5)]
+
+and we call
+
+  compose [(l1, t6), (l2, t7), (l3, t8)]
+
+We get:
+
+  [(Square, t1.t6), ({conal}, t1.t6), ({vilhelm}, t2.t5), (T, t3.t6), 
+   (R, t5.t7)]
+
+(Note that composition of affine transformations may be the wrong way
+around in this example, I didn't give the order much thought.)
+
+Now, for the semantics of the 'named' operation.
+
+  named :: N -> Layout t a -> Layout t a
+
+'named n d' does the following TWO things:
+
+  - prepend the name 'n' to every name already in d (but keep the
+    original names too).  I.e. we essentially "qualify" existing
+    names.  But we keep around the unqualified versions too, as long
+    as they are unambiguous.
+  - add a new element ({n}, id).  This now gives us a reference to d's
+    local coordinate system.
+
+For example, if 'd' is the result of the compose example earlier,
+evaluating 'named "foo" d' would produce
+
+  [(Square, t1.t6), ({foo.conal, conal}, t1.t6), 
+   ({foo.vilhelm, vilhelm}, t2.t5), (T, t3.t6), 
+   (R, t5.t7), ({foo}, id)]
+
