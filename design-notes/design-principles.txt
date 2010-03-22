@@ -1,0 +1,7 @@
+
+* It should be _beautiful_.  There is no place for quick, ugly hacks
+  in this library.
+* It should be _general_.  For example, we want to leave open the
+  possibility of multiple back or front ends, diagrams in R^3 or other
+  vector spaces, animation...
+* It should be _modular_. XXX
