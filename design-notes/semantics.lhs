@@ -1,3 +1,4 @@
+% -*- LaTeX -*-
 \documentclass{article}
 
 %include polycode.fmt
@@ -20,6 +21,7 @@ import Data.Monoid
 import Data.List
 import Control.Arrow
 import qualified Data.Map as M
+import Data.VectorSpace
 
 type AName = String
 type Name = [AName]
@@ -42,6 +44,10 @@ type Name = [AName]
 
 %format ***  = "\times"
 
+\title{\texttt{diagrams} semantics}
+\author{Brent Yorgey \and Vilhelm Sj\"oberg \and Conal Elliott}
+\maketitle
+
 This file documents the current understanding of the \emph{semantics}
 for diagrams.  Note that this does not necessarily mean that the
 diagrams library will \emph{implement} things in exactly this way, but
@@ -59,17 +65,21 @@ We take as given a set of ``primitives'' which can be rendered by
 various rendering backends.  The overall goal of the diagrams library
 is to provide a DSL for specifying a set of primitives which should be
 rendered in a certain way.  The semantics of primitives themselves is
-not the concern of this document; we consider them to be (mostly)
+not the concern of this document; for now we consider them to be (mostly)
 opaque.
 
-We also have a monoid of ``transformations'' |t|.  The intuition
-is that |t| represents transformations on the space in which the
-primitives are being laid out.  We also have a class |Transformable|
+We also have a monoid of ``transformations'' |t|.  The intuition is
+that |t| represents transformations on the vector space in which the
+primitives are being laid out, so they will probably correspond to
+affine transformations.  We also have a class |Transformable|
 representing things to which transformations can be applied:
 
 \begin{code}
 class Monoid t => Transformable t a where
   transform :: t -> a -> a  
+
+instance Monoid t => Transformable t t where
+  transform = mappend
 \end{code}
 
 The intention is that primitives should be |Transformable|, but as we
@@ -156,12 +166,8 @@ reflection this is not unexpected: |qualify| and |rememberAs| have
 quite different purposes; conflating them only leads to confusion.
 
 We can also transform |NameSet|s, by combining the given
-transformation with every transformation in the map.
-
-\begin{code}
-instance (Monoid t) => Transformable t (NameSet t) where
-  transform = M.map . mappend
-\end{code}
+transformation with every transformation in the map; we already have
+this instance for free since |NameSet| is a functor.
 
 \section{Combining Names and Layouts}
 \label{sec:combining}
@@ -230,14 +236,19 @@ the (left-biased) union of the |NameSet|s.
 \section{Regions}
 \label{sec:regions}
 
+% XXX note, this assumes 2D!  Make this a bit more general to talk
+% about arbitrary vector spaces... although it may be rather difficult
+% to implement bounding regions in, say, R^3.
+
 Every diagram may optionally have an associated \emph{bounding
   region}, which is used to help automatically position diagrams
 relative to one another. 
 
-Semantically, a |Region| is just a subset of $\R^2$:
+Semantically, a |Region| is just a subset of the vector space being
+used for layout:
 
 \begin{code}
-type Region = Double -> Double -> Bool
+type Region v = v -> Bool
 \end{code}
 
 |Bool| forms a Boolean algebra, and hence so does |Region|, where we
@@ -250,26 +261,79 @@ operations may be useful as well.
 
 We can associate a |Region| with every diagram to serve as a
 ``bounding region'' (diagrams which do not have a natural ``bounding
-region'' may simply be assigned the universal region $\R^2$).  We then
-get a naturally derived monoid on |(Diagram, Region)| pairs which
-takes the union of diagrams' bounding regions while combining the
-diagrams.  The bounding region of a diagram may be used to
-automatically position two diagrams adjacent to one another, without
-the user having to remember, or even know, how large the diagrams are.
+region'' may simply be assigned the universal region $const True$).
+We then get a naturally derived monoid on |(Diagram, Region)|
+pairs which takes the union of diagrams' bounding regions while
+combining the diagrams.  The bounding region of a diagram may be used
+to automatically position two diagrams adjacent to one another,
+without the user having to remember, or even know, how large the
+diagrams are.
 
-Of course, |Double -> Double -> Bool| is quite an inefficient
-\emph{implementation} of regions.  The challenge will be to come up
-with a suitable induced Boolean subalgebra which is computationally
-tractable, yet sufficiently expressive.  For example, we might
-consider only collections of polygonally-bounded regions, which are
-clearly closed under union, intersection, and complementation.
-However, this might not be sufficiently expressive; we might want to
-be able to have bounding regions with curved boundaries.
+Of course, |v -> Bool| is a very poor \emph{implementation} of
+regions. (Union, intersection, complement and inclusion testing are
+trivial -- but \emph{boundary-finding}, to place one diagram next to
+another, is all but impossible.) The challenge will be to come up with
+a suitable induced Boolean subalgebra which is computationally
+tractable, yet sufficiently expressive.  For example, in
+two-dimensional vector spaces we might consider only collections of
+polygonally-bounded regions, which are clearly closed under union,
+intersection, and complementation.  However, this might not be
+sufficiently expressive; we might want to be able to have bounding
+regions with curved boundaries.  Regions bounded by B\'ezier curves are
+also closed under union, intersection, and complementation; we should
+explore the tractability of implementing these operations, or calling
+out to an existing library for computing with B\'ezier curves.
+
+Three-dimensional (or higher!) vector spaces seem to pose a difficult
+challenge for implementing regions, but that bridge can be crossed
+later.
 
 \section{Paths}
 \label{sec:paths}
 
+It is important to note that we only need \emph{segments} (defined
+below) as primitives; then paths can simply be implemented as a part
+of a ``standard library'' on top of that.  However, paths are
+important enough that it is worth spelling out the design of the path
+library.
 
+\subsection{Segments}
+\label{sec:segments}
+
+A \emph{segment} is a B\'ezier curve whose first point is taken to be
+zero.  Note that this includes straight line segments as a degenerate
+case; in a real implementation it may well make sense to distinguish
+these cases with different constructors, but considering everything as
+a B\'ezier curve is sufficient for the semantics. 
+% XXX note something about speed of point traveling parametrically
+% along the straight line segment?
+
+\begin{code}
+data Segment a = Bezier a a a
+
+straight :: AdditiveGroup a => a -> Segment a
+straight x = Bezier x zeroV x
+
+bezier :: a -> a -> a -> Segment a
+bezier = Bezier
+
+pointAt :: VectorSpace a => Scalar a -> Segment a -> a
+pointAt t (Bezier c1 c2 x2) = (3 * (1-t)^2 * t) *^ c1 
+                          ^+^ (3 * (1-t) * t^2) *^ c2
+                          ^+^ t^3 *^ x2
+\end{code}
+
+
+
+type RelPath a = [Segment a]
+
+data BasedPath a = BasedPath { base :: a, relativize :: RelPath a }
+
+baseAt :: a -> RelPath a -> BasedPath a
+baseAt = BasedPath
+
+rebase :: a -> BasedPath a -> BasedPath a
+rebase a = baseAt a . relativize
 
 
 \end{document}
