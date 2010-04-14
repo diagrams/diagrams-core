@@ -1,21 +1,41 @@
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, GADTs, FlexibleContexts, EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies
+           , MultiParamTypeClasses
+           , GADTs
+           , FlexibleContexts
+           , FlexibleInstances
+           , TypeOperators
+           , GeneralizedNewtypeDeriving
+           , UndecidableInstances #-}
 
 import Data.AdditiveGroup
 import Data.VectorSpace
+import Data.LinearMap
+import Data.Basis
+import Data.MemoTrie
 import qualified Data.Map as M
 
 import Data.Maybe
+import Data.Monoid
+
+import System.IO
 
 ---------------------------------------------
 -- Backend/Primitive stuff
 
+data RenderOption =
+    OutputFile FilePath
+  -- XXX other things here, like size etc.
+  | Other String String
+
 class Backend b where
   type BackendSpace b :: *
   type Render b :: * -> *
-  type Options b :: *
-  render :: Options b -> Render b () -> IO ()
+  render :: [RenderOption] -> Render b () -> IO ()
 
-class (Backend b) => Renderable p b where
+class (HasBasis v, HasTrie (Basis v)) => Transformable v t where
+  transform :: Affine v -> t -> t
+
+class (Backend b, Transformable (BackendSpace b) p) => Renderable p b where
   renderPrim :: p -> Render b ()
 
 data Prim b where
@@ -57,19 +77,35 @@ rememberAs n e names = M.insert n (evalLExpr e names) names
 -------------------------------------------------
 -- Diagrams
 
-data F   -- Frozen
-data U   -- Unfrozen
+data Diagram b = Diagram { prims  :: [Prim b]
+                         , bounds :: Bounds (BackendSpace b)
+                         , names  :: NameSet (BackendSpace b)
+                         }
 
-data Diagram f b = Diagram { prims  :: [Prim b]
-                           , bounds :: Bounds (BackendSpace b)
-                           , names  :: NameSet (BackendSpace b)
-                           }
-
-rebase :: (v ~ BackendSpace b, VectorSpace v) => LExpr v -> Diagram f b -> Diagram f b
-rebase e d = Diagram { prims  = map undefined (prims d)
-                     , bounds = rebaseBounds (evalLExpr e (names d)) (bounds d)
-                     , names  = M.map undefined (names d)
+rebase :: (v ~ BackendSpace b, InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
+       => LExpr v -> Diagram b -> Diagram b
+rebase e d = Diagram { prims  = map undefined (prims d)    -- XXX
+                     , bounds = rebaseBounds u (bounds d)
+                     , names  = M.map (^-^ u) (names d)
                      }
+  where u = evalLExpr e (names d)
 
-rebaseBounds :: VectorSpace v => v -> Bounds v -> Bounds v
-rebaseBounds = undefined
+rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
+             => v -> Bounds v -> Bounds v
+rebaseBounds u f v = f v ^-^ ((u ^/ (v <.> v)) <.> v)
+
+------------------------------------------------
+-- Affine transformations
+
+-- An affine transformation consists of a linear transformation and a
+-- translation.
+data Affine v = Affine (v :-* v) v
+
+-- Affine transformations are closed under composition.
+instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => Monoid (Affine v) where
+  mempty = Affine idL zeroV
+  mappend (Affine a2 b2) (Affine a1 b1) = Affine (a2 *.* a1) (lapply a2 b1 ^+^ b2)
+
+-- Apply an affine transformation.
+aapply :: (HasBasis v, HasTrie (Basis v)) => Affine v -> v -> v
+aapply (Affine a b) v = lapply a v ^+^ b
