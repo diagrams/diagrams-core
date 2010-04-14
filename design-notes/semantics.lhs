@@ -15,7 +15,8 @@
 \begin{code}
 {-# LANGUAGE MultiParamTypeClasses, 
              FlexibleInstances,
-             TypeSynonymInstances #-}
+             TypeSynonymInstances,
+             TypeFamilies #-}
 
 import Data.Monoid
 import Data.List
@@ -61,38 +62,51 @@ inefficient) executable model of the semantics.
 \section{Primitives and transformations}
 \label{sec:prims}
 
-We take as given a set of ``primitives'' which can be rendered by
-various rendering backends.  The overall goal of the diagrams library
-is to provide a DSL for specifying a set of primitives which should be
-rendered in a certain way.  The semantics of primitives themselves is
-not the concern of this document; for now we consider them to be (mostly)
-opaque.
+To start out, we take as given a set of ``primitives'' which can be
+rendered by various rendering backends.  The overall goal of the
+diagrams library is to provide a DSL which can be used to specify a
+set of primitives which should be rendered in a certain way.  The
+semantics of primitives themselves is not the concern of this
+document; for now we consider them to be (mostly) opaque.  See
+Section \ref{sec:backends}.
 
-We also have a monoid of ``transformations'' |t|.  The intuition is
-that |t| represents transformations on the vector space in which the
-primitives are being laid out, so they will probably correspond to
-affine transformations.  We also have a class |Transformable|
-representing things to which transformations can be applied:
+% We also have a monoid of ``transformations'' |t|.  The intuition is
+% that |t| represents transformations on the vector space in which the
+% primitives are being laid out, so they will probably correspond to
+% affine transformations. 
+
+We begin with a class |Transformable| representing things to which
+monoidal transformations can be applied:
 
 \begin{code}
 class Monoid t => Transformable t a where
   transform :: t -> a -> a  
-
-instance Monoid t => Transformable t t where
-  transform = mappend
 \end{code}
 
 The intention is that primitives should be |Transformable|, but as we
 will see, other things will be |Transformable| as well.
 
-We require that |transform| is a monoid action, that is, 
+We require that |transform| is a monoid action, that is,
 \begin{enumerate}
 \item |transform mempty a == a|, and
 \item |transform (t1 `mappend` t2) a == transform t1 (transform t2 a)|
 \end{enumerate}
 where |mempty| and |`mappend`| denote the monoid unit and binary
-operation, respectively.
+operation, respectively.  For example, affine transformations on a
+vector space are a typical example of the sorts of transformations we
+want to allow; but there may be other sorts of primitives and
+transformations that would be useful.
 
+Of course, transformations themselves are transformable:
+\begin{code}
+instance Monoid t => Transformable t t where
+  transform = mappend
+\end{code}
+
+% XXX change the name of this to 'Composition'?  'Layout' is almost
+% too good of a name to give up -- might want to use it for
+% *combinators* which achieve certain positionings of sub-diagrams
+% relative to one another?
 \section{Layouts}
 \label{sec:layouts}
 
@@ -175,7 +189,7 @@ this instance for free since |NameSet| is a functor.
 A |NamedLayout| is a |Layout| paired with a |NameSet|.
 
 \begin{code}
-type NamedLayout t a = (Layout a, NameSet t)
+data NamedLayout t a = NL (Layout a) (NameSet t)
 \end{code}
 
 The intuition here is that while building a layout, we may have wanted
@@ -186,7 +200,7 @@ We can lift |transform| and |over| to act on |NamedLayouts| in the
 obvious way:
 
 \begin{code}
-instance (Transformable t a) => Transformable t (NamedLayout t a) where
+instance Transformable t a => Transformable t (NamedLayout t a) where
   transform t = transform t *** transform t
 \end{code}
 
@@ -323,8 +337,8 @@ pointAt t (Bezier c1 c2 x2) = (3 * (1-t)^2 * t) *^ c1
                           ^+^ t^3 *^ x2
 \end{code}
 
-
-
+ % XXX
+\begin{code}
 type RelPath a = [Segment a]
 
 data BasedPath a = BasedPath { base :: a, relativize :: RelPath a }
@@ -334,6 +348,15 @@ baseAt = BasedPath
 
 rebase :: a -> BasedPath a -> BasedPath a
 rebase a = baseAt a . relativize
+\end{code}
 
+\section{Backends}
+\label{sec:backends}
+
+\begin{code}
+-- class Backend b where
+--   type Primitive b
+--   type 
+\end{code}
 
 \end{document}
