@@ -66,6 +66,9 @@ data AName = IName Int
 
 type Name = [AName]
 
+nm :: String -> Name
+nm = (:[]) . SName
+
 type NameSet v = M.Map Name v
 
 qualify :: AName -> NameSet v -> NameSet v
