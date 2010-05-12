@@ -5,7 +5,10 @@
            , FlexibleInstances
            , TypeOperators
            , GeneralizedNewtypeDeriving
-           , UndecidableInstances #-}
+           , UndecidableInstances
+           , TypeSynonymInstances #-}
+
+module Diagrams where
 
 import Data.AdditiveGroup
 import Data.VectorSpace
@@ -27,19 +30,27 @@ data RenderOption =
   -- XXX other things here, like size etc.
   | Other String String
 
-class Backend b where
-  type BackendSpace b :: *
+class (HasBasis (BSpace b), HasTrie (Basis (BSpace b))) => Backend b where
+  type BSpace b :: *
   type Render b :: * -> *
-  render :: [RenderOption] -> Render b () -> IO ()
+  runRender :: [RenderOption] -> Render b () -> IO ()
 
-class (HasBasis v, HasTrie (Basis v)) => Transformable v t where
-  transform :: Affine v -> t -> t
+class (HasBasis (TSpace t), HasTrie (Basis (TSpace t))) => Transformable t where
+  type TSpace t :: *
+  transform :: Affine (TSpace t) -> t -> t
 
-class (Backend b, Transformable (BackendSpace b) p) => Renderable p b where
-  renderPrim :: p -> Render b ()
+class (Backend b, Transformable t) => Renderable t b where
+  render :: b -> t -> Render b ()
 
 data Prim b where
-  Prim :: Renderable p b => p -> Prim b
+  Prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> Prim b
+
+renderPrim :: b -> Prim b -> Render b ()
+renderPrim b (Prim t) = render b t
+
+instance Backend b => Transformable (Prim b) where
+  type TSpace (Prim b) = BSpace b
+  transform v (Prim p) = Prim (transform v p)
 
 ------------------------------------------------
 -- Bounds
@@ -78,13 +89,16 @@ rememberAs n e names = M.insert n (evalLExpr e names) names
 -- Diagrams
 
 data Diagram b = Diagram { prims  :: [Prim b]
-                         , bounds :: Bounds (BackendSpace b)
-                         , names  :: NameSet (BackendSpace b)
+                         , bounds :: Bounds (BSpace b)
+                         , names  :: NameSet (BSpace b)
                          }
 
-rebase :: (v ~ BackendSpace b, InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
+rebase :: ( Backend b, v ~ BSpace b
+          , InnerSpace v, HasBasis v, HasTrie (Basis v)
+          , AdditiveGroup (Scalar v), Fractional (Scalar v))
        => LExpr v -> Diagram b -> Diagram b
-rebase e d = Diagram { prims  = map undefined (prims d)    -- XXX
+rebase e d = Diagram { prims  = map (transform (translation (negateV u)))
+                                    (prims d)
                      , bounds = rebaseBounds u (bounds d)
                      , names  = M.map (^-^ u) (names d)
                      }
@@ -103,9 +117,12 @@ data Affine v = Affine (v :-* v) v
 
 -- Affine transformations are closed under composition.
 instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => Monoid (Affine v) where
-  mempty = Affine idL zeroV
+  mempty  = Affine idL zeroV
   mappend (Affine a2 b2) (Affine a1 b1) = Affine (a2 *.* a1) (lapply a2 b1 ^+^ b2)
 
 -- Apply an affine transformation.
 aapply :: (HasBasis v, HasTrie (Basis v)) => Affine v -> v -> v
 aapply (Affine a b) v = lapply a v ^+^ b
+
+translation :: (HasBasis v, HasTrie (Basis v)) => v -> Affine v
+translation = Affine idL
