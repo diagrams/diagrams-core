@@ -323,15 +323,15 @@ a B\'ezier curve is sufficient for the semantics.
 % along the straight line segment?
 
 \begin{code}
-data Segment a = Bezier a a a
+data Segment v = Bezier v v v
 
-straight :: AdditiveGroup a => a -> Segment a
+straight :: AdditiveGroup v => v -> Segment v
 straight x = Bezier x zeroV x
 
-bezier :: a -> a -> a -> Segment a
+bezier :: v -> v -> v -> Segment v
 bezier = Bezier
 
-pointAt :: VectorSpace a => Scalar a -> Segment a -> a
+pointAt :: (VectorSpace v, Num (Scalar v)) => Scalar v -> Segment v -> v
 pointAt t (Bezier c1 c2 x2) = (3 * (1-t)^2 * t) *^ c1 
                           ^+^ (3 * (1-t) * t^2) *^ c2
                           ^+^ t^3 *^ x2

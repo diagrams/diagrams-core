@@ -129,3 +129,19 @@ aapply (Affine a b) v = lapply a v ^+^ b
 
 translation :: (HasBasis v, HasTrie (Basis v)) => v -> Affine v
 translation = Affine idL
+
+------------------------------------------------
+-- Paths
+
+data Segment v = Bezier v v v
+
+straight :: AdditiveGroup v => v -> Segment v
+straight v = Bezier v zeroV v
+
+bezier :: v -> v -> v -> Segment v
+bezier = Bezier
+
+pointAt :: (VectorSpace v, Num (Scalar v)) => Scalar v -> Segment v -> v
+pointAt t (Bezier c1 c2 x2) = (3 * (1-t)^2 * t) *^ c1
+                          ^+^ (3 * (1-t) * t^2) *^ c2
+                          ^+^ t^3 *^ x2
