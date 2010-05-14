@@ -325,8 +325,8 @@ a B\'ezier curve is sufficient for the semantics.
 \begin{code}
 data Segment v = Bezier v v v
 
-straight :: AdditiveGroup v => v -> Segment v
-straight x = Bezier x zeroV x
+straight :: (VectorSpace v, Fractional (Scalar v)) => v -> Segment v
+straight x = Bezier (v ^/ 3) (2 *^ (v ^/ 3)) v
 
 bezier :: v -> v -> v -> Segment v
 bezier = Bezier
