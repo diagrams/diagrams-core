@@ -134,9 +134,10 @@ translation = Affine idL
 -- Paths
 
 data Segment v = Bezier v v v
+  deriving Show
 
-straight :: AdditiveGroup v => v -> Segment v
-straight v = Bezier v zeroV v
+straight :: (VectorSpace v, Fractional (Scalar v)) => v -> Segment v
+straight v = Bezier (v ^/ 3) (2 *^ (v ^/ 3)) v
 
 bezier :: v -> v -> v -> Segment v
 bezier = Bezier
@@ -145,3 +146,4 @@ pointAt :: (VectorSpace v, Num (Scalar v)) => Scalar v -> Segment v -> v
 pointAt t (Bezier c1 c2 x2) = (3 * (1-t)^2 * t) *^ c1
                           ^+^ (3 * (1-t) * t^2) *^ c2
                           ^+^ t^3 *^ x2
+
