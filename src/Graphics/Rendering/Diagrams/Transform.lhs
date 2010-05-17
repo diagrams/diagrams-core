@@ -48,3 +48,9 @@ XXX comment me!
 > class (HasBasis (TSpace t), HasTrie (Basis (TSpace t))) => Transformable t where
 >   type TSpace t :: *         -- ^ Vector space of transformations
 >   transform :: Affine (TSpace t) -> t -> t
+
+> translate :: Transformable t => TSpace t -> t -> t
+> translate = transform . fromTranslate
+
+> scale :: Transformable t => Scalar (TSpace t) -> t -> t
+> scale = transform . fromLinear . linear . (*^)
