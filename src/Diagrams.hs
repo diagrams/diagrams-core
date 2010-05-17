@@ -188,3 +188,49 @@ pointAt t (Bezier c1 c2 x2) = (3 * (1-t)^2 * t) *^ c1
                           ^+^ (3 * (1-t) * t^2) *^ c2
                           ^+^ t^3 *^ x2
 
+{- (1-t)^2 t c1 + (1-t) t^2 c2 + t^3 x2
+
+   Can we compute the projection of B(t) onto a given vector v?
+
+   u.v = |u||v| cos th
+
+   |proj_v u| = cos th * |u|
+              = (u.v/|v|)
+
+   so B_v(t) = (B(t).v/|v|)
+
+   Then take the derivative of this wrt. t, get a quadratic, solve.
+
+   B_v(t) = (1/|v|) *     -- note this does not affect max/min, can solve for t first
+            (1-t)^2 t (c1.v) + (1-t) t^2 (c2.v) + t^3 (x2.v)
+          = t^3 ((c1 - c2 + x2).v) + t^2 ((-2c1 + c2).v) + t (c1.v)
+
+   B_v'(t) = t^2 (3(c1 - c2 + x2).v) + t (2(-2c1 + c2).v) + c1.v
+
+   Set equal to zero, use quadratic formula.
+-}
+
+data QFSolution d = NoRealSol | DoubleSol d | RealSols d d
+
+quadForm :: (Floating d, Ord d) => d -> d -> d -> QFSolution d
+quadForm a b c
+  | d < 0     = NoRealSol
+  | d == 0    = DoubleSol (-b/(2*a))
+  | otherwise = RealSols ((-b + sqrt d)/(2*a)) ((-b - sqrt d)/(2*a))
+ where d = b*b - 4*a*c
+
+qfList :: (Floating d, Ord d) => d -> d -> d -> [d]
+qfList a b c = case quadForm a b c of
+                 NoRealSol -> []
+                 DoubleSol d -> [d]
+                 RealSols d1 d2 -> [d1,d2]
+
+segmentBounds :: (InnerSpace v, Ord (Scalar v), Floating (Scalar v))
+              => Segment v -> Bounds v
+segmentBounds s@(Bezier c1 c2 x2) v =
+  maximum .
+  map (\t -> (pointAt t s <.> v) / magnitude v) $
+  [0,1] ++
+  qfList (3 * ((c1 ^-^ c2 ^+^ x2) <.> v))
+         (2 * (((-2) *^ c1 ^+^ c2) <.> v))
+         (c1 <.> v)
