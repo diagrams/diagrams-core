@@ -19,3 +19,8 @@ Library
                        Graphics.Rendering.Diagrams.Transform,
                        Graphics.Rendering.Diagrams.Renderable,
                        Graphics.Rendering.Diagrams.Expressions
+  Build-depends:       base >= 4.2 && < 4.3,
+                       containers >= 0.3 && < 0.4,
+                       vector-space >= 0.7 && < 0.8,
+                       MemoTrie >= 0.4.7 && < 0.5
+  hs-source-dirs:      src
