@@ -1,3 +1,4 @@
+> {-# LANGUAGE FlexibleContexts, FlexibleInstances, TypeFamilies, MultiParamTypeClasses, UndecidableInstances #-}
 
 XXX comment me
 
@@ -16,6 +17,8 @@ XXX comment me
 >
 > import qualified Data.Map as M
 
+> type Bounds v = v -> Scalar v
+>
 > data Diagram b = Diagram { prims  :: [Prim b]
 >                          , bounds :: Bounds (BSpace b)
 >                          , names  :: NameSet (BSpace b)
@@ -25,7 +28,7 @@ XXX comment me
 >           , InnerSpace v, HasBasis v, HasTrie (Basis v)
 >           , AdditiveGroup (Scalar v), Fractional (Scalar v))
 >        => LExpr v -> Diagram b -> Diagram b
-> rebase e d = Diagram { prims  = map (translate (negateV u)))
+> rebase e d = Diagram { prims  = map (translate (negateV u))
 >                                     (prims d)
 >                      , bounds = rebaseBounds u (bounds d)
 >                      , names  = M.map (^-^ u) (names d)
