@@ -19,6 +19,7 @@ import qualified Data.Map as M
 
 import Data.Maybe
 import Data.Monoid
+import Control.Applicative (Applicative(..), (*>), (<$>))
 
 import System.IO
 
@@ -51,6 +52,9 @@ renderPrim b (Prim t) = render b t
 instance Backend b => Transformable (Prim b) where
   type TSpace (Prim b) = BSpace b
   transform v (Prim p) = Prim (transform v p)
+
+instance Backend b => Renderable (Prim b) b where
+  render b (Prim p) = render b p
 
 ------------------------------------------------
 -- Bounds
@@ -110,6 +114,22 @@ rebase e d = Diagram { prims  = map (transform (translation (negateV u)))
 rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
              => v -> Bounds v -> Bounds v
 rebaseBounds u f v = f v ^-^ ((u ^/ (v <.> v)) <.> v)
+
+instance ( Backend b
+         , HasTrie (Basis (BSpace b))
+         , HasBasis (BSpace b)) =>
+         Transformable (Diagram b) where
+  type TSpace (Diagram b) = BSpace b
+  transform t (Diagram ps bs ns) = Diagram (map (transform t) ps)
+                                           (\v -> undefined)    -- XXX
+                                           (M.map (aapply t) ns)
+
+instance (Backend b, Applicative (Render b)) => Renderable (Diagram b) b where
+  render b (Diagram ps _ _) = mapA_ (render b) ps
+
+mapA_ :: Applicative f => (a -> f b) -> [a] -> f ()
+mapA_ f []     = pure ()
+mapA_ f (x:xs) = f x *> mapA_ f xs
 
 ------------------------------------------------
 -- Affine transformations
