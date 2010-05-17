@@ -151,6 +151,27 @@ translation :: (HasBasis v, HasTrie (Basis v)) => v -> Affine v
 translation = Affine idL
 
 ------------------------------------------------
+-- Composing diagrams
+
+atop :: Ord (Scalar (BSpace b)) => Diagram b -> Diagram b -> Diagram b
+atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
+  Diagram (ps1 ++ ps2)
+          (\v -> max (bs1 v) (bs2 v))  -- XXX make this nicer?
+          (M.union ns1 ns2)
+
+beside :: ( Backend b
+          , v ~ BSpace b
+          , HasBasis v
+          , HasTrie (Basis v)
+          , InnerSpace v
+          , AdditiveGroup (Scalar v)
+          , Fractional (Scalar v)
+          , Ord (Scalar v))
+       => v -> Diagram b -> Diagram b -> Diagram b
+beside v d1 d2 = rebase (Const (bounds d1 v *^ v)) d1
+          `atop` rebase (Const (bounds d2 (negateV v) *^ negateV v)) d2
+
+------------------------------------------------
 -- Paths
 
 data Segment v = Bezier v v v
