@@ -20,5 +20,5 @@ XXX some comments here
 > class (HasBasis (BSpace b), HasTrie (Basis (BSpace b))) => Backend b where
 >   type BSpace b :: *           -- ^ The vector space associated with this backend
 >   type Render b :: * -> *      -- ^ The rendering environment used by this backend
->   runRender :: [RenderOption] -> Render b () -> IO ()
+>   runRender :: b -> [RenderOption] -> Render b () -> IO ()
 >                                -- ^ Run a computation in the rendering environment
