@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   id="svg5251"
+   version="1.1"
+   inkscape:version="0.47 r22583"
+   width="226.8"
+   height="226.8"
+   sodipodi:docname="Asymptote-logo-no.png"
+   inkscape:export-filename="/home/brent/hacking/diagrams-next/doc/hacphi-talk/images/Asymptote-logo-no.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
+  <metadata
+     id="metadata5257">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs5255">
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       id="perspective5259" />
+    <inkscape:perspective
+       id="perspective5188"
+       inkscape:persp3d-origin="0.5 : 0.33333333 : 1"
+       inkscape:vp_z="1 : 0.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 0.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+  </defs>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1280"
+     inkscape:window-height="782"
+     id="namedview5253"
+     showgrid="false"
+     inkscape:zoom="2.0884956"
+     inkscape:cx="30.950847"
+     inkscape:cy="117.70932"
+     inkscape:window-x="0"
+     inkscape:window-y="18"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg5251" />
+  <image
+     xlink:href="file:///home/brent/hacking/diagrams-next/doc/hacphi-talk/images/Asymptote-logo.png"
+     width="199"
+     height="113"
+     id="image5261"
+     x="12.370338"
+     y="52.590675" />
+  <path
+     sodipodi:type="arc"
+     style="fill:none;stroke:#d80000;stroke-width:20;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+     id="path4645"
+     sodipodi:cx="160"
+     sodipodi:cy="34"
+     sodipodi:rx="179"
+     sodipodi:ry="179"
+     d="m 339,34 a 179,179 0 1 1 -358,0 179,179 0 1 1 358,0 z"
+     transform="matrix(0.6,0,0,0.6,17.4,93)" />
+  <path
+     style="fill:none;stroke:#d80000;stroke-width:12;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+     d="M 178.2,27.6 45.6,195"
+     id="path5157" />
+</svg>

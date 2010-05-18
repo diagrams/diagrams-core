@@ -1,9 +1,10 @@
 # DIAGRAMS = $(patsubst %.hs,%.eps,$(wildcard diagrams/[a-z]*.hs))
+IMAGES = $(wildcard images/*.{jpg,pdf})
 
 all : diagrams-hacphi-20100522.pdf
 
-%.pdf : %.lhs
-	rubber -f -pd $<
+%.pdf : %.lhs $(IMAGES)
+	rubber -f -d $<
 
 # diagrams/%.eps: diagrams/%.hs diagrams/SpeciesDiagrams.o diagrams/TreeDiagrams.o
 # 	cd diagrams && runhaskell ../$< && ps2eps -f ../$(patsubst %.hs,%.ps,$<)
