@@ -30,7 +30,7 @@
 \usepackage{ulem}
 \usepackage{url}
 
-\newif \iftext \texttrue
+\newif \iftext \texttrue 
 
 \newcommand{\stext}[1]{\iftext \begin{center}#1\end{center} \fi}
 
@@ -58,7 +58,7 @@
     \includegraphics[width=4in]{images/code-to-dia.pdf}
   \end{center}
   \stext{The goal: programmatically generate drawings and diagrams in
-    a way that is declarative, compositional, and powerful.}
+    a way that is declarative, powerful, and semantically elegant.}
 \end{frame}
 
 \begin{frame}{}
@@ -95,14 +95,14 @@
 
 \begin{frame}{}
   \begin{center}
-    
+    % XXX
   \end{center}
   \stext{What about PGF/TikZ?}
 \end{frame}
 
 \begin{frame}{}
   \begin{center}
-    
+    % XXX
   \end{center}
   \stext{That's right, it uses an ad-hoc language and\dots sigh.}
 \end{frame}
@@ -112,14 +112,62 @@
     \includegraphics[width=4in]{images/diagrams.pdf}
   \end{center}
   \stext{Thus, the \texttt{diagrams} library was born!  It's gotten a
-    bit of use, people seem to like it.}
+    bit of use, people seem to like it. It got quite a few things
+    right, but let's look at some things it got wrong.}
 \end{frame}
-
-% Things diagrams got right:
 
 \begin{frame}{}
-  
+  \begin{center}
+    \includegraphics[width=3in]{images/ab.pdf}
+  \end{center}
+  \stext{A fundamental ability of the library is to put two diagrams
+    next to each other to create a larger diagram.}
 \end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/ab-boxed.pdf}
+  \end{center}
+  \stext{An obvious way to accomplish this is with bounding boxes.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/ab-boxed-rot.pdf}
+  \end{center}
+  \stext{What happens when we want to rotate the triangle?}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/ab-boxed-rot-adj.pdf}
+  \end{center}
+  \stext{Not so fast\dots this is hard to do! Current version lets you
+    sort of get around this with lots of ugly hacks.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/ab-boxed-diag.pdf}
+  \end{center}
+  \stext{And what about putting things next to each other along a line
+    that isn't vertical or horizontal?  We get this\dots}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/ab-boxed-diag-adj.pdf}
+  \end{center}
+  \stext{\dots instead of this.}  
+\end{frame}
+
+
+% Solution: bounding functions
+
+% Ability to refer to subparts
+
+% Solution: named points, expressions
+
 
 \end{document}
 
