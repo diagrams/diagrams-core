@@ -13,7 +13,7 @@ XXX comment me
 > import Data.Basis
 > import Data.MemoTrie
 >
-> import Control.Applicative (Applicative(..), (*>), (<$>))
+> import Control.Monad (mapM_)
 >
 > import qualified Data.Map as M
 
@@ -48,12 +48,8 @@ XXX comment me
 >                                            (\v -> undefined)    -- XXX
 >                                            (M.map (aapply t) ns)
 > 
-> instance (Backend b, Applicative (Render b)) => Renderable (Diagram b) b where
->   render b (Diagram ps _ _) = mapA_ (render b) ps
-> 
-> mapA_ :: Applicative f => (a -> f b) -> [a] -> f ()
-> mapA_ f []     = pure ()
-> mapA_ f (x:xs) = f x *> mapA_ f xs
+> instance (Backend b, Monad (Render b)) => Renderable (Diagram b) b where
+>   render b (Diagram ps _ _) = mapM_ (render b) ps
 > 
 > atop :: Ord (Scalar (BSpace b)) => Diagram b -> Diagram b -> Diagram b
 > atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
