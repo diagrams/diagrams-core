@@ -142,8 +142,18 @@
   \begin{center}
     \includegraphics[width=3in]{images/ab-boxed-rot-adj.pdf}
   \end{center}
-  \stext{Not so fast\dots this is hard to do! Current version lets you
-    sort of get around this with lots of ugly hacks.}
+  \stext{Why not just adjust the box?  Not so fast---this requires
+    knowing more about the diagram than just its bounding box in the
+    first place!}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/ab-boxed-rotbox.pdf}
+  \end{center}
+  \stext{We could do this, but now transformations don't
+    compose---rotating by A then by B gives a different bounding box
+    than just rotating by A+B.}
 \end{frame}
 
 \begin{frame}{}
@@ -161,8 +171,32 @@
   \stext{\dots instead of this.}  
 \end{frame}
 
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/triangle-bounds.pdf}
+  \end{center}
+  \stext{The solution, suggested by Sebastian Setzer, is to have a
+    function giving the distance to the nearest enclosing (hyper)plane
+    in a given direction (relative to some distinguished base point).}
+\end{frame}
 
-% Solution: bounding functions
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/triangle-bounds-rot.pdf}
+  \end{center}
+  \stext{This obviously works beautifully with rotation! In fact, it
+    works with any affine transformation.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/triangle-circle-bounds.pdf}
+  \end{center}
+  \stext{We can put two diagrams next to each other along any vector
+    by putting them alongside a separating plane.  It's not ``perfect''
+    --- notice the small gap in this case --- but it's pretty good,
+    and simple/consistent; it's easy to predict what will happen.}
+\end{frame}
 
 % Ability to refer to subparts
 
