@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="230"
+   height="140"
+   id="svg3612"
+   version="1.1"
+   inkscape:version="0.46"
+   sodipodi:docname="four.svg"
+   sodipodi:version="0.32"
+   inkscape:output_extension="org.inkscape.output.svg.inkscape">
+  <defs
+     id="defs3614">
+    <marker
+       inkscape:stockid="Arrow1Mstart"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mstart"
+       style="overflow:visible">
+      <path
+         id="path3222"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;marker-start:none"
+         transform="scale(0.4) translate(10,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mend"
+       style="overflow:visible;">
+      <path
+         id="path3225"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;marker-start:none;"
+         transform="scale(0.4) rotate(180) translate(10,0)" />
+    </marker>
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 526.18109 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="744.09448 : 526.18109 : 1"
+       inkscape:persp3d-origin="372.04724 : 350.78739 : 1"
+       id="perspective3620" />
+    <g
+       id="scarab_and_dung">
+      <g
+         transform="translate(-12.5)"
+         fill="none"
+         stroke-width="1"
+         stroke="#162284"
+         id="dung">
+        <circle
+           id="circle22943"
+           r="12"
+           cy="12.5"
+           cx="12.5" />
+        <g
+           transform="translate(6, 6)"
+           id="hacker">
+          <g
+             id="grid">
+<!-- (0,0) - (12,12) -->            <rect
+               id="rect22947"
+               height="12"
+               width="12"
+               y="0.5"
+               x="0.5" />
+            <rect
+               id="rect22949"
+               height="12"
+               width="4"
+               y="0.5"
+               x="4.5" />
+            <rect
+               id="rect22951"
+               height="4"
+               width="12"
+               y="4.5"
+               x="0.5" />
+          </g>
+          <g
+             stroke="none"
+             fill="#162284"
+             id="glider">
+            <circle
+               id="circle22954"
+               r=".9"
+               cy="2.5"
+               cx="6.5" />
+            <circle
+               id="circle22956"
+               r=".9"
+               cy="6.5"
+               cx="10.5" />
+            <circle
+               id="circle22958"
+               r=".9"
+               cy="10.5"
+               cx="2.5" />
+            <circle
+               id="circle22960"
+               r=".9"
+               cy="10.5"
+               cx="6.5" />
+            <circle
+               id="circle22962"
+               r=".9"
+               cy="10.5"
+               cx="10.5" />
+          </g>
+        </g>
+      </g>
+      <use
+         id="use22964"
+         transform="translate(0, 47) scale(0.2)"
+         xlink:href="#scarab" />
+    </g>
+    <g
+       transform="translate(0, -71)"
+       id="cairo_text_small">
+      <g
+         id="g22927"
+         transform="scale(0.085)">
+        <g
+           id="g22929"
+           transform="translate(-1139, -208.5)">
+<!-- 63 (c), advance 444, 0 horiBearing 38,522 -->          <path
+             id="path22931"
+             d="             M 412, 433              C 385, 422 336, 413 298, 413              C 142, 413 38, 525 38, 680              C 38, 826 144, 947 298, 947              C 332, 947 377, 944 416, 926              L 409, 842              C 380, 861 340, 871 308, 871              C 187, 871 138, 771 138, 680              C 138, 583 197, 489 302, 489              C 332, 489 368, 496 404, 511              L 412, 433 "
+             transform="translate(-151)" />
+<!-- 61 (a), advance 556, 0 horiBearing 46,522 -->          <path
+             id="path22933"
+             d="       M 109, 541        C 147, 509 204, 489 257, 489        C 351, 489 383, 534 383, 622        C 346, 620 320, 620 283, 620        C 186, 620 46, 660 46, 788        C 46, 899 123, 947 233, 947        C 319, 947 369, 900 391, 869        L 393, 869        L 393, 938        L 481, 938        C 479, 920 477, 893 477, 835        L 477, 624        C 477, 485 418, 413 272, 413        C 207, 413 151, 433 104, 461        L 109, 541        M 383, 737        C 383, 813 334, 871 241, 871        C 198, 871 146, 842 146, 788        C 146, 698 272, 690 323, 690        C 343, 690 363, 692 383, 692        L 383, 737 "
+             transform="translate(379.5)" />
+<!-- 69 (i), advance 278, 0 horiBearing 86,730 -->          <path
+             id="path22935"
+             d="             M 92, 938              L 186, 938              L 186, 420.3              L 92, 420.3              L 92, 938              M 88, 261             A 51, 51 0 1 1 190,261             A 51, 51 0 1 1 88,261"
+             transform="translate(1000)" />
+<!-- 72 (r), advance 389, 0 horiBearing 80,522 -->          <path
+             id="path22937"
+             d="        M 80, 938         L 174, 938         L 174, 703         C 174, 575 229, 495 313, 495         C 329, 495 348, 497 365, 504         L 365, 420         C 345, 416 331, 413 303, 413         C 249, 413 195, 451 170, 504         L 168, 504         L 168, 420.3         L 80, 420.3         L 80, 938 "
+             transform="translate(1341.5)" />
+<!-- 6f (o), advance 611, 0 horiBearing 46,522 -->          <path
+             id="path22939"
+             d="             M 46, 680              C 46, 826 152, 947 306, 947              C 459, 947 565, 826 565, 680              C 565, 525 461, 413 306, 413              C 150, 413 46, 525 46, 680              M 146, 680              C 146, 583 205, 489 306, 489              C 406, 489 465, 583 465, 680              C 465, 771 416, 871 306, 871              C 195, 871 146, 771 146, 680 "
+             transform="translate(1826)" />
+<!-- bounds: 38, 205 <-> 2232, 947 -->        </g>
+      </g>
+    </g>
+    <g
+       fill="#f39914"
+       id="scarab">
+      <g
+         id="g22913"
+         transform="translate(-150, -170)">
+        <path
+           d="M205.599,94.567c0-11.668-24.914-21.129-55.628-21.129      c-30.723,0-55.624,9.46-55.624,21.129c0,10.203,24.901,7.346,55.624,7.346      C180.685,101.913,205.599,104.233,205.599,94.567z"
+           id="scarab_head" />
+        <path
+           d="M136.423,161.506c0,0,12.751,12.577,13.547,13.362      c2.262-2.232,13.545-13.362,13.545-13.362c7.135-7.036,87.111-6.399,91.066-6.363      c-0.469-6.298-1.254-12.472-2.325-18.519c-15.183-19.279-42.811-32.225-74.485-32.225      h-55.518c-31.745,0-59.439,13.011-74.598,32.37c-1.054,6-1.829,12.128-2.296,18.374      C49.321,155.106,129.288,154.47,136.423,161.506z"
+           id="scarab_torso" />
+        <path
+           d="M149.97,301.187c2.005-24.729,8.386-103.483,8.405-103.721      c-0.09-0.219-6.478-15.578-8.405-20.214c-1.936,4.655-8.316,19.995-8.408,20.214      C141.582,197.704,147.965,276.458,149.97,301.187z"
+           id="scarab_spine" />
+        <path
+           d="M140.403,197.149l8.862-21.31l-13.686-13.499      c-5.65-5.573-67.074-6.235-90.259-6.019l-0.006-0.622c-0.154,2.144-0.271,4.302-0.35,6.475      c-0.076,2.207,10.392,4.706,10.392,6.717c0,2.319-10.457,5.084-10.359,7.631      c2.993,73.349,48.53,131.631,104.372,132.048l-9.02-111.29L140.403,197.149z"
+           id="scarab_wing_left" />
+        <path
+           d="M244.585,168.891c0-2.011,10.467-4.506,10.391-6.715      c-0.079-2.174-0.195-4.332-0.351-6.479l-0.004,0.624      c-23.186-0.216-84.608,0.445-90.26,6.017l-13.688,13.502l8.915,21.438l-9.017,111.29      c55.854-0.417,101.378-58.698,104.373-132.049      C255.04,173.976,244.585,171.209,244.585,168.891z"
+           id="scarab_wing_right" />
+        <path
+           d="M44.506,141.12c-4.135-0.856-4.895-1.54-7.935-2.92      c-9.59-3.364-10.376-5.481-16.08-11.86c-7.426-8.306-12.661-20.142-17.1-29.463      c-3.576-7.525-3.984-16.409-2.86-24.273c0.991-6.935,7.144-12.869,12.074-18.92      c5.844-7.191,10.356-14.822,17.924-21.354c7.736-6.682,23.203-9.809,26.168-19.648      C57.86,8.819,54.334,1.766,61.482,0c-0.366,4.703,3.639,8.477,2.397,13.575      c-1.129,4.627-4.368,5.811-9.611,9.099c-7.564,4.746-18.366,8.779-24.748,13.965      c-7.175,5.827-4.369,13.771-10.569,20.057c-2.001,2.03-7.901,4.706-9.137,6.83      c-1.861,3.199-0.297,9.572-0.116,13.12c0.425,8.284,5.588,14.244,9.555,22.045      c4.152,8.141,6.429,15.409,13.411,22.519c4.183,4.262,11.429,4.802,16.21,10.647      l-3.555,4.186L44.506,141.12z"
+           id="scarab_leg_front_left" />
+        <path
+           d="M43.94,191.922l-0.809-7.346      c-9.506-4.579-10.339-9.772-20.738-12.466c-23.728-6.151-21.361,11.25-15.532,26.373      c5.676,14.726,8.237,30.23,14.345,44.795c2.805,6.688,6.919,13.213,14.298,15.127      c0.372-8.435-0.917-10.651-6.113-16.919c-4.395-5.293-3.326-12.548-6.072-18.504      c-3.581-7.804-4.196-15.646-7.279-23.502c-1.363-3.479-8.33-13.966-6.452-17.861      c3.183-6.603,9.178-0.083,12.179,2.077c4.218,3.036,6.467,2.223,11.681,2.898      C34.041,186.673,37.005,188.756,43.94,191.922z"
+           id="scarab_leg_middle_left" />
+        <path
+           d="M65.839,257.063l-2.771-4.837      c-6.68,8.928-6.993,16.228-10.056,23.347c-5.277,12.263-0.157,28.851,9.854,37.676      c6.052,5.375,15.907,9.618,23.122,13.136c10.035,4.892,20.113,11.286,31.336,13.396      c2.482,0.466,8.798,1.295,6.693-3.522c-0.975-2.237-8.091-4.591-10.146-5.734      c-8.312-4.623-16.377-10.524-24.142-16.176c-9.498-6.862-20.843-11.186-28.311-20.684      c-3.054-3.885-3.544-4.922-2.816-9.39c0.693-4.263,1.344-9.174,2.241-13.439      C61.855,266.029,63.274,261.378,65.839,257.063z"
+           id="scarab_leg_back_left" />
+        <path
+           d="M255.487,141.12c4.134-0.856,4.896-1.54,7.936-2.92      c9.583-3.364,10.369-5.481,16.071-11.86c7.428-8.306,12.661-20.142,17.115-29.463      c3.574-7.525,3.983-16.409,2.86-24.273c-0.992-6.935-7.157-12.869-12.087-18.92      c-5.843-7.191-10.356-14.822-17.919-21.354c-7.735-6.682-23.202-9.809-26.167-19.648      C242.135,8.819,245.66,1.766,238.511,0c0.366,4.703-3.637,8.477-2.396,13.575      c1.131,4.627,4.368,5.811,9.611,9.099c7.563,4.746,18.367,8.779,24.747,13.965      c7.17,5.827,4.362,13.771,10.563,20.057c2.001,2.03,7.901,4.706,9.139,6.83      c1.859,3.199,0.295,9.572,0.113,13.12c-0.424,8.284-5.588,14.244-9.553,22.045      c-4.152,8.141-6.431,15.409-13.404,22.519c-4.184,4.262-11.429,4.802-16.211,10.647      l3.556,4.186L255.487,141.12z"
+           id="scarab_leg_front_right" />
+        <path
+           d="M256.053,191.922l0.81-7.346      c9.507-4.579,10.34-9.772,20.73-12.466c23.741-6.151,21.374,11.25,15.534,26.373      c-5.676,14.726-8.238,30.23-14.347,44.795c-2.804,6.688-6.911,13.213-14.291,15.127      c-0.371-8.435,0.918-10.651,6.113-16.919c4.39-5.293,3.319-12.548,6.066-18.504      c3.58-7.804,4.197-15.646,7.278-23.502c1.363-3.479,8.33-13.966,6.453-17.861      c-3.184-6.603-9.179-0.083-12.181,2.077c-4.217,3.036-6.458,2.223-11.672,2.898      C265.951,186.673,262.986,188.756,256.053,191.922z"
+           id="scarab_leg_middle_right" />
+        <path
+           d="M234.155,257.063l2.771-4.837      c6.679,8.928,6.991,16.228,10.057,23.347c5.274,12.263,0.154,28.851-9.854,37.676      c-6.055,5.375-15.903,9.618-23.117,13.136c-10.034,4.892-20.127,11.286-31.351,13.396      c-2.481,0.466-8.789,1.295-6.691-3.522c0.976-2.237,8.092-4.591,10.146-5.734      c8.312-4.623,16.392-10.524,24.155-16.176c9.498-6.862,20.838-11.186,28.305-20.684      c3.055-3.885,3.543-4.922,2.818-9.39c-0.696-4.263-1.346-9.174-2.244-13.439      C238.137,266.029,236.718,261.378,234.155,257.063z"
+           id="scarab_leg_back_right" />
+      </g>
+    </g>
+    <inkscape:perspective
+       id="perspective22975"
+       inkscape:persp3d-origin="185 : 27 : 1"
+       inkscape:vp_z="370 : 40.5 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_x="0 : 40.5 : 1"
+       sodipodi:type="inkscape:persp3d" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="2.8"
+     inkscape:cx="122.07714"
+     inkscape:cy="66.824233"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1280"
+     inkscape:window-height="1006"
+     inkscape:window-x="0"
+     inkscape:window-y="18"
+     inkscape:window-maximized="0"
+     inkscape:object-paths="true"
+     inkscape:snap-midpoints="true"
+     inkscape:snap-global="false"
+     showguides="true"
+     inkscape:guide-bbox="true" />
+  <metadata
+     id="metadata3617">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-304.00853,-292.75813)">
+    <use
+       height="140"
+       width="230"
+       y="0"
+       x="0"
+       xlink:href="#scarab_and_dung"
+       transform="translate(417.36567,315.10066)"
+       id="use22966" />
+    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Bitstream Vera Sans"
+       x="398.29425"
+       y="385.97241"
+       id="text22797"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan22799"
+         x="398.29425"
+         y="385.97241"
+         style="font-size:56px">4</tspan></text>
+  </g>
+</svg>

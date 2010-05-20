@@ -1,6 +1,8 @@
 %% -*- LaTeX -*-
 \documentclass[xcolor=svgnames]{beamer}
 
+\usepackage{brent}
+
 %include polycode.fmt
 
 \renewcommand{\onelinecomment}{--- \itshape}
@@ -30,7 +32,7 @@
 \usepackage{ulem}
 \usepackage{url}
 
-\newif \iftext \texttrue 
+\newif \iftext \textfalse
 
 \newcommand{\stext}[1]{\iftext \begin{center}#1\end{center} \fi}
 
@@ -95,14 +97,14 @@
 
 \begin{frame}{}
   \begin{center}
-    % XXX
+    \includegraphics[width=1.7in]{images/pgf-tikz.pdf}
   \end{center}
   \stext{What about PGF/TikZ?}
 \end{frame}
 
 \begin{frame}{}
   \begin{center}
-    % XXX
+    \includegraphics[width=1.7in]{images/pgf-tikz-no.pdf}
   \end{center}
   \stext{That's right, it uses an ad-hoc language and\dots sigh.}
 \end{frame}
@@ -114,6 +116,12 @@
   \stext{Thus, the \texttt{diagrams} library was born!  It's gotten a
     bit of use, people seem to like it. It got quite a few things
     right, but let's look at some things it got wrong.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/one.pdf}
+  \end{center}
 \end{frame}
 
 \begin{frame}{}
@@ -198,10 +206,143 @@
     and simple/consistent; it's easy to predict what will happen.}
 \end{frame}
 
-% Ability to refer to subparts
+%\begin{frame}{}
+%  \begin{center}
+%    \includegraphics[width=3in]{images/two.pdf}
+%  \end{center}
+%\end{frame}
 
-% Solution: named points, expressions
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/linked.pdf}
+  \end{center}
+  \stext{Here's something else that the current version gets
+    wrong---there's no way to refer to previously laid out diagrams,
+    so making a diagram like this one is very tedious; there's no good
+  way to do it.}
+\end{frame}
 
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/expressions.pdf}
+  \end{center}
+  \stext{Every diagram will have an implicit distinguished ``control
+    point'' thought of as the origin of a local coordinate system.
+    Other points can be defined and named relative to the origin and
+    each other, using a simple language for linear expressions.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/expressions-join.pdf}
+  \end{center}
+  \stext{We can compose two diagrams by identifying a point from each,
+    with the identified point becoming the new origin.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/three.pdf}
+  \end{center}
+  \stext{A third limitation of the first version is that it only works
+    for two-dimensional diagrams!}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+      \Huge $\R^2 \qquad \R^3 \qquad \R \to V \dots$
+      \includegraphics[width=1in]{images/R2.pdf}
+      \includegraphics[width=1.5in]{images/3D-axis.png}
+      \includegraphics[width=1.5in]{images/clock.jpg}
+  \end{center}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/four.pdf}
+  \end{center}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/cairo.pdf}
+  \end{center}
+  \stext{Something else the original version got wrong was to require
+    Cairo as a rendering backend.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/backends.pdf}
+  \end{center}
+  \stext{The new version will be more modular, allowing anyone to
+    easily create a new rendering backend.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-wanted.jpg}
+  \end{center}
+  \stext{How you can help:}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-1.pdf}
+  \end{center}
+  \stext{Help work on the core library.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-2.pdf}
+  \end{center}
+  \stext{Help write a standard library of convenient/common things
+    implemented in terms of core primitives.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-3.pdf}
+  \end{center}
+  \stext{Write a backend.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-4.pdf}
+  \end{center}
+  \stext{Write documentation or a tutorial.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-5.pdf}
+  \end{center}
+  \stext{Make some examples for fun and to help drive development.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-6.pdf}
+  \end{center}
+  \stext{Write a higher-level extension library.}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=3in]{images/help-7.pdf}
+  \end{center}
+  \stext{Write an application for real-time visualization/editing, or
+    a gitit plugin, or\dots}
+\end{frame}
+
+\begin{frame}{}
+  \begin{center}
+    \includegraphics[width=1.5in]{images/logo.png}
+  \end{center}
+  \stext{\dots design a better logo.}
+\end{frame}
 
 \end{document}
 
