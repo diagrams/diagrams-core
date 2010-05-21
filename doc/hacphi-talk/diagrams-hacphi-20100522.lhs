@@ -37,7 +37,7 @@
 \newcommand{\stext}[1]{\iftext \begin{center}#1\end{center} \fi}
 
 \title{Declarative, embedded drawing with \texttt{diagrams}: past and future}
-\date{Hac $\varphi$ \\ May 22, 2010}
+\date{Hac $\varphi$ \\ May 21, 2010}
 \author{Brent Yorgey \\ University of Pennsylvania}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
