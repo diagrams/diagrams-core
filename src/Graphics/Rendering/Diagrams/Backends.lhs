@@ -1,12 +1,22 @@
 > {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 
-XXX some comments here
+This module defines the interface for diagram rendering backends.
+Each backend has an associated vector space, and uses an associated
+rendering context.  Adding a new rendering backend is as simple as
+instantiating the 'Backend' class, and then writing a 'Renderable'
+instance (see "Graphics.Rendering.Diagrams.Renderable") for each
+primitive that your backend knows how to render.
 
 > module Graphics.Rendering.Diagrams.Backends where
 >
 > import Data.Basis
 > import Data.MemoTrie
 >
+
+| Options to control rendering.  NOTE, more options need to be added
+  here.  Not every backend needs to recognize every option; unrecognized
+  options should simply be ignored.
+
 > data RenderOption =
 >     OutputFile FilePath
 >   -- XXX other things here, like size etc.
