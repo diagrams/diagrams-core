@@ -2,7 +2,32 @@
 
 -- XXX comment me
 
-module Graphics.Rendering.Diagrams where
+module Graphics.Rendering.Diagrams
+       ( module Graphics.Rendering.Diagrams.Transform
+       , module Graphics.Rendering.Diagrams.Expressions
+
+         -- * Backends
+
+       , HasLinearMap
+       , Backend(..)
+       , Renderable(..)
+
+         -- * Primtives
+
+       , Prim(..)
+       , renderPrim
+
+         -- * Diagrams
+
+       , Bounds
+       , Diagram(..)
+
+         -- ** Primitive operations
+
+       , rebase
+       , atop
+       , beside
+       ) where
 
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Expressions
@@ -11,9 +36,11 @@ import Data.VectorSpace
 import Data.Basis
 import Data.MemoTrie
 
-import Control.Monad (mapM_)
-
 import qualified Data.Map as M
+
+------------------------------------------------------------
+-- Backends  -----------------------------------------------
+------------------------------------------------------------
 
 -- for ease of implementing backends
 class (HasBasis v, HasTrie (Basis v)) => HasLinearMap v
@@ -37,6 +64,10 @@ class (Backend b, Transformable t) => Renderable t b where
   -- ^ Given a token representing the backend and a transformable
   --   object, render it in the appropriate rendering context.
 
+------------------------------------------------------------
+--  Primitives  --------------------------------------------
+------------------------------------------------------------
+
 -- | A value of type @Prim b@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render.
 
@@ -53,6 +84,9 @@ instance Backend b => Transformable (Prim b) where
 instance Backend b => Renderable (Prim b) b where
   render b (Prim p) = render b p
 
+------------------------------------------------------------
+--  Diagrams  ----------------------------------------------
+------------------------------------------------------------
 
 type Bounds v = v -> Scalar v
 
@@ -88,9 +122,10 @@ instance ( Backend b
 atop :: Ord (Scalar (BSpace b)) => Diagram b -> Diagram b -> Diagram b
 atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
   Diagram (ps1 ++ ps2)
-          (\v -> max (bs1 v) (bs2 v))  -- XXX make this nicer?
+          (\v -> max (bs1 v) (bs2 v))
           (M.union ns1 ns2)
 
+-- XXX should this be moved to the standard library?
 beside :: ( Backend b
           , v ~ BSpace b
           , HasBasis v
