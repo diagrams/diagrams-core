@@ -32,7 +32,7 @@
 \usepackage{ulem}
 \usepackage{url}
 
-\newif \iftext \textfalse
+\newif \iftext \texttrue
 
 \newcommand{\stext}[1]{\iftext \begin{center}#1\end{center} \fi}
 
@@ -76,7 +76,8 @@
   \begin{center}
     \includegraphics[width=1.75in]{images/MPlogo-no.png}
   \end{center}
-  \stext{But it's not sufficiently declarative, and uses a weird ad-hoc language.}
+  \stext{But it's not sufficiently declarative, and uses a weird
+    ad-hoc language which isn't general-purpose.}
 \end{frame}
 
 \begin{frame}{}
@@ -92,7 +93,9 @@
   \begin{center}
     \includegraphics[width=1.72in]{images/Asymptote-logo-no.png}
   \end{center}
-  \stext{No thanks, it uses a TERRIBLE ad-hoc language ``based on'' C++\dots}
+  \stext{No thanks: at least it uses a general-purpose language (so we
+    can compute the diagrams we want to describe), but it's a TERRIBLE
+    language combining the worst features of C++ and Java.}
 \end{frame}
 
 \begin{frame}{}
@@ -106,7 +109,8 @@
   \begin{center}
     \includegraphics[width=1.7in]{images/pgf-tikz-no.pdf}
   \end{center}
-  \stext{That's right, it uses an ad-hoc language and\dots sigh.}
+  \stext{That's right, it uses an ad-hoc, non-general purpose language
+    and\dots sigh.}
 \end{frame}
 
 \begin{frame}{}
@@ -143,7 +147,10 @@
   \begin{center}
     \includegraphics[width=3in]{images/ab-boxed-rot.pdf}
   \end{center}
-  \stext{What happens when we want to rotate the triangle?}
+  \stext{What happens when we want to rotate the triangle? The above
+    is what the currently released version of \texttt{diagrams} does
+    --- I've gotten bug reports about it, and I agree it's a bug.  But
+  it's not clear what the real solution is.}
 \end{frame}
 
 \begin{frame}{}
@@ -183,9 +190,11 @@
   \begin{center}
     \includegraphics[width=3in]{images/triangle-bounds.pdf}
   \end{center}
-  \stext{The solution, suggested by Sebastian Setzer, is to have a
+  \stext{An elegant solution, suggested by Sebastian Setzer, is to have a
     function giving the distance to the nearest enclosing (hyper)plane
-    in a given direction (relative to some distinguished base point).}
+    in a given direction (relative to some distinguished base point).
+    In some sense this gives us a functional representation of a
+    convex bounding region.}
 \end{frame}
 
 \begin{frame}{}
@@ -226,10 +235,11 @@
   \begin{center}
     \includegraphics[width=3in]{images/expressions.pdf}
   \end{center}
-  \stext{Every diagram will have an implicit distinguished ``control
-    point'' thought of as the origin of a local coordinate system.
-    Other points can be defined and named relative to the origin and
-    each other, using a simple language for linear expressions.}
+  \stext{In the new version, every diagram will have an implicit
+    distinguished ``control point'' thought of as the origin of a
+    local coordinate system.  Other points can be defined and named
+    relative to the origin and each other, using a simple language for
+    linear expressions.}
 \end{frame}
 
 \begin{frame}{}
@@ -237,7 +247,8 @@
     \includegraphics[width=3in]{images/expressions-join.pdf}
   \end{center}
   \stext{We can compose two diagrams by identifying a point from each,
-    with the identified point becoming the new origin.}
+    with the identified point becoming the new origin.  All other
+    diagram combinators can be implemented in terms of this operation.}
 \end{frame}
 
 \begin{frame}{}
@@ -255,6 +266,8 @@
       \includegraphics[width=1.5in]{images/3D-axis.png}
       \includegraphics[width=1.5in]{images/clock.jpg}
   \end{center}
+  \stext{The new version is polymorphic over the vector space used, so
+    we can have 2D diagrams, 3D diagrams, animations\dots}
 \end{frame}
 
 \begin{frame}{}
@@ -297,7 +310,7 @@
   \begin{center}
     \includegraphics[width=3in]{images/help-2.pdf}
   \end{center}
-  \stext{Help write a standard library of convenient/common things
+  \stext{Help write a blessed standard library of convenient/common things
     implemented in terms of core primitives.}
 \end{frame}
 
