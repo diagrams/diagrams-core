@@ -1,5 +1,15 @@
-
-XXX comment me
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.Rendering.Diagrams.Expressions
+-- Copyright   :  (c) Brent Yorgey 2010
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  byorgey@cis.upenn.edu
+-- Stability   :  experimental
+-- Portability :  portable
+--
+-- XXX comment me
+--
+-----------------------------------------------------------------------------
 
 > module Graphics.Rendering.Diagrams.Expressions where
 >

@@ -1,12 +1,10 @@
-> {-# LANGUAGE FlexibleContexts, FlexibleInstances, TypeFamilies, MultiParamTypeClasses, UndecidableInstances #-}
+> {-# LANGUAGE FlexibleContexts, FlexibleInstances, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, GADTs #-}
 
 XXX comment me
 
 > module Graphics.Rendering.Diagrams where
 >
-> import Graphics.Rendering.Diagrams.Backends
 > import Graphics.Rendering.Diagrams.Transform
-> import Graphics.Rendering.Diagrams.Renderable
 > import Graphics.Rendering.Diagrams.Expressions
 >
 > import Data.VectorSpace
@@ -17,13 +15,51 @@ XXX comment me
 >
 > import qualified Data.Map as M
 
+| Abstract diagrams are rendered to particular formats by /backends/.
+  Each backend must be an instance of the 'Backend' class, and comes
+  with an associated vector space and rendering environment.
+
+> class (HasBasis (BSpace b), HasTrie (Basis (BSpace b))) => Backend b where
+>   type BSpace b :: *           -- ^ The vector space associated with this backend
+>   type Render b :: * -> *      -- ^ The rendering environment used by this backend
+>   type Result b :: *           -- ^ The result of the rendering operation
+>   data Option b :: *           -- ^ The rendering options for this backend
+>   renderDia     :: b -> [Option b] -> Diagram b -> Result b
+>                                -- ^ Render a diagram using this backend
+> 
+
+| The 'Renderable' type class connects backends to primitives which
+  they know how to render.
+
+> class (Backend b, Transformable t) => Renderable t b where
+>   render :: b -> t -> Render b ()  
+>   -- ^ Given a token representing the backend and a transformable
+>   --   object, render it in the appropriate rendering context.
+
+| A value of type @Prim b@ is an opaque (existentially quantified)
+  primitive which backend @b@ knows how to render.
+
+> data Prim b where
+>   Prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> Prim b
+> 
+> renderPrim :: b -> Prim b -> Render b ()
+> renderPrim b (Prim t) = render b t
+> 
+> instance Backend b => Transformable (Prim b) where
+>   type TSpace (Prim b) = BSpace b
+>   transform v (Prim p) = Prim (transform v p)
+> 
+> instance Backend b => Renderable (Prim b) b where
+>   render b (Prim p) = render b p
+
+
 > type Bounds v = v -> Scalar v
 >
 > data Diagram b = Diagram { prims  :: [Prim b]
 >                          , bounds :: Bounds (BSpace b)
 >                          , names  :: NameSet (BSpace b)
 >                          }
-> 
+
 > rebase :: ( Backend b, v ~ BSpace b
 >           , InnerSpace v, HasBasis v, HasTrie (Basis v)
 >           , AdditiveGroup (Scalar v), Fractional (Scalar v))
