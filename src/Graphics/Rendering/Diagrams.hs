@@ -49,8 +49,9 @@ import Data.MemoTrie
 
 import qualified Data.Map as M
 
--- for ease of implementing backends
-class (HasBasis v, HasTrie (Basis v)) => HasLinearMap v
+------------------------------------------------------------
+-- Backends  -----------------------------------------------
+------------------------------------------------------------
 
 -- | Abstract diagrams are rendered to particular formats by /backends/.
 --   Each backend must be an instance of the 'Backend' class, and comes
