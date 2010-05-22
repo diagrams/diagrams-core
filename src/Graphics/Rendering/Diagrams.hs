@@ -55,7 +55,8 @@ import qualified Data.Map as M
 -- | Abstract diagrams are rendered to particular formats by /backends/.
 --   Each backend must be an instance of the 'Backend' class, and comes
 --   with an associated vector space and rendering environment.
-class HasLinearMap (BSpace b) => Backend b where
+class (HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)))
+    => Backend b where
   type BSpace b :: *           -- The vector space associated with this backend
   type Render b :: *           -- The rendering environment used by this backend
   type Result b :: *           -- The result of the rendering operation
@@ -115,8 +116,9 @@ data Diagram b = Diagram { prims  :: [Prim b]
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
 rebase :: ( Backend b, v ~ BSpace b
-          , InnerSpace v, HasLinearMap v
-          , AdditiveGroup (Scalar v), Fractional (Scalar v))
+          , InnerSpace v, HasLinearMap v, HasLinearMap (Scalar v)
+          , AdditiveGroup (Scalar v), Fractional (Scalar v)
+          , Scalar (Scalar v) ~ Scalar v)
        => LExpr v -> Diagram b -> Diagram b
 rebase e d = Diagram { prims  = map (translate (negateV u))
                                     (prims d)
@@ -129,12 +131,14 @@ rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
              => v -> Bounds v -> Bounds v
 rebaseBounds u f v = f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
-instance ( Backend b, HasLinearMap (BSpace b)) =>
-         Transformable (Diagram b) where
+instance ( Backend b, HasLinearMap (BSpace b)
+         , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
+         , Fractional (Scalar (BSpace b)))
+    => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps bs ns) = Diagram (map (transform t) ps)
                                            (\v -> undefined)    -- XXX
-                                           (M.map (aapply t) ns)
+                                           (M.map (papply t) ns)
 
 -- | Compose two diagrams by aligning their respective local origins,
 --   putting the first on top of the second.
@@ -149,10 +153,12 @@ atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
 beside :: ( Backend b
           , v ~ BSpace b
           , HasLinearMap v
+          , HasLinearMap (Scalar v)
           , InnerSpace v
           , AdditiveGroup (Scalar v)
           , Fractional (Scalar v)
-          , Ord (Scalar v))
+          , Ord (Scalar v)
+          , Scalar (Scalar v) ~ Scalar v)
        => v -> Diagram b -> Diagram b -> Diagram b
 beside v d1 d2 = rebase (Const (bounds d1 v *^ v)) d1
           `atop` rebase (Const (bounds d2 (negateV v) *^ negateV v)) d2
