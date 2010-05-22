@@ -1,6 +1,18 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, GADTs #-}
 
--- XXX comment me
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.Rendering.Diagrams
+-- Copyright   :  (c) Brent Yorgey 2010
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  byorgey@cis.upenn.edu
+-- Stability   :  experimental
+-- Portability :  portable
+--
+-- The core library of primitives forming the basis of an embedded
+-- domain-specific language for describing and rendering diagrams.
+--
+-----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams
        ( module Graphics.Rendering.Diagrams.Transform
