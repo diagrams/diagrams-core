@@ -20,7 +20,6 @@ module Graphics.Rendering.Diagrams
 
          -- * Backends
 
-       , HasLinearMap
        , Backend(..)
        , Renderable(..)
 
