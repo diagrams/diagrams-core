@@ -49,10 +49,6 @@ import Data.MemoTrie
 
 import qualified Data.Map as M
 
-------------------------------------------------------------
--- Backends  -----------------------------------------------
-------------------------------------------------------------
-
 -- for ease of implementing backends
 class (HasBasis v, HasTrie (Basis v)) => HasLinearMap v
 
@@ -119,7 +115,7 @@ data Diagram b = Diagram { prims  :: [Prim b]
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
 rebase :: ( Backend b, v ~ BSpace b
-          , InnerSpace v, HasBasis v, HasTrie (Basis v)
+          , InnerSpace v, HasLinearMap v
           , AdditiveGroup (Scalar v), Fractional (Scalar v))
        => LExpr v -> Diagram b -> Diagram b
 rebase e d = Diagram { prims  = map (translate (negateV u))
@@ -133,9 +129,7 @@ rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
              => v -> Bounds v -> Bounds v
 rebaseBounds u f v = f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
-instance ( Backend b
-         , HasTrie (Basis (BSpace b))
-         , HasBasis (BSpace b)) =>
+instance ( Backend b, HasLinearMap (BSpace b)) =>
          Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps bs ns) = Diagram (map (transform t) ps)
@@ -154,8 +148,7 @@ atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
 -- | Place two diagrams next to each other along the given vector.
 beside :: ( Backend b
           , v ~ BSpace b
-          , HasBasis v
-          , HasTrie (Basis v)
+          , HasLinearMap v
           , InnerSpace v
           , AdditiveGroup (Scalar v)
           , Fractional (Scalar v)
