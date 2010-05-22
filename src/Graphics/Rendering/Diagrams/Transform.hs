@@ -1,8 +1,46 @@
 {-# LANGUAGE TypeOperators, FlexibleContexts, FlexibleInstances, UndecidableInstances, TypeFamilies #-}
 
--- XXX comment me!
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.Rendering.Diagrams.Transform
+-- Copyright   :  (c) Brent Yorgey 2010
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  byorgey@cis.upenn.edu
+-- Stability   :  experimental
+-- Portability :  portable
+--
+-- Graphics.Rendering.Diagrams defines the core library of primitives
+-- forming the basis of an embedded domain-specific language for
+-- describing and rendering diagrams.
+--
+-- The Transform module defines some generic transformations
+-- parameterized by any vector space.
+--
+-----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Transform where
+module Graphics.Rendering.Diagrams.Transform
+       ( -- * Affine transformations
+
+         Affine(..)
+       , aapply
+       , fromLinear
+       , fromTranslate
+
+         -- * The 'Transformable' class
+
+       , HasLinearMap
+       , Transformable(..)
+
+         -- * Vector space independent transformations
+         -- $
+         -- Some transformations are specific to a particular vector
+         -- space, but a few can be defined generically over any
+         -- vector space.
+
+       , translate
+       , scale
+
+       ) where
 
 import Data.AdditiveGroup
 import Data.VectorSpace
@@ -12,7 +50,7 @@ import Data.MemoTrie
 
 import Data.Monoid
 
--- for convenience 
+-- for convenience
 class (HasBasis v, HasTrie (Basis v)) => HasLinearMap v
 instance (HasBasis v, HasTrie (Basis v)) => HasLinearMap v
 
@@ -53,8 +91,12 @@ class (HasLinearMap (TSpace t)) => Transformable t where
   type TSpace t :: *         -- Vector space of transformations
   transform :: Affine (TSpace t) -> t -> t
 
+-- | Translate by a vector.
+
 translate :: Transformable t => TSpace t -> t -> t
 translate = transform . fromTranslate
+
+-- | Scale uniformly in every dimension by the given scalar.
 
 scale :: Transformable t => Scalar (TSpace t) -> t -> t
 scale = transform . fromLinear . linear . (*^)
