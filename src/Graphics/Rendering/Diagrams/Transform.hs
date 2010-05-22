@@ -46,7 +46,7 @@ fromTranslate = Affine idL
 --   transformations.
 
 class (HasBasis (TSpace t), HasTrie (Basis (TSpace t))) => Transformable t where
-  type TSpace t :: *         -- ^ Vector space of transformations
+  type TSpace t :: *         -- Vector space of transformations
   transform :: Affine (TSpace t) -> t -> t
 
 translate :: Transformable t => TSpace t -> t -> t
