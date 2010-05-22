@@ -15,11 +15,13 @@ import Control.Monad (mapM_)
 
 import qualified Data.Map as M
 
+-- for ease of implementing backends
+class (HasBasis v, HasTrie (Basis v)) => HasLinearMap v
+
 -- | Abstract diagrams are rendered to particular formats by /backends/.
 --   Each backend must be an instance of the 'Backend' class, and comes
 --   with an associated vector space and rendering environment.
-
-class (HasBasis (BSpace b), HasTrie (Basis (BSpace b))) => Backend b where
+class HasLinearMap (BSpace b) => Backend b where
   type BSpace b :: *           -- ^ The vector space associated with this backend
   type Render b :: *           -- ^ The rendering environment used by this backend
   type Result b :: *           -- ^ The result of the rendering operation
