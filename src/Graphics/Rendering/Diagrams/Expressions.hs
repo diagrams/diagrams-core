@@ -23,6 +23,7 @@ module Graphics.Rendering.Diagrams.Expressions
          -- * Name sets
 
        , NameSet(..)
+       , fromNames
 
          -- ** Primitive 'NameSet' operations
 
@@ -35,6 +36,7 @@ import Data.VectorSpace
 import qualified Data.Map as M
 import Data.Monoid
 import Data.Maybe (fromMaybe, listToMaybe)
+import Control.Arrow ((***))
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
@@ -74,6 +76,9 @@ newtype NameSet v = NameSet (M.Map Name [v])
 instance Monoid (NameSet v) where
   mempty = NameSet M.empty
   (NameSet s1) `mappend` (NameSet s2) = NameSet $ M.unionWith (++) s1 s2
+
+fromNames :: [(String, v)] -> NameSet v
+fromNames = NameSet . M.fromList . map (nm *** (:[]))
 
 qualify :: AName -> NameSet v -> NameSet v
 qualify n (NameSet names) = NameSet $ M.mapKeys (n:) names
