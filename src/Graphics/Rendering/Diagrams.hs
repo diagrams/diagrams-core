@@ -36,7 +36,7 @@ module Graphics.Rendering.Diagrams
        , Diagram(..)
 
          -- ** Primitive operations
-
+         -- $prim
        , rebase
        , atop
        ) where
@@ -54,6 +54,9 @@ import Control.Applicative hiding (Const)
 
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
+
+-- XXX TODO: add lots of actual diagrams to illustrate the
+-- documentation!  Haddock supports \<\<inline image urls\>\>.
 
 ------------------------------------------------------------
 -- Backends  -----------------------------------------------
@@ -145,6 +148,10 @@ data Diagram b = Diagram { prims  :: [Prim b]
 ------------------------------------------------------------
 --  Primitive operations  ----------------------------------
 ------------------------------------------------------------
+
+-- $prim
+-- There are two fundamental operations for manipulating and composing
+-- diagrams.  XXX write more here.
 
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
