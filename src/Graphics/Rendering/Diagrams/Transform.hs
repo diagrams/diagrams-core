@@ -26,6 +26,7 @@ module Graphics.Rendering.Diagrams.Transform
 
          -- ** Projective transformations
        , Projective
+       , pinv
        , papply
        , fromLinear
        , translation
@@ -94,6 +95,10 @@ apply (f :-: _) = lapply f
 -- | A projective transformation is a linear transformation one
 --   dimension up.  XXX write something better here.
 newtype Projective v = Projective ((v, Scalar v) :-: (v, Scalar v))
+
+-- | Invert a projective transformation.
+pinv :: Projective v -> Projective v
+pinv (Projective t) = Projective (inv t)
 
 -- | Projective transformations are closed under composition.
 instance (HasLinearMap v, HasLinearMap (Scalar v)

@@ -172,17 +172,18 @@ rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
 rebaseBounds u (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 instance ( Backend b, HasLinearMap (BSpace b)
+         , InnerSpace (BSpace b)
          , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
-         , Fractional (Scalar (BSpace b)))
+         , Floating (Scalar (BSpace b)))
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
-  transform t (Diagram ps bs ns) = Diagram (map (transform t) ps)
-                                           (Bounds $ \v -> undefined)
-        {- XXX we need inverses for the above!
-             \v -> let v' = t^-1 v in normalize (t (bs v' *^ v'))
-              or something like that
-        -}
-                                           (M.map (papply t) ns)
+  transform t (Diagram ps (Bounds b) ns)
+    = Diagram (map (transform t) ps)
+              -- XXX need to check: is this right?
+              (Bounds $ \v -> let v' = papply (pinv t) v
+                                  k  = magnitude v / magnitude v'
+                              in  k * b v')
+              (M.map (papply t) ns)
 
 -- | Compose two diagrams by aligning their respective local origins.
 --   Put the first on top of the second (when such a notion makes
