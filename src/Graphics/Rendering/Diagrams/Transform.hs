@@ -22,9 +22,10 @@ module Graphics.Rendering.Diagrams.Transform
        ( -- * Transformations
 
          -- ** Invertible linear transformations
-         (:-:), inv, apply
+         (:-:)(..), (<->), inv, apply
 
          -- ** Projective transformations
+       , Projective
        , papply
        , fromLinear
        , translation
@@ -66,6 +67,11 @@ import Data.Monoid
 -- | @(u :-: v) is an invertible linear map.
 data (:-:) u v = (u :-* v) :-: (v :-* u)
 infixr 7 :-:
+
+-- | Create an invertible linear map from two functions which are
+--   assumed to be linear inverses.
+(<->) :: (HasLinearMap u, HasLinearMap v) => (u -> v) -> (v -> u) -> (u :-: v)
+f <-> g = linear f :-: linear g
 
 -- | Linear maps from a vector space to itself form a monoid under
 --   composition.
@@ -110,16 +116,16 @@ papply (Projective a) v = project $ apply a (v,1)
 fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v)
                         ,Scalar (Scalar v) ~ Scalar v)
                         => (v :-: v) -> Projective v
-fromLinear t = Projective $ (linear $ \(v,c) -> (apply t v, c)) :-:
-                            (linear $ \(v,c) -> (apply (inv t) v, c))
+fromLinear t = Projective $ (\(v,c) -> (apply t v, c)) <->
+                            (\(v,c) -> (apply (inv t) v, c))
 
 
 -- | Treat a translation as a projective transformation.
 translation :: (HasLinearMap v, HasLinearMap (Scalar v)
                            ,Scalar (Scalar v) ~ Scalar v)
                           => v -> Projective v
-translation v0 = Projective $ (linear $ \(v,c) -> (v ^+^ v0 ^* c,c)) :-:
-                              (linear $ \(v,c) -> (v ^-^ v0 ^* c,c))
+translation v0 = Projective $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
+                              (\(v,c) -> (v ^-^ v0 ^* c,c))
 
 ------------------------------------------------------------
 --  The 'Transformable' class  -----------------------------
@@ -147,5 +153,5 @@ scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t)
          ,Fractional (Scalar (TSpace t)))
          => Scalar (TSpace t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
-scale s = transform . fromLinear $ linear (s *^) :-: linear (^/ s)
+scale s = transform . fromLinear $ (s *^) <-> (^/ s)
 
