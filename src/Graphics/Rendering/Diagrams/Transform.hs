@@ -51,8 +51,23 @@ import Data.MemoTrie
 import Data.Monoid
 
 -- for convenience
-class (HasBasis v, HasTrie (Basis v),VectorSpace v) => HasLinearMap v
-instance (HasBasis v, HasTrie (Basis v),VectorSpace v) => HasLinearMap v
+class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
+instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
+
+-- | A linear map (conveniently paired with its inverse).
+data (:-:) u v = (u :-* v) :-: (v :-* u)
+infixr 7 :-:
+
+instance HasLinearMap v => Monoid (v :-: v) where
+  mempty = idL :-: idL
+  (f :-: f') `mappend` (g :-: g') = (f *.* g :-: g' *.* f')
+
+-- | Invert a linear map
+inv :: (u :-: v) -> (v :-: u)
+inv (f :-: g) = (g :-: f)
+
+apply :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -> v
+apply (f :-: _) = lapply f
 
 -- | An affine transformation consists of a linear transformation
 --   followed by a translation.

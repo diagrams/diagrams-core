@@ -146,7 +146,11 @@ instance ( Backend b, HasLinearMap (BSpace b)
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps bs ns) = Diagram (map (transform t) ps)
-                                           (Bounds $ \v -> undefined)    -- XXX
+                                           (Bounds $ \v -> undefined)
+        {- XXX we need inverses for the above!
+             \v -> let v' = t^-1 v in normalize (t (bs v' *^ v'))
+              or something like that
+        -}
                                            (M.map (papply t) ns)
 
 -- | Compose two diagrams by aligning their respective local origins,
