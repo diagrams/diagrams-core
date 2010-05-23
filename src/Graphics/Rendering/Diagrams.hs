@@ -132,7 +132,6 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
   mempty = Bounds $ const zeroV
   mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
 
-
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
@@ -160,30 +159,30 @@ rebase :: ( Backend b, v ~ BSpace b
           , AdditiveGroup (Scalar v), Fractional (Scalar v)
           , Scalar (Scalar v) ~ Scalar v)
        => LExpr v -> Diagram b -> Diagram b
-rebase e d = Diagram { prims  = map (translate (negateV u))
-                                    (prims d)
-                     , bounds = rebaseBounds u (bounds d)
-                     , names  = M.map (^-^ u) (names d)
-                     }
-  where u = evalLExpr e (names d)
+rebase e (Diagram ps b (NameSet s))
+  = Diagram { prims  = map (translate (negateV u)) ps
+            , bounds = rebaseBounds u b
+            , names  = NameSet $ M.map (map (^-^ u)) s
+            }
+  where u = evalLExpr e (NameSet s)
 
 rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
              => v -> Bounds v -> Bounds v
 rebaseBounds u (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
-instance ( Backend b, HasLinearMap (BSpace b)
+instance ( Backend b
          , InnerSpace (BSpace b)
          , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
          , Floating (Scalar (BSpace b)))
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
-  transform t (Diagram ps (Bounds b) ns)
+  transform t (Diagram ps (Bounds b) (NameSet ns))
     = Diagram (map (transform t) ps)
               -- XXX need to check: is this right?
               (Bounds $ \v -> let v' = papply (pinv t) v
                                   k  = magnitude v / magnitude v'
                               in  k * b v')
-              (M.map (papply t) ns)
+              (NameSet $ M.map (map (papply t)) ns)
 
 -- | Compose two diagrams by aligning their respective local origins.
 --   Put the first on top of the second (when such a notion makes
