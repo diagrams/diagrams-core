@@ -47,6 +47,11 @@ import Data.Basis
 import Data.MemoTrie
 
 import qualified Data.Map as M
+import Data.Monoid
+import Control.Applicative hiding (Const)
+
+(<>) :: Monoid m => m -> m -> m
+(<>) = mappend
 
 ------------------------------------------------------------
 -- Backends  -----------------------------------------------
@@ -99,7 +104,11 @@ instance Backend b => Renderable (Prim b) b where
 --   go in a given direction to get to a hyperplane entirely
 --   containing the diagram on one side of it.  XXX write more about
 --   this.
-type Bounds v = v -> Scalar v
+newtype Bounds v = Bounds (v -> Scalar v)
+
+instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
+  mempty = Bounds $ const zeroV
+  mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
 
 -- | The basic 'Diagram' data type.  A diagram consists of a list of
 --   primitives, a functional convex bounding region, and a set of
@@ -129,7 +138,7 @@ rebase e d = Diagram { prims  = map (translate (negateV u))
 
 rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
              => v -> Bounds v -> Bounds v
-rebaseBounds u f v = f v ^-^ ((u ^/ (v <.> v)) <.> v)
+rebaseBounds u (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 instance ( Backend b, HasLinearMap (BSpace b)
          , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
@@ -137,16 +146,19 @@ instance ( Backend b, HasLinearMap (BSpace b)
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps bs ns) = Diagram (map (transform t) ps)
-                                           (\v -> undefined)    -- XXX
+                                           (Bounds $ \v -> undefined)    -- XXX
                                            (M.map (papply t) ns)
 
 -- | Compose two diagrams by aligning their respective local origins,
 --   putting the first on top of the second.
-atop :: Ord (Scalar (BSpace b)) => Diagram b -> Diagram b -> Diagram b
+atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s)
+     => Diagram b -> Diagram b -> Diagram b
 atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
-  Diagram (ps1 ++ ps2)
-          (\v -> max (bs1 v) (bs2 v))
-          (M.union ns1 ns2)
+  Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2)
+
+instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s) => Monoid (Diagram b) where
+  mempty  = Diagram mempty mempty mempty
+  mappend = atop
 
 -- XXX should this be moved to the standard library?
 -- | Place two diagrams next to each other along the given vector.
@@ -160,5 +172,7 @@ beside :: ( Backend b
           , Ord (Scalar v)
           , Scalar (Scalar v) ~ Scalar v)
        => v -> Diagram b -> Diagram b -> Diagram b
-beside v d1 d2 = rebase (Const (bounds d1 v *^ v)) d1
-          `atop` rebase (Const (bounds d2 (negateV v) *^ negateV v)) d2
+beside v d1@(Diagram _ (Bounds b1) _)
+         d2@(Diagram _ (Bounds b2) _)
+  = rebase (Const (b1 v *^ v)) d1 `atop`
+    rebase (Const (b2 (negateV v) *^ negateV v)) d2
