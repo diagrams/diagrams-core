@@ -146,5 +146,6 @@ translate = transform . translation
 scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t)
          ,Fractional (Scalar (TSpace t)))
          => Scalar (TSpace t) -> t -> t
+scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform . fromLinear $ linear (s *^) :-: linear (^/ s)
 
