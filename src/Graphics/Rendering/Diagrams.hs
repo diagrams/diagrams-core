@@ -39,7 +39,6 @@ module Graphics.Rendering.Diagrams
 
        , rebase
        , atop
-       , beside
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
