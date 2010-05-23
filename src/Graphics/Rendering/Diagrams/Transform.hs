@@ -19,12 +19,15 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Transform
-       ( -- * Affine transformations
+       ( -- * Transformations
 
-         Affine(..)
+         -- ** Invertible linear transformations
+         (:-:), inv, apply
+
+         -- ** Projective transformations
        , papply
        , fromLinear
-       , fromTranslate
+       , translation
 
          -- * The 'Transformable' class
 
@@ -32,10 +35,9 @@ module Graphics.Rendering.Diagrams.Transform
        , Transformable(..)
 
          -- * Vector space independent transformations
-         -- $
-         -- Some transformations are specific to a particular vector
-         -- space, but a few can be defined generically over any
-         -- vector space.
+         -- | Some transformations are specific to a particular vector
+         --   space, but a few can be defined generically over any
+         --   vector space.
 
        , translate
        , scale
@@ -50,144 +52,99 @@ import Data.MemoTrie
 
 import Data.Monoid
 
--- for convenience
-class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
-instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
+(<>) :: Monoid m => m -> m -> m
+(<>) = mappend
 
--- | A linear map (conveniently paired with its inverse).
+------------------------------------------------------------
+--  Transformations  ---------------------------------------
+------------------------------------------------------------
+
+--------------------------------------------------
+--  Invertible linear transformations  -----------
+--------------------------------------------------
+
+-- | @(u :-: v) is an invertible linear map.
 data (:-:) u v = (u :-* v) :-: (v :-* u)
 infixr 7 :-:
 
+-- | Linear maps from a vector space to itself form a monoid under
+--   composition.
 instance HasLinearMap v => Monoid (v :-: v) where
   mempty = idL :-: idL
   (f :-: f') `mappend` (g :-: g') = (f *.* g :-: g' *.* f')
 
--- | Invert a linear map
+-- | Invert a linear map.
 inv :: (u :-: v) -> (v :-: u)
 inv (f :-: g) = (g :-: f)
 
+-- | Apply a linear map to a vector.
 apply :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -> v
 apply (f :-: _) = lapply f
 
--- | An affine transformation consists of a linear transformation
---   followed by a translation.
+--------------------------------------------------
+--  Projective transformations  ------------------
+--------------------------------------------------
 
--- Right now, we have projective versions of everything.
--- We may want to go back through and use the old names.
+-- | A projective transformation is a linear transformation one
+--   dimension up.  XXX write something better here.
+newtype Projective v = Projective ((v, Scalar v) :-: (v, Scalar v))
 
-data Affine v = Affine { getLinear    :: v :-* v
-                       , getTranslate :: v
-                       }
-
-newtype Projective v = Projective ((v, Scalar v) :-* (v, Scalar v))
-
--- | Affine transformations are closed under composition.
-
-instance (HasLinearMap v, VectorSpace v)
-         => Monoid (Affine v) where
-  mempty  = Affine idL zeroV
-  mappend (Affine a2 b2) (Affine a1 b1) =
-    Affine (a2 *.* a1) (lapply a2 b1 ^+^ b2)
-
+-- | Projective transformations are closed under composition.
 instance (HasLinearMap v, HasLinearMap (Scalar v)
          ,Scalar (Scalar v) ~ Scalar v)
     => Monoid (Projective v) where
-  mempty  = Projective idL
-  mappend (Projective a2) (Projective a1) = Projective (a2 *.* a1)
+  mempty = Projective mempty
+  mappend (Projective a2) (Projective a1) = Projective (a2 <> a1)
 
--- | Apply an affine transformation.
-
-aapply :: (HasLinearMap v) => Affine v -> v -> v
-aapply (Affine a b) v = lapply a v ^+^ b
-
+-- | XXX comment me
 project :: (Fractional (Scalar v), VectorSpace v) => (v, Scalar v) -> v
 project (v,c) = v ^/ c
 
+-- | XXX comment me
 papply :: (HasLinearMap v, HasLinearMap (Scalar v)
           ,Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
           => Projective v -> v -> v
-papply (Projective a) v = project $ lapply a (v,1)
+papply (Projective a) v = project $ apply a (v,1)
 
--- | Treat a linear transformation as an affine transformation.
-
-{-
-fromLinear :: AdditiveGroup v => (v :-* v) -> Affine v
-fromLinear t = Affine t zeroV
-
-projectiveFromLinear :: (HasLinearMap v, HasLinearMap (Scalar v)
-                        ,Scalar (Scalar v) ~ Scalar v)
-                        => (v :-* v) -> Projective v
-projectiveFromLinear t = Projective $ linear $ \(v,c) -> (lapply t v,c)
--}
-
+-- | Treat a linear transformation as a projective transformation.
 fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v)
                         ,Scalar (Scalar v) ~ Scalar v)
-                        => (v :-* v) -> Projective v
-fromLinear t = Projective $ linear $ \(v,c) -> (lapply t v,c)
+                        => (v :-: v) -> Projective v
+fromLinear t = Projective $ (linear $ \(v,c) -> (apply t v, c)) :-:
+                            (linear $ \(v,c) -> (apply (inv t) v, c))
 
--- | Treat a translation as an affine transformation.
 
-{-
-fromTranslate :: (HasLinearMap v) => v -> Affine v
-fromTranslate = Affine idL
-
-projectiveFromTranslate :: (HasLinearMap v, HasLinearMap (Scalar v)
+-- | Treat a translation as a projective transformation.
+translation :: (HasLinearMap v, HasLinearMap (Scalar v)
                            ,Scalar (Scalar v) ~ Scalar v)
                           => v -> Projective v
-projectiveFromTranslate v0 = Projective $ linear $ \(v,c) -> (v ^+^ v0,c)
--}
+translation v0 = Projective $ (linear $ \(v,c) -> (v ^+^ v0 ^* c,c)) :-:
+                              (linear $ \(v,c) -> (v ^-^ v0 ^* c,c))
 
-fromTranslate :: (HasLinearMap v, HasLinearMap (Scalar v)
-                           ,Scalar (Scalar v) ~ Scalar v)
-                          => v -> Projective v
-fromTranslate v0 = Projective $ linear $ \(v,c) -> (v ^+^ v0 ^* c,c)
+------------------------------------------------------------
+--  The 'Transformable' class  -----------------------------
+------------------------------------------------------------
 
--- | Type class for things which can be transformed by affine
+-- | 'HasLinearMap' is a poor man's class constraint synonym, just to
+--   help shorten some of the ridiculously long constraint sets.
+class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
+instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
+
+-- | Type class for things which can be transformed by projective
 --   transformations.
-
-{-
-class (HasLinearMap (TSpace t)) => Transformable t where
-  type TSpace t :: *         -- Vector space of transformations
-  transform :: Affine (TSpace t) -> t -> t
-
-class (HasLinearMap (PSpace t),HasLinearMap (Scalar (PSpace t)))
-    => Projectable t where
-  type PSpace t :: *         -- Vector space of transformations
-  projTransform :: Projective (PSpace t) -> t -> t
--}
-
-class (HasLinearMap (TSpace t),HasLinearMap (Scalar (TSpace t)))
+class (HasLinearMap (TSpace t), HasLinearMap (Scalar (TSpace t)))
     => Transformable t where
   type TSpace t :: *         -- Vector space of transformations
   transform :: Projective (TSpace t) -> t -> t
 
 -- | Translate by a vector.
-
-{-
-translate :: Transformable t => TSpace t -> t -> t
-translate = transform . fromTranslate
-
-projTranslate :: (Projectable t, Scalar (Scalar (PSpace t)) ~ Scalar (PSpace t))
-                 => PSpace t -> t -> t
-projTranslate = projTransform . projectiveFromTranslate
--}
-
 translate :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t))
              => TSpace t -> t -> t
-translate = transform . fromTranslate
+translate = transform . translation
 
 -- | Scale uniformly in every dimension by the given scalar.
-
-{-
-scale :: Transformable t => Scalar (TSpace t) -> t -> t
-scale = transform . fromLinear . linear . (*^)
-
-projScale :: (Projectable t, Scalar (Scalar (PSpace t)) ~ Scalar (PSpace t))
-             => Scalar (PSpace t) -> t -> t
-projScale = projTransform . projectiveFromLinear . linear . (*^)
--}
-
-scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t))
+scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t)
+         ,Fractional (Scalar (TSpace t)))
          => Scalar (TSpace t) -> t -> t
-scale = transform . fromLinear . linear . (*^)
+scale s = transform . fromLinear $ linear (s *^) :-: linear (^/ s)
 
