@@ -25,7 +25,7 @@ module Graphics.Rendering.Diagrams.Transform
          (:-:)(..), (<->), inv, apply
 
          -- ** Projective transformations
-       , Projective
+       , Projective(..)
        , pinv
        , papply
        , fromLinear
