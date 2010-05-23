@@ -27,9 +27,12 @@ module Graphics.Rendering.Diagrams
 
        , Prim(..)
 
-         -- * Diagrams
+         -- * Bounds
 
        , Bounds(..)
+
+         -- * Diagrams
+
        , Diagram(..)
 
          -- ** Primitive operations
@@ -97,18 +100,40 @@ instance Backend b => Renderable (Prim b) b where
   render b (Prim p) = render b p
 
 ------------------------------------------------------------
---  Diagrams  ----------------------------------------------
+--  Bounds  ------------------------------------------------
 ------------------------------------------------------------
 
--- | The bounding function for a diagram tells us how far we have to
---   go in a given direction to get to a hyperplane entirely
---   containing the diagram on one side of it.  XXX write more about
---   this.
+-- | Every diagram comes equipped with a bounding function.
+--   Intuitively, the bounding function for a diagram tells us the
+--   minimum distance we have to go in any given direction to get to a
+--   (hyper)plane entirely containing the diagram on one side of
+--   it. Formally, given a vector @v@, it returns a scalar @s@ such
+--   that
+--
+--     * for every vector @u@ with its endpoint inside the diagram,
+--       if the projection of @u@ onto @v@ is @s' v@, then @s' <= s@.
+--
+--     * @s@ is the smallest such scalar.
+--
+--   Essentially, bounding functions are a functional representation
+--   of convex bounding regions.  The idea for this representation
+--   came from Sebastian Setzer: see <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.
+--
+--   XXX add some diagrams here to illustrate!  Note that Haddock supports
+--   inline images, using a \<\<url\>\> syntax.
 newtype Bounds v = Bounds (v -> Scalar v)
 
+-- | Bounding functions form a monoid, with the constantly zero
+--   function (/i.e./ the empty region) as the identity, and pointwise
+--   maximum as composition.
 instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
   mempty = Bounds $ const zeroV
   mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
+
+
+------------------------------------------------------------
+--  Diagrams  ----------------------------------------------
+------------------------------------------------------------
 
 -- | The basic 'Diagram' data type.  A diagram consists of a list of
 --   primitives, a functional convex bounding region, and a set of
@@ -153,13 +178,18 @@ instance ( Backend b, HasLinearMap (BSpace b)
         -}
                                            (M.map (papply t) ns)
 
--- | Compose two diagrams by aligning their respective local origins,
---   putting the first on top of the second.
+-- | Compose two diagrams by aligning their respective local origins.
+--   Put the first on top of the second (when such a notion makes
+--   sense in the digrams' vector space, such as R2; in other vector
+--   spaces, like R3, 'atop' is commutative).
 atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s)
      => Diagram b -> Diagram b -> Diagram b
 atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
   Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2)
 
+-- | Diagrams form a monoid since each of their three components do:
+--   the empty diagram has no primitives, a constantly zero bounding
+--   function, and no named points; diagrams compose via 'atop'.
 instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s) => Monoid (Diagram b) where
   mempty  = Diagram mempty mempty mempty
   mappend = atop
