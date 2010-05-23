@@ -29,7 +29,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Diagrams
 
-       , Bounds
+       , Bounds(..)
        , Diagram(..)
 
          -- ** Primitive operations
