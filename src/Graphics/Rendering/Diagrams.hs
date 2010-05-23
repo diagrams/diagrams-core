@@ -193,20 +193,3 @@ atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
 instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s) => Monoid (Diagram b) where
   mempty  = Diagram mempty mempty mempty
   mappend = atop
-
--- XXX should this be moved to the standard library?
--- | Place two diagrams next to each other along the given vector.
-beside :: ( Backend b
-          , v ~ BSpace b
-          , HasLinearMap v
-          , HasLinearMap (Scalar v)
-          , InnerSpace v
-          , AdditiveGroup (Scalar v)
-          , Fractional (Scalar v)
-          , Ord (Scalar v)
-          , Scalar (Scalar v) ~ Scalar v)
-       => v -> Diagram b -> Diagram b -> Diagram b
-beside v d1@(Diagram _ (Bounds b1) _)
-         d2@(Diagram _ (Bounds b2) _)
-  = rebase (Const (b1 v *^ v)) d1 `atop`
-    rebase (Const (b2 (negateV v) *^ negateV v)) d2
