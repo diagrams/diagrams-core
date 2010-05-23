@@ -39,6 +39,8 @@ module Graphics.Rendering.Diagrams
          -- $prim
        , rebase
        , atop
+
+       , rebaseBounds
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
