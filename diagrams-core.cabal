@@ -17,6 +17,7 @@ Library
   Exposed-modules:     Graphics.Rendering.Diagrams,
                        Graphics.Rendering.Diagrams.Transform,
                        Graphics.Rendering.Diagrams.Expressions
+                       Graphics.Rendering.Diagrams.Animation
   Build-depends:       base >= 4.2 && < 4.3,
                        containers >= 0.3 && < 0.4,
                        vector-space >= 0.7 && < 0.8,
