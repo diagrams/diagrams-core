@@ -16,5 +16,5 @@ all : diagrams-hacphi-20100522.pdf
   # preserve compiled .eps and .lhs files to save time on later builds
 
 clean: 
-	rm -f *~ *.aux *.ptb *.log *.pdf *blx.bib *.dvi *.hi *.o *.bbl *.blg *.nav *.out *.snm *.toc
+	rm -f *~ *.aux *.ptb *.log *.pdf *blx.bib *.dvi *.hi *.o *.bbl *.blg *.nav *.out *.snm *.toc *.tex
 #	rm -f diagrams/*.ps
