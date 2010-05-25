@@ -1,0 +1,13 @@
+
+* Things that need doing
+
+  + [-] Make some very simple shapes in a "standard library" module
+    + [X] "Box"
+    + [ ] Ellipse
+    + [ ] Paths
+  + [ ] Code up a simple graphical backend e.g. using Cairo
+
+  + Add attributes to diagrams
+  + Make expressions more expressive, and add niceties like Num
+    instance, IsString instance for names, etc. to make writing
+    expressions easy
