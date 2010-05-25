@@ -2,7 +2,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams
+-- Module      :  Graphics.Rendering.Diagrams.Basics
 -- Copyright   :  (c) Brent Yorgey 2010
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  byorgey@cis.upenn.edu
@@ -14,13 +14,10 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams
-       ( module Graphics.Rendering.Diagrams.Transform
-       , module Graphics.Rendering.Diagrams.Expressions
+module Graphics.Rendering.Diagrams.Basics
+       ( -- * Backends
 
-         -- * Backends
-
-       , Backend(..)
+         Backend(..)
        , Renderable(..)
 
          -- * Primtives
@@ -149,10 +146,6 @@ data Diagram b = Diagram { prims  :: [Prim b]
 ------------------------------------------------------------
 --  Primitive operations  ----------------------------------
 ------------------------------------------------------------
-
--- $prim
--- There are two fundamental operations for manipulating and composing
--- diagrams.  XXX write more here.
 
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
