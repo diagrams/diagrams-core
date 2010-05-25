@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Expressions
@@ -14,7 +15,7 @@
 module Graphics.Rendering.Diagrams.Expressions
        ( -- * Names
 
-         AName, Name, nm
+         AName, Name, IsName(..)
 
          -- * Linear expressions
 
@@ -42,14 +43,29 @@ import Control.Arrow ((***))
 --  Names  -------------------------------------------------
 ------------------------------------------------------------
 
+-- | An atomic name is either a number or a string.  Numeric names are
+--   provided for convenience in naming lists of things, such as a row
+--   of ten squares.
 data AName = IName Int
            | SName String
   deriving (Eq, Ord, Show)
 
+-- | A (qualified) name is a sequence of atomic names.  In practice
+--   they should be non-empty but we don't enforce it.
 type Name = [AName]
 
-nm :: String -> Name
-nm = (:[]) . SName
+-- | Things which can be converted to names.
+class IsName n where
+  toName :: n -> Name
+
+instance IsName String where
+  toName = (:[]) . SName
+
+instance IsName Int where
+  toName = (:[]) . IName
+
+instance IsName [String] where
+  toName = map SName
 
 ------------------------------------------------------------
 --  Linear expressions  ------------------------------------
@@ -78,7 +94,7 @@ instance Monoid (NameSet v) where
   (NameSet s1) `mappend` (NameSet s2) = NameSet $ M.unionWith (++) s1 s2
 
 fromNames :: [(String, v)] -> NameSet v
-fromNames = NameSet . M.fromList . map (nm *** (:[]))
+fromNames = NameSet . M.fromList . map (toName *** (:[]))
 
 qualify :: AName -> NameSet v -> NameSet v
 qualify n (NameSet names) = NameSet $ M.mapKeys (n:) names
