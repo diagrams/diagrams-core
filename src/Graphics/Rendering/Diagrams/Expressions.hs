@@ -93,7 +93,7 @@ instance Monoid (NameSet v) where
   mempty = NameSet M.empty
   (NameSet s1) `mappend` (NameSet s2) = NameSet $ M.unionWith (++) s1 s2
 
-fromNames :: [(String, v)] -> NameSet v
+fromNames :: IsName n => [(n, v)] -> NameSet v
 fromNames = NameSet . M.fromList . map (toName *** (:[]))
 
 qualify :: AName -> NameSet v -> NameSet v
