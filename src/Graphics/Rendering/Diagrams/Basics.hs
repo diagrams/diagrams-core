@@ -72,7 +72,7 @@ class (HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)))
   data Option b :: *           -- The rendering options for this backend
   -- | 'renderDia' is used to render a diagram using this backend.
   renderDia     :: b          -- ^ Backend token
-                -> [Option b] -- ^ Backend-specific rendering options
+                -> Option b   -- ^ Backend-specific collection of rendering options
                 -> Diagram b  -- ^ Diagram to render
                 -> Result b   -- ^ Output of the rendering operation
 
