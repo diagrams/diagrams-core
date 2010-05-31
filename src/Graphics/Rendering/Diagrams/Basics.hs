@@ -173,10 +173,8 @@ instance ( Backend b
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps (Bounds b) (NameSet ns))
     = Diagram (map (transform t) ps)
-              -- XXX need to check: is this right?
-              (Bounds $ \v -> let v' = papply (pinv t) v
-                                  k  = magnitude v / magnitude v'
-                              in  k * b v')
+              -- XXX this is still wrong for transformations that don't preserve angle!
+              (Bounds $ b . papply (pinv t))
               (NameSet $ M.map (map (papply t)) ns)
 
 -- | Compose two diagrams by aligning their respective local origins.
