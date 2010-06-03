@@ -65,7 +65,7 @@ import Data.Monoid
 --  Invertible linear transformations  -----------
 --------------------------------------------------
 
--- | @(u :-: v) is an invertible linear map.
+-- | @(u :-: v)@ is an invertible linear map.
 data (:-:) u v = (u :-* v) :-: (v :-* u)
 infixr 7 :-:
 
