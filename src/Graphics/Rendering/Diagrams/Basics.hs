@@ -12,6 +12,13 @@
 -- The core library of primitives forming the basis of an embedded
 -- domain-specific language for describing and rendering diagrams.
 --
+-- Note that end users should rarely (if ever) need to import this
+-- module directly; instead, import "Graphics.Rendering.Diagrams",
+-- which re-exports most of the functionality from this module.
+-- Library developers may occasionally wish to import this module
+-- directly if they need direct access to something not re-exported by
+-- "Graphics.Rendering.Diagrams".
+--
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Basics
@@ -78,11 +85,14 @@ class (HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)))
 
 -- | The 'Renderable' type class connects backends to primitives which
 --   they know how to render.
-
 class (Backend b, Transformable t) => Renderable t b where
   render :: b -> t -> Render b
   -- ^ Given a token representing the backend and a transformable
   --   object, render it in the appropriate rendering context.
+
+  -- Note, the token is necessary for type inference: unifying Render
+  -- b with something else will never work, since Render is not
+  -- necessarily injective.
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
@@ -93,10 +103,19 @@ class (Backend b, Transformable t) => Renderable t b where
 data Prim b where
   Prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> Prim b
 
+-- Note that we also require the vector spaces for the backend and the
+-- primitive to be the same; this is necessary since the rendering
+-- backend may need to apply some transformations to the primitive
+-- after unpacking the existential package.
+
+-- | The 'Transformable' instance for 'Prim' just pushes calls to
+--   'transform' down through the 'Prim' constructor.
 instance Backend b => Transformable (Prim b) where
   type TSpace (Prim b) = BSpace b
   transform v (Prim p) = Prim (transform v p)
 
+-- | The 'Renderable' instance for 'Prim' just pushes calls to
+--   'render' down through the 'Prim' constructor.
 instance Backend b => Renderable (Prim b) b where
   render b (Prim p) = render b p
 
@@ -112,7 +131,7 @@ instance Backend b => Renderable (Prim b) b where
 --   that
 --
 --     * for every vector @u@ with its endpoint inside the diagram,
---       if the projection of @u@ onto @v@ is @s' v@, then @s' <= s@.
+--       if the projection of @u@ onto @v@ is @s' *^ v@, then @s' <= s@.
 --
 --     * @s@ is the smallest such scalar.
 --
@@ -126,7 +145,10 @@ newtype Bounds v = Bounds (v -> Scalar v)
 
 -- | Bounding functions form a monoid, with the constantly zero
 --   function (/i.e./ the empty region) as the identity, and pointwise
---   maximum as composition.
+--   maximum as composition.  Hence, if @b1@ is the bounding function
+--   for diagram @d1@, and @b2@ is the bounding function for @d2@,
+--   then @b1 \`mappend\` b2@ is the bounding function for @d1
+--   \`atop\` d2@.
 instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
   mempty = Bounds $ const zeroV
   mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
@@ -161,10 +183,14 @@ rebase e (Diagram ps b (NameSet s))
             }
   where u = evalLExpr e (NameSet s)
 
+-- | Rebase a bounding function, that is, change the local origin with
+--   respect to which bounding queries are made.
 rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
              => v -> Bounds v -> Bounds v
 rebaseBounds u (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
+-- | 'Diagram's can be transformed by transforming each of their
+--   components appropriately.
 instance ( Backend b
          , InnerSpace (BSpace b)
          , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
@@ -178,9 +204,10 @@ instance ( Backend b
               (NameSet $ M.map (map (papply t)) ns)
 
 -- | Compose two diagrams by aligning their respective local origins.
---   Put the first on top of the second (when such a notion makes
---   sense in the digrams' vector space, such as R2; in other vector
---   spaces, like R3, 'atop' is commutative).
+--   The new diagram has all the primitives and all the names from the
+--   two diagrams combined.  Put the first on top of the second (when
+--   such a notion makes sense in the digrams' vector space, such as
+--   R2; in other vector spaces, like R3, 'atop' is commutative).
 atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s)
      => Diagram b -> Diagram b -> Diagram b
 atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
