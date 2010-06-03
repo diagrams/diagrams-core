@@ -73,15 +73,24 @@ import Control.Applicative hiding (Const)
 --   with an associated vector space and rendering environment.
 class (HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)))
     => Backend b where
-  type BSpace b :: *           -- The vector space associated with this backend
-  type Render b :: *           -- The rendering environment used by this backend
-  type Result b :: *           -- The result of the rendering operation
-  data Option b :: *           -- The rendering options for this backend
+  type BSpace b  :: *           -- The vector space associated with this backend
+  type Render b  :: *           -- The rendering environment used by this backend
+  type Result b  :: *           -- The result of the rendering operation
+  data Options b :: *           -- The rendering options for this backend
   -- | 'renderDia' is used to render a diagram using this backend.
-  renderDia     :: b          -- ^ Backend token
-                -> Option b   -- ^ Backend-specific collection of rendering options
-                -> Diagram b  -- ^ Diagram to render
-                -> Result b   -- ^ Output of the rendering operation
+  renderDia      :: b          -- ^ Backend token
+                 -> Options b  -- ^ Backend-specific collection of rendering options
+                 -> Diagram b  -- ^ Diagram to render
+                 -> Result b   -- ^ Output of the rendering operation
+
+-- Note: as of version 2.7.2, Haddock doesn't seem to support
+-- documentation for associated types; hence the comments next to
+-- BSpace, Render, etc. above are not Haddock comments.  Making them
+-- Haddock comments by adding a carat causes Haddock to choke with a
+-- parse error.  Hopefully at some point in the future Haddock will
+-- support this, at which time this comment can be deleted and the
+-- above comments made into proper Haddock comments.
+
 
 -- | The 'Renderable' type class connects backends to primitives which
 --   they know how to render.
