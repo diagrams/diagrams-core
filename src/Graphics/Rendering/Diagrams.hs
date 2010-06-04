@@ -39,11 +39,10 @@ module Graphics.Rendering.Diagrams
 
          -- * Names
 
-       , AName, Name, IsName(..)
+       , Name, IsName(..), Qualifiable(..)
        , NameSet
        , fromNames
 
-       , qualify
        , rememberAs
 
        , LExpr(..), evalLExpr

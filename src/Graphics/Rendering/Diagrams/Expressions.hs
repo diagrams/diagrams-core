@@ -8,14 +8,25 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- XXX comment me
+-- An embedded domain-specific language for describing and rendering
+-- diagrams.  This module provides names and expressions for referring
+-- to locations within diagrams.
+--
+-- Note that end users should rarely (if ever) need to import this
+-- module directly; instead, import "Graphics.Rendering.Diagrams",
+-- which re-exports most of the functionality from this module.
+-- Library developers may occasionally wish to import this module
+-- directly if they need direct access to something not re-exported by
+-- "Graphics.Rendering.Diagrams".
 --
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Expressions
        ( -- * Names
 
-         AName, Name, IsName(..)
+         AName(..), Name(..), IsName(..)
+
+       , Qualifiable(..)
 
          -- * Linear expressions
 
@@ -28,12 +39,12 @@ module Graphics.Rendering.Diagrams.Expressions
 
          -- ** Primitive 'NameSet' operations
 
-       , qualify
        , rememberAs
        ) where
 
 import Data.VectorSpace
 
+import Data.List (intercalate)
 import qualified Data.Map as M
 import Data.Monoid
 import Data.Maybe (fromMaybe, listToMaybe)
@@ -45,27 +56,55 @@ import Control.Arrow ((***))
 
 -- | An atomic name is either a number or a string.  Numeric names are
 --   provided for convenience in naming lists of things, such as a row
---   of ten squares.
+--   of ten squares, or the vertices of a path.
 data AName = IName Int
            | SName String
-  deriving (Eq, Ord, Show)
+  deriving Ord
 
--- | A (qualified) name is a sequence of atomic names.  In practice
---   they should be non-empty but we don't enforce it.
-type Name = [AName]
+-- XXX is this really what we want?  Given these Eq and Show
+-- instances, is it worth even having the IName/SName distinction at
+-- all?  Or do we want the derived Eq instance?
 
--- | Things which can be converted to names.
+instance Eq AName where
+  IName i1 == IName i2 = i1 == i2
+  SName s1 == SName s2 = s1 == s2
+  IName i  == SName s  = show i == s
+  SName s  == IName i  = s == show i
+
+instance Show AName where
+  show (IName i) = show i
+  show (SName s) = s
+
+-- | A (qualified) name is a nonempty sequence of atomic names.
+--   Atomic names can be either numbers or arbitrary strings.  Numeric
+--   names are provided for convenience in naming lists of things,
+--   such as a row of ten squares, or the vertices of a path.
+newtype Name = Name [AName]
+  deriving (Eq, Ord)
+
+instance Show Name where
+  show (Name ns) = intercalate "." $ map show ns
+
+-- | Instaces of 'IsName' are things which can be converted to names.
 class IsName n where
   toName :: n -> Name
 
 instance IsName String where
-  toName = (:[]) . SName
+  toName = Name . (:[]) . SName
 
 instance IsName Int where
-  toName = (:[]) . IName
+  toName = Name . (:[]) . IName
 
-instance IsName [String] where
-  toName = map SName
+-- | Instances of 'Qualifiable' are things which can be qualified by
+--   prefixing them with a name.
+class Qualifiable a where
+  (|>) :: IsName n => n -> a -> a
+  -- ^ Qualify with the given name.
+
+-- | Of course, names themselves are qualifiable.
+instance Qualifiable Name where
+  n1 |> (Name ns2) = Name $ ns1 ++ ns2
+    where (Name ns1) = toName n1
 
 ------------------------------------------------------------
 --  Linear expressions  ------------------------------------
