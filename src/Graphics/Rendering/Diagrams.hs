@@ -42,8 +42,9 @@ module Graphics.Rendering.Diagrams
        , Name, IsName(..), Qualifiable(..)
        , NameSet
        , fromNames
-
        , rememberAs
+
+         -- * Expressions
 
        , LExpr(..), evalLExpr
 
@@ -65,8 +66,15 @@ module Graphics.Rendering.Diagrams
        , Diagram(..)
 
          -- ** Primitive operations
-         -- | There are two fundamental operations for manipulating and composing
-         --   diagrams.  XXX write more here.
+
+         -- | There are two fundamental operations for manipulating
+         --   and composing diagrams. All other convenient diagram
+         --   composition methods can be implemented in terms of
+         --   these, with the help of 'NameSet's, expressions, and
+         --   bounding functions.  See the standard library in the
+         --   diagrams-lib package for a number of higher-level
+         --   diagram composition operators implemented in terms of
+         --   these.
        , rebase
        , atop
 
