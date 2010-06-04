@@ -29,7 +29,6 @@ module Graphics.Rendering.Diagrams.Transform
        , inv
        , apply
        , fromLinear
-       , translation
 
          -- * The 'Transformable' class
 
@@ -41,8 +40,8 @@ module Graphics.Rendering.Diagrams.Transform
          --   space, but a few can be defined generically over any
          --   vector space.
 
-       , translate
-       , scale
+       , translation, translate
+       , scaling, scale
 
        ) where
 
@@ -128,13 +127,6 @@ fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v),
 fromLinear t = Transformation $ (\(v,c) -> (lapp t v, c)) <->
                                 (\(v,c) -> (lapp (linv t) v, c))
 
--- | Create a translation.
-translation :: (HasLinearMap v, HasLinearMap (Scalar v)
-               ,Scalar (Scalar v) ~ Scalar v)
-            => v -> Transformation v
-translation v0 = Transformation $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
-                                  (\(v,c) -> (v ^-^ v0 ^* c,c))
-
 ------------------------------------------------------------
 --  The 'Transformable' class  -----------------------------
 ------------------------------------------------------------
@@ -144,22 +136,33 @@ translation v0 = Transformation $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
 class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 
--- | Type class for things which can be transformed by projective
---   transformations.
+-- | Type class for things which can be transformed.
 class (HasLinearMap (TSpace t), HasLinearMap (Scalar (TSpace t)))
     => Transformable t where
   type TSpace t :: *         -- Vector space of transformations
   transform :: Transformation (TSpace t) -> t -> t
+
+-- | Create a translation.
+translation :: (HasLinearMap v, HasLinearMap (Scalar v),
+                Scalar (Scalar v) ~ Scalar v)
+            => v -> Transformation v
+translation v0 = Transformation $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
+                                  (\(v,c) -> (v ^-^ v0 ^* c,c))
 
 -- | Translate by a vector.
 translate :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t))
           => TSpace t -> t -> t
 translate = transform . translation
 
+-- | Create a scale transformation.
+scaling :: (HasLinearMap v, HasLinearMap (Scalar v),
+            Scalar (Scalar v) ~ Scalar v, Fractional (Scalar v))
+        => Scalar v -> Transformation v
+scaling s = fromLinear $ (s *^) <-> (^/ s)
+
 -- | Scale uniformly in every dimension by the given scalar.
 scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t),
           Fractional (Scalar (TSpace t)))
       => Scalar (TSpace t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
-scale s = transform . fromLinear $ (s *^) <-> (^/ s)
-
+scale s = transform $ scaling s

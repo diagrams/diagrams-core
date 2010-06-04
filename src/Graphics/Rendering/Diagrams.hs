@@ -31,9 +31,12 @@ module Graphics.Rendering.Diagrams
        , inv
        , apply
        , fromLinear
-       , translation
-       , translate
-       , scale
+
+         -- ** Some specific transformations
+       , translation, translate
+       , scaling, scale
+
+         -- ** The 'Transformable' class
 
        , Transformable(..)
 
