@@ -115,26 +115,25 @@ project :: (Fractional (Scalar v), VectorSpace v) => (v, Scalar v) -> v
 project (v,c) = v ^/ c
 
 -- | Apply a transformation to a vector.
-apply :: (HasLinearMap v, HasLinearMap (Scalar v)
-          ,Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
-          => Transformation v -> v -> v
+apply :: (HasLinearMap v, HasLinearMap (Scalar v),
+          Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
+      => Transformation v -> v -> v
 apply (Transformation a) v = project $ lapp a (v,1)
 
 -- | Create a general transformation from an invertible linear
 --   transformation.
-fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v)
-                        ,Scalar (Scalar v) ~ Scalar v)
-                        => (v :-: v) -> Transformation v
+fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v),
+               Scalar (Scalar v) ~ Scalar v)
+           => (v :-: v) -> Transformation v
 fromLinear t = Transformation $ (\(v,c) -> (lapp t v, c)) <->
-                            (\(v,c) -> (lapp (linv t) v, c))
-
+                                (\(v,c) -> (lapp (linv t) v, c))
 
 -- | Create a translation.
 translation :: (HasLinearMap v, HasLinearMap (Scalar v)
-                           ,Scalar (Scalar v) ~ Scalar v)
-                          => v -> Transformation v
+               ,Scalar (Scalar v) ~ Scalar v)
+            => v -> Transformation v
 translation v0 = Transformation $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
-                              (\(v,c) -> (v ^-^ v0 ^* c,c))
+                                  (\(v,c) -> (v ^-^ v0 ^* c,c))
 
 ------------------------------------------------------------
 --  The 'Transformable' class  -----------------------------
@@ -154,13 +153,13 @@ class (HasLinearMap (TSpace t), HasLinearMap (Scalar (TSpace t)))
 
 -- | Translate by a vector.
 translate :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t))
-             => TSpace t -> t -> t
+          => TSpace t -> t -> t
 translate = transform . translation
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t)
-         ,Fractional (Scalar (TSpace t)))
-         => Scalar (TSpace t) -> t -> t
+scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t),
+          Fractional (Scalar (TSpace t)))
+      => Scalar (TSpace t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform . fromLinear $ (s *^) <-> (^/ s)
 
