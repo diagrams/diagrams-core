@@ -26,8 +26,8 @@ module Graphics.Rendering.Diagrams.Transform
 
          -- ** General transformations
        , Transformation(..)
-       , pinv
-       , papply
+       , inv
+       , apply
        , fromLinear
        , translation
 
@@ -97,8 +97,8 @@ lapp (f :-: _) = lapply f
 newtype Transformation v = Transformation ((v, Scalar v) :-: (v, Scalar v))
 
 -- | Invert a transformation.
-pinv :: Transformation v -> Transformation v
-pinv (Transformation t) = Transformation (linv t)
+inv :: Transformation v -> Transformation v
+inv (Transformation t) = Transformation (linv t)
 
 -- | Transformations are closed under composition.
 instance (HasLinearMap v, HasLinearMap (Scalar v)
@@ -112,10 +112,10 @@ project :: (Fractional (Scalar v), VectorSpace v) => (v, Scalar v) -> v
 project (v,c) = v ^/ c
 
 -- | XXX comment me
-papply :: (HasLinearMap v, HasLinearMap (Scalar v)
+apply :: (HasLinearMap v, HasLinearMap (Scalar v)
           ,Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
           => Transformation v -> v -> v
-papply (Transformation a) v = project $ lapp a (v,1)
+apply (Transformation a) v = project $ lapp a (v,1)
 
 -- | Create a general transformation from an invertible linear
 --   transformation.

@@ -209,8 +209,8 @@ instance ( Backend b
   transform t (Diagram ps (Bounds b) (NameSet ns))
     = Diagram (map (transform t) ps)
               -- XXX this is still wrong for transformations that don't preserve angle!
-              (Bounds $ b . papply (pinv t))
-              (NameSet $ M.map (map (papply t)) ns)
+              (Bounds $ b . apply (inv t))
+              (NameSet $ M.map (map (apply t)) ns)
 
 -- | Compose two diagrams by aligning their respective local origins.
 --   The new diagram has all the primitives and all the names from the

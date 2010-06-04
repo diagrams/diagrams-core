@@ -28,8 +28,8 @@
 module Graphics.Rendering.Diagrams
        ( -- * Transformations
          Transformation
-       , pinv
-       , papply
+       , inv
+       , apply
        , fromLinear
        , translation
        , translate
