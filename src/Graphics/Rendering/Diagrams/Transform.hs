@@ -92,9 +92,11 @@ lapp (f :-: _) = lapply f
 --  Projective transformations  ------------------
 --------------------------------------------------
 
--- | A projective transformation is a linear transformation one
---   dimension up.  XXX write something better here.
+-- | General transformations.  XXX more documentation...
 newtype Transformation v = Transformation ((v, Scalar v) :-: (v, Scalar v))
+
+-- Note that transformations are implemented as invertible linear maps
+-- in projective space.
 
 -- | Invert a transformation.
 inv :: Transformation v -> Transformation v
@@ -107,11 +109,12 @@ instance (HasLinearMap v, HasLinearMap (Scalar v)
   mempty = Transformation mempty
   mappend (Transformation a2) (Transformation a1) = Transformation (a2 <> a1)
 
--- | XXX comment me
+-- | Map from projective space back down to the normal vector space,
+--   by dividing through by the extra scalar component.
 project :: (Fractional (Scalar v), VectorSpace v) => (v, Scalar v) -> v
 project (v,c) = v ^/ c
 
--- | XXX comment me
+-- | Apply a transformation to a vector.
 apply :: (HasLinearMap v, HasLinearMap (Scalar v)
           ,Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
           => Transformation v -> v -> v
