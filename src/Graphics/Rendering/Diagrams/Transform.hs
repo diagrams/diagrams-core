@@ -24,8 +24,8 @@ module Graphics.Rendering.Diagrams.Transform
          -- ** Invertible linear transformations
          (:-:)(..), (<->), inv, apply
 
-         -- ** Projective transformations
-       , Projective(..)
+         -- ** Transformation transformations
+       , Transformation(..)
        , pinv
        , papply
        , fromLinear
@@ -89,23 +89,23 @@ apply :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u 
 apply (f :-: _) = lapply f
 
 --------------------------------------------------
---  Projective transformations  ------------------
+--  Transformation transformations  ------------------
 --------------------------------------------------
 
 -- | A projective transformation is a linear transformation one
 --   dimension up.  XXX write something better here.
-newtype Projective v = Projective ((v, Scalar v) :-: (v, Scalar v))
+newtype Transformation v = Transformation ((v, Scalar v) :-: (v, Scalar v))
 
 -- | Invert a projective transformation.
-pinv :: Projective v -> Projective v
-pinv (Projective t) = Projective (inv t)
+pinv :: Transformation v -> Transformation v
+pinv (Transformation t) = Transformation (inv t)
 
--- | Projective transformations are closed under composition.
+-- | Transformation transformations are closed under composition.
 instance (HasLinearMap v, HasLinearMap (Scalar v)
          ,Scalar (Scalar v) ~ Scalar v)
-    => Monoid (Projective v) where
-  mempty = Projective mempty
-  mappend (Projective a2) (Projective a1) = Projective (a2 <> a1)
+    => Monoid (Transformation v) where
+  mempty = Transformation mempty
+  mappend (Transformation a2) (Transformation a1) = Transformation (a2 <> a1)
 
 -- | XXX comment me
 project :: (Fractional (Scalar v), VectorSpace v) => (v, Scalar v) -> v
@@ -114,22 +114,22 @@ project (v,c) = v ^/ c
 -- | XXX comment me
 papply :: (HasLinearMap v, HasLinearMap (Scalar v)
           ,Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
-          => Projective v -> v -> v
-papply (Projective a) v = project $ apply a (v,1)
+          => Transformation v -> v -> v
+papply (Transformation a) v = project $ apply a (v,1)
 
 -- | Treat a linear transformation as a projective transformation.
 fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v)
                         ,Scalar (Scalar v) ~ Scalar v)
-                        => (v :-: v) -> Projective v
-fromLinear t = Projective $ (\(v,c) -> (apply t v, c)) <->
+                        => (v :-: v) -> Transformation v
+fromLinear t = Transformation $ (\(v,c) -> (apply t v, c)) <->
                             (\(v,c) -> (apply (inv t) v, c))
 
 
 -- | Treat a translation as a projective transformation.
 translation :: (HasLinearMap v, HasLinearMap (Scalar v)
                            ,Scalar (Scalar v) ~ Scalar v)
-                          => v -> Projective v
-translation v0 = Projective $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
+                          => v -> Transformation v
+translation v0 = Transformation $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
                               (\(v,c) -> (v ^-^ v0 ^* c,c))
 
 ------------------------------------------------------------
@@ -146,7 +146,7 @@ instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 class (HasLinearMap (TSpace t), HasLinearMap (Scalar (TSpace t)))
     => Transformable t where
   type TSpace t :: *         -- Vector space of transformations
-  transform :: Projective (TSpace t) -> t -> t
+  transform :: Transformation (TSpace t) -> t -> t
 
 -- | Translate by a vector.
 translate :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t))
