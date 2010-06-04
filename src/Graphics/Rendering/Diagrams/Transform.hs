@@ -24,7 +24,7 @@ module Graphics.Rendering.Diagrams.Transform
          -- ** Invertible linear transformations
          (:-:)(..), (<->), linv, lapp
 
-         -- ** Transformation transformations
+         -- ** General transformations
        , Transformation(..)
        , pinv
        , papply
@@ -89,18 +89,18 @@ lapp :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -
 lapp (f :-: _) = lapply f
 
 --------------------------------------------------
---  Transformation transformations  ------------------
+--  Projective transformations  ------------------
 --------------------------------------------------
 
 -- | A projective transformation is a linear transformation one
 --   dimension up.  XXX write something better here.
 newtype Transformation v = Transformation ((v, Scalar v) :-: (v, Scalar v))
 
--- | Invert a projective transformation.
+-- | Invert a transformation.
 pinv :: Transformation v -> Transformation v
 pinv (Transformation t) = Transformation (linv t)
 
--- | Transformation transformations are closed under composition.
+-- | Transformations are closed under composition.
 instance (HasLinearMap v, HasLinearMap (Scalar v)
          ,Scalar (Scalar v) ~ Scalar v)
     => Monoid (Transformation v) where
@@ -117,7 +117,8 @@ papply :: (HasLinearMap v, HasLinearMap (Scalar v)
           => Transformation v -> v -> v
 papply (Transformation a) v = project $ lapp a (v,1)
 
--- | Treat a linear transformation as a projective transformation.
+-- | Create a general transformation from an invertible linear
+--   transformation.
 fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v)
                         ,Scalar (Scalar v) ~ Scalar v)
                         => (v :-: v) -> Transformation v
@@ -125,7 +126,7 @@ fromLinear t = Transformation $ (\(v,c) -> (lapp t v, c)) <->
                             (\(v,c) -> (lapp (linv t) v, c))
 
 
--- | Treat a translation as a projective transformation.
+-- | Create a translation.
 translation :: (HasLinearMap v, HasLinearMap (Scalar v)
                            ,Scalar (Scalar v) ~ Scalar v)
                           => v -> Transformation v
