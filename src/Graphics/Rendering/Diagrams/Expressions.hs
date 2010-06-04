@@ -35,10 +35,9 @@ module Graphics.Rendering.Diagrams.Expressions
          -- * Name sets
 
        , NameSet(..)
+
+         -- ** Constructing name sets
        , fromNames
-
-         -- ** Primitive 'NameSet' operations
-
        , rememberAs
        ) where
 
@@ -126,17 +125,30 @@ evalLExpr (s :*: e) names   = s *^ evalLExpr e names
 --  Name sets  ---------------------------------------------
 ------------------------------------------------------------
 
+-- | A 'NameSet' is a map from names to vectors, possibly with
+--   multiple vectors associated with each name.
 newtype NameSet v = NameSet (M.Map Name [v])
 
+-- | 'NameSet's form a monoid with the empty map as the identity, and
+--   map union as the binary operation.  No information is ever lost:
+--   if two maps have the same name in their domain, the resulting map
+--   will associate that name to the union of the two sets of vectors
+--   associated with that name.
 instance Monoid (NameSet v) where
   mempty = NameSet M.empty
   (NameSet s1) `mappend` (NameSet s2) = NameSet $ M.unionWith (++) s1 s2
 
+-- | 'NameSet's are qualifiable: if @ns@ is a 'NameSet', then @n |>
+--   ns@ is the same 'NameSet' except with every name qualified by
+--   @n@.
+instance Qualifiable (NameSet v) where
+  n |> (NameSet names) = NameSet $ M.mapKeys (n |>) names
+
+-- | Construct a 'NameSet' from a list of (name, vector) pairs.
 fromNames :: IsName n => [(n, v)] -> NameSet v
 fromNames = NameSet . M.fromList . map (toName *** (:[]))
 
-qualify :: AName -> NameSet v -> NameSet v
-qualify n (NameSet names) = NameSet $ M.mapKeys (n:) names
-
+-- | Evaluate the given expression and remember the resulting vector
+--   under the given name.
 rememberAs :: VectorSpace v => Name -> LExpr v -> NameSet v -> NameSet v
 rememberAs n e s@(NameSet names) = NameSet $ M.insertWith (++) n [evalLExpr e s] names
