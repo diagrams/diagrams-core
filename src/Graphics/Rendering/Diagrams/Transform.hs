@@ -22,7 +22,7 @@ module Graphics.Rendering.Diagrams.Transform
        ( -- * Transformations
 
          -- ** Invertible linear transformations
-         (:-:)(..), (<->), inv, apply
+         (:-:)(..), (<->), linv, lapp
 
          -- ** Transformation transformations
        , Transformation(..)
@@ -81,12 +81,12 @@ instance HasLinearMap v => Monoid (v :-: v) where
   (f :-: f') `mappend` (g :-: g') = (f *.* g :-: g' *.* f')
 
 -- | Invert a linear map.
-inv :: (u :-: v) -> (v :-: u)
-inv (f :-: g) = (g :-: f)
+linv :: (u :-: v) -> (v :-: u)
+linv (f :-: g) = (g :-: f)
 
 -- | Apply a linear map to a vector.
-apply :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -> v
-apply (f :-: _) = lapply f
+lapp :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -> v
+lapp (f :-: _) = lapply f
 
 --------------------------------------------------
 --  Transformation transformations  ------------------
@@ -98,7 +98,7 @@ newtype Transformation v = Transformation ((v, Scalar v) :-: (v, Scalar v))
 
 -- | Invert a projective transformation.
 pinv :: Transformation v -> Transformation v
-pinv (Transformation t) = Transformation (inv t)
+pinv (Transformation t) = Transformation (linv t)
 
 -- | Transformation transformations are closed under composition.
 instance (HasLinearMap v, HasLinearMap (Scalar v)
@@ -115,14 +115,14 @@ project (v,c) = v ^/ c
 papply :: (HasLinearMap v, HasLinearMap (Scalar v)
           ,Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
           => Transformation v -> v -> v
-papply (Transformation a) v = project $ apply a (v,1)
+papply (Transformation a) v = project $ lapp a (v,1)
 
 -- | Treat a linear transformation as a projective transformation.
 fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v)
                         ,Scalar (Scalar v) ~ Scalar v)
                         => (v :-: v) -> Transformation v
-fromLinear t = Transformation $ (\(v,c) -> (apply t v, c)) <->
-                            (\(v,c) -> (apply (inv t) v, c))
+fromLinear t = Transformation $ (\(v,c) -> (lapp t v, c)) <->
+                            (\(v,c) -> (lapp (linv t) v, c))
 
 
 -- | Treat a translation as a projective transformation.

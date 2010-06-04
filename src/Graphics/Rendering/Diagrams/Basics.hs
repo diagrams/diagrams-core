@@ -114,7 +114,7 @@ data Prim b where
 
 -- Note that we also require the vector spaces for the backend and the
 -- primitive to be the same; this is necessary since the rendering
--- backend may need to apply some transformations to the primitive
+-- backend may need to lapp some transformations to the primitive
 -- after unpacking the existential package.
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
