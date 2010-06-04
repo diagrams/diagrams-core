@@ -78,7 +78,6 @@ module Graphics.Rendering.Diagrams
        , rebase
        , atop
 
-       , rebaseBounds
        ) where
 
 import Graphics.Rendering.Diagrams.Basics
