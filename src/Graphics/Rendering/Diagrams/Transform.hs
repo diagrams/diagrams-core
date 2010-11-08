@@ -52,6 +52,9 @@ import Data.Basis
 import Data.MemoTrie
 
 import Data.Monoid
+import qualified Data.Map as M
+
+import Graphics.Rendering.Diagrams.Expressions
 
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
@@ -141,6 +144,15 @@ class (HasLinearMap (TSpace t), HasLinearMap (Scalar (TSpace t)))
     => Transformable t where
   type TSpace t :: *         -- Vector space of transformations
   transform :: Transformation (TSpace t) -> t -> t
+
+instance Transformable t => Transformable [t] where
+  type TSpace [t] = TSpace t
+  transform t = map (transform t)
+
+instance (HasLinearMap v, HasLinearMap (Scalar v), Transformable v)
+    => Transformable (NameSet v) where
+  type TSpace (NameSet v) = TSpace v
+  transform t (NameSet ns) = NameSet $ M.map (map (transform t)) ns
 
 -- | Create a translation.
 translation :: (HasLinearMap v, HasLinearMap (Scalar v),

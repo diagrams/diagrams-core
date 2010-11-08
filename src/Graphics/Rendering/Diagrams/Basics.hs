@@ -163,6 +163,28 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
   mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
 
 ------------------------------------------------------------
+--  Transforming bounding regions  -------------------------
+------------------------------------------------------------
+
+-- | From a vector @v@, generate a set of vectors that span the
+--   subspace orthogonal to @v@.
+orthogonalSpace :: (InnerSpace v, HasBasis v, Floating (Scalar v)) => v -> [v]
+orthogonalSpace v = map ortho basis
+  where basis   = map (basisValue . fst) (decompose v)
+        ortho b = b ^-^ prj b
+        prj     = proj v
+
+-- | @proj v u@ computes the projection of @u@ onto @v@.
+proj :: (InnerSpace v, Floating (Scalar v)) => v -> v -> v
+proj v u = (u <.> v') *^ v'
+  where v' = normalized v
+
+instance (Transformable v, HasLinearMap v, HasLinearMap (Scalar v))
+    => Transformable (Bounds v) where
+  type TSpace (Bounds v) = TSpace v
+  transform t (Bounds b) = undefined -- XXX write me!
+
+------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
 
@@ -203,14 +225,15 @@ rebaseBounds u (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 instance ( Backend b
          , InnerSpace (BSpace b)
          , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
+         , TSpace (BSpace b) ~ BSpace b
+         , Transformable (BSpace b)
          , Floating (Scalar (BSpace b)))
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
-  transform t (Diagram ps (Bounds b) (NameSet ns))
+  transform t (Diagram ps b ns)
     = Diagram (map (transform t) ps)
-              -- XXX this is still wrong for transformations that don't preserve angle!
-              (Bounds $ b . apply (inv t))
-              (NameSet $ M.map (map (apply t)) ns)
+              (transform t b)
+              (transform t ns)
 
 -- | Compose two diagrams by aligning their respective local origins.
 --   The new diagram has all the primitives and all the names from the
@@ -228,3 +251,4 @@ atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
 instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s) => Monoid (Diagram b) where
   mempty  = Diagram mempty mempty mempty
   mappend = atop
+
