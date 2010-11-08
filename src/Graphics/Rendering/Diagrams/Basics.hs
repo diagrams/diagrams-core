@@ -50,6 +50,10 @@ module Graphics.Rendering.Diagrams.Basics
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Expressions
 
+import qualified Numeric.LinearAlgebra.Algorithms as L
+import qualified Data.Packed.Vector as LV
+import qualified Data.Packed.Matrix as LM
+
 import Data.VectorSpace
 import Data.Basis
 import Data.MemoTrie
@@ -179,10 +183,30 @@ proj :: (InnerSpace v, Floating (Scalar v)) => v -> v -> v
 proj v u = (u <.> v') *^ v'
   where v' = normalized v
 
-instance (Transformable v, HasLinearMap v, HasLinearMap (Scalar v))
+instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
+         , InnerSpace v, Floating (Scalar v), L.Field (Scalar v))
     => Transformable (Bounds v) where
   type TSpace (Bounds v) = TSpace v
-  transform t (Bounds b) = undefined -- XXX write me!
+  transform t (Bounds b) =   -- XXX add lots of comments explaining this!
+    Bounds $ \v ->
+      let v' = undual (map (transform $ inv t) (orthogonalSpace v))
+          vi = transform (inv t) v
+      in  b v' * (v' <.> vi) * (magnitude v / magnitude vi)
+
+vecToList :: HasBasis v => v -> [Scalar v]
+vecToList = map snd . decompose
+
+listToVec :: HasBasis v => [Basis v] -> [Scalar v] -> v
+listToVec bs ss = recompose $ zip bs ss
+
+undual :: (L.Field (Scalar v), HasBasis v) => [v] -> v
+undual vs = listToVec bs
+          . LV.toList . L.nullVector . LM.fromLists
+          . map vecToList
+          $ vs
+  where bs = map fst . decompose . head $ vs
+
+
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -199,6 +223,8 @@ data Diagram b = Diagram { prims  :: [Prim b]
 ------------------------------------------------------------
 --  Primitive operations  ----------------------------------
 ------------------------------------------------------------
+
+-- XXX rebase ought to be implemented in terms of transform?
 
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
@@ -227,7 +253,8 @@ instance ( Backend b
          , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
          , TSpace (BSpace b) ~ BSpace b
          , Transformable (BSpace b)
-         , Floating (Scalar (BSpace b)))
+         , Floating (Scalar (BSpace b))
+         , L.Field (Scalar (BSpace b)))
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps b ns)
