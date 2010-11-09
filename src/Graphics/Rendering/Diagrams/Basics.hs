@@ -200,7 +200,7 @@ instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
     Bounds $ \v ->
       let v' = undual (map (transform $ inv t) (orthogonalSpace v))
           vi = transform (inv t) v
-      in  b v' * (v' <.> vi) * (magnitude v / magnitude vi)
+      in  b v' / (v' <.> vi) * magnitudeSq v'
 
 vecToList :: HasBasis v => v -> [Scalar v]
 vecToList = map snd . decompose
