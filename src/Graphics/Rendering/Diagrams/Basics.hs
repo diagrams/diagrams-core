@@ -61,6 +61,7 @@ import Data.MemoTrie
 import qualified Data.Map as M
 import Data.Monoid
 import Control.Applicative hiding (Const)
+import Data.List (sortBy)
 
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
@@ -170,10 +171,17 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
 --  Transforming bounding regions  -------------------------
 ------------------------------------------------------------
 
+-- map ortho basis generates n vectors spanning an
+-- (n-1) dimensional space; dropping one gives us
+-- a basis.  To help keep numerical error to a
+-- minimum, drop the one with the smallest
+-- magnitude.
+
 -- | From a vector @v@, generate a set of vectors that span the
 --   subspace orthogonal to @v@.
 orthogonalSpace :: (InnerSpace v, HasBasis v, Floating (Scalar v)) => v -> [v]
-orthogonalSpace v = map ortho basis
+orthogonalSpace v = tail . sortBy magnitude . map ortho $ basis
+
   where basis   = map (basisValue . fst) (decompose v)
         ortho b = b ^-^ prj b
         prj     = proj v
