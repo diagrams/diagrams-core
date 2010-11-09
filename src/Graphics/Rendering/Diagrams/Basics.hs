@@ -62,6 +62,7 @@ import qualified Data.Map as M
 import Data.Monoid
 import Control.Applicative hiding (Const)
 import Data.List (sortBy)
+import Data.Ord (comparing)
 
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
@@ -179,8 +180,8 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
 
 -- | From a vector @v@, generate a set of vectors that span the
 --   subspace orthogonal to @v@.
-orthogonalSpace :: (InnerSpace v, HasBasis v, Floating (Scalar v)) => v -> [v]
-orthogonalSpace v = tail . sortBy magnitude . map ortho $ basis
+orthogonalSpace :: (InnerSpace v, HasBasis v, Floating (Scalar v), Ord (Scalar v)) => v -> [v]
+orthogonalSpace v = tail . sortBy (comparing magnitude) . map ortho $ basis
 
   where basis   = map (basisValue . fst) (decompose v)
         ortho b = b ^-^ prj b
@@ -192,7 +193,7 @@ proj v u = (u <.> v') *^ v'
   where v' = normalized v
 
 instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
-         , InnerSpace v, Floating (Scalar v), L.Field (Scalar v))
+         , InnerSpace v, Floating (Scalar v), L.Field (Scalar v), Ord (Scalar v))
     => Transformable (Bounds v) where
   type TSpace (Bounds v) = TSpace v
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
@@ -258,11 +259,14 @@ rebaseBounds u (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 --   components appropriately.
 instance ( Backend b
          , InnerSpace (BSpace b)
-         , Scalar (Scalar (BSpace b)) ~ Scalar (BSpace b)
          , TSpace (BSpace b) ~ BSpace b
          , Transformable (BSpace b)
-         , Floating (Scalar (BSpace b))
-         , L.Field (Scalar (BSpace b)))
+         , s ~ Scalar (BSpace b)
+         , Scalar s ~ s
+         , Floating s
+         , L.Field s
+         , Ord s
+         , HasLinearMap s )
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps b ns)
