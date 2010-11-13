@@ -55,6 +55,15 @@ module Graphics.Rendering.Diagrams
 
        , Backend(..)
        , Renderable(..)
+       , renderDia
+
+         -- * Attributes and styles
+
+       , AttributeClass(..)
+       , Style
+       , getAttr, setAttr, addAttr
+       , applyAttr
+       , applyStyle
 
          -- * Primtives
 

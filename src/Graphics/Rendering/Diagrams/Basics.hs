@@ -5,6 +5,8 @@
            , UndecidableInstances
            , GADTs
            , DeriveFunctor
+           , ExistentialQuantification
+           , ScopedTypeVariables
            #-}
 
 -----------------------------------------------------------------------------
@@ -23,10 +25,12 @@
 -- module directly; instead, import "Graphics.Rendering.Diagrams",
 -- which re-exports most of the functionality from this module.
 -- Library developers may occasionally wish to import this module
--- directly if they need direct access to something not re-exported by
+-- directly if they need access to something not re-exported by
 -- "Graphics.Rendering.Diagrams".
 --
 -----------------------------------------------------------------------------
+
+-- TODO: this module probably wants breaking up into smaller modules...
 
 module Graphics.Rendering.Diagrams.Basics
        ( -- * Backends
@@ -34,13 +38,38 @@ module Graphics.Rendering.Diagrams.Basics
          Backend(..)
        , Renderable(..)
 
+       , renderDia
+
+         -- * Attributes
+
+       , AttributeClass
+       , Attribute(..)
+       , unwrapAttr
+
+       , applyAttr
+
+         -- * Styles
+
+       , Style(..), inStyle
+       , getAttr, setAttr, addAttr
+
+       , attrToStyle
+       , applyStyle
+
          -- * Primtives
 
-       , Prim(..)
+       , Prim(..), prim
 
          -- * Bounds
 
        , Bounds(..)
+
+         -- ** Bounds transformation
+
+       , OrientedSubspace(..)
+       , orthogonalSpace, orthogonalVec
+       , proj
+       , vecToList, listToVec
 
          -- * Diagrams
 
@@ -57,6 +86,8 @@ module Graphics.Rendering.Diagrams.Basics
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Expressions
 
+import Data.Typeable
+
 import qualified Numeric.LinearAlgebra.Algorithms as L
 import qualified Data.Packed.Vector as LV
 import qualified Data.Packed.Matrix as LM
@@ -67,6 +98,7 @@ import Data.MemoTrie
 
 import qualified Data.Map as M
 import Data.Monoid
+import Control.Arrow (first, second)
 import Control.Applicative hiding (Const)
 import Data.List (sortBy)
 import Data.Ord (comparing)
@@ -84,16 +116,24 @@ import Data.Ord (comparing)
 -- | Abstract diagrams are rendered to particular formats by /backends/.
 --   Each backend must be an instance of the 'Backend' class, and comes
 --   with an associated vector space and rendering environment.
-class (HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)))
+class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)), Monoid (Render b) )
     => Backend b where
   type BSpace b  :: *           -- The vector space associated with this backend
-  type Render b  :: *           -- The rendering environment used by this backend
+  type Render b  :: *           -- The type of rendering operations used by this
+                                --   backend, which must be a monoid
   type Result b  :: *           -- The result of the rendering operation
   data Options b :: *           -- The rendering options for this backend
-  -- | 'renderDia' is used to render a diagram using this backend.
-  renderDia      :: b          -- ^ Backend token
+
+  -- | Perform a rendering operation with a local style.
+  withStyle      :: b          -- ^ Backend token (needed only for type inference)
+                 -> Style      -- ^ Style to use
+                 -> Render b   -- ^ Rendering operation to run
+                 -> Render b   -- ^ Rendering operation using the style locally
+
+  -- | 'doRender' is used to interpret rendering operations.
+  doRender       :: b          -- ^ Backend token (needed only for type inference)
                  -> Options b  -- ^ Backend-specific collection of rendering options
-                 -> Diagram b  -- ^ Diagram to render
+                 -> Render b   -- ^ Rendering operation to perform
                  -> Result b   -- ^ Output of the rendering operation
 
 -- Note: as of version 2.7.2, Haddock doesn't seem to support
@@ -104,17 +144,93 @@ class (HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)))
 -- support this, at which time this comment can be deleted and the
 -- above comments made into proper Haddock comments.
 
+-- | Render a diagram.
+renderDia :: Backend b => b -> Options b -> Diagram b -> Result b
+renderDia b opts d = doRender b opts (mconcat $ map renderOne (prims d))
+  where renderOne (s,p) = withStyle b s (render b p)
 
 -- | The 'Renderable' type class connects backends to primitives which
 --   they know how to render.
 class (Backend b, Transformable t) => Renderable t b where
   render :: b -> t -> Render b
-  -- ^ Given a token representing the backend and a transformable
-  --   object, render it in the appropriate rendering context.
+  -- ^ Given a token representing the backend, a style, and a
+  -- transformable object, render it in the appropriate rendering
+  -- context.
 
   -- Note, the token is necessary for type inference: unifying Render
   -- b with something else will never work, since Render is not
   -- necessarily injective.
+
+------------------------------------------------------------
+--  Attributes  --------------------------------------------
+------------------------------------------------------------
+
+-- The attribute code is inspired by xmonad's Message type, which
+-- was in turn based on ideas in /An Extensible Dynamically-Typed
+-- Hierarchy of Exceptions/, Simon Marlow, 2006.
+
+-- | Every attribute must be an instance of @AttributeClass@.
+class Typeable a => AttributeClass a
+
+-- | An existential wrapper type to hold attributes.
+data Attribute = forall a. AttributeClass a => Attribute a
+
+-- | Unwrap an unknown 'Attribute' type, performing a (dynamic)
+--   type check on the result.
+unwrapAttr :: AttributeClass a => Attribute -> Maybe a
+unwrapAttr (Attribute a) = cast a
+
+------------------------------------------------------------
+--  Styles  ------------------------------------------------
+------------------------------------------------------------
+
+-- | A @Style@ is a collection of attributes, containing at most one
+--   attribute of any given type.
+newtype Style = Style (M.Map String Attribute)
+  -- The String keys are serialized TypeRep values, corresponding to
+  -- the type of the stored attribute.
+
+inStyle :: (M.Map String Attribute -> M.Map String Attribute)
+        -> Style -> Style
+inStyle f (Style s) = Style (f s)
+
+-- | Extract an attribute from a style using the magic of type
+--   inference.
+getAttr :: forall a. AttributeClass a => Style -> Maybe a
+getAttr (Style s) = M.lookup ty s >>= unwrapAttr
+  where ty = (show . typeOf $ (undefined :: a))
+  -- the unwrapAttr should never fail, since we maintain the invariant
+  -- that attributes of type T are always stored with the key "T".
+
+-- | Add a new attribute to a style, or replace the old attribute of
+--   the same type if one exists.
+setAttr :: forall a. AttributeClass a => a -> Style -> Style
+setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (Attribute a)
+
+-- | The empty style contains no attributes; composition of styles is
+--   left-biased union; i.e. if the two styles contain attributes of
+--   the same type, the one from the left is taken.
+instance Monoid Style where
+  mempty = Style M.empty
+  (Style s1) `mappend` (Style s2) = Style $ s1 `M.union` s2
+
+-- | Create a style from a single attribute.
+attrToStyle :: forall a. AttributeClass a => a -> Style
+attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (Attribute a))
+
+-- | Attempt to add a new attribute to a style, but if an attribute of
+--   the same type already exists, do not replace it.
+addAttr :: forall a. AttributeClass a => a -> Style -> Style
+addAttr a s = attrToStyle a <> s
+
+-- | Apply an attribute to a diagram.  Note that child attributes
+--   always have precedence over parent attributes.
+applyAttr :: AttributeClass a => a -> Diagram b -> Diagram b
+applyAttr = applyStyle . attrToStyle
+
+-- | Apply a style to a diagram.
+applyStyle :: Style -> Diagram b -> Diagram b
+applyStyle s d = d { prims = (map . first) (s<>) (prims d) }
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
@@ -124,6 +240,11 @@ class (Backend b, Transformable t) => Renderable t b where
 --   primitive which backend @b@ knows how to render.
 data Prim b where
   Prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> Prim b
+
+-- | Convenience function for constructing a singleton list of
+--   primitives with empty style.
+prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> [(Style, Prim b)]
+prim p = [(mempty, Prim p)]
 
 -- Note that we also require the vector spaces for the backend and the
 -- primitive to be the same; this is necessary since the rendering
@@ -240,17 +361,17 @@ vecToList = map snd . decompose
 listToVec :: HasBasis v => [Basis v] -> [Scalar v] -> v
 listToVec bs ss = recompose $ zip bs ss
 
-
-
-
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
 
+-- TODO: At some point, we may want to abstract this into a type
+-- class...
+
 -- | The basic 'Diagram' data type.  A diagram consists of a list of
---   primitives, a functional convex bounding region, and a set of
---   named (local) points.
-data Diagram b = Diagram { prims  :: [Prim b]
+--   primitives paired with styles, a functional convex bounding
+--   region, and a set of named (local) points.
+data Diagram b = Diagram { prims  :: [(Style, Prim b)]
                          , bounds :: Bounds (BSpace b)
                          , names  :: NameSet (BSpace b)
                          }
@@ -261,19 +382,22 @@ data Diagram b = Diagram { prims  :: [Prim b]
 
 -- XXX rebase ought to be implemented in terms of transform?
 
+-- TODO: does rebase really need to involve expressions?  Can't those
+-- go in the standard library?
+
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
 rebase :: ( Backend b, v ~ BSpace b
           , InnerSpace v, HasLinearMap v, HasLinearMap (Scalar v)
           , AdditiveGroup (Scalar v), Fractional (Scalar v)
-          , Scalar (Scalar v) ~ Scalar v)
+          , Scalar (Scalar v) ~ Scalar v )
        => LExpr v -> Diagram b -> Diagram b
 rebase e (Diagram ps b (NameSet s))
-  = Diagram { prims  = map (translate (negateV u)) ps
+  = Diagram { prims  = (map . second) (translate (negateV u)) ps
             , bounds = rebaseBounds u b
             , names  = NameSet $ M.map (map (^-^ u)) s
             }
-  where u = evalLExpr e (NameSet s)
+  where u  = evalLExpr e (NameSet s)
 
 -- | Rebase a bounding function, that is, change the local origin with
 --   respect to which bounding queries are made.
@@ -296,7 +420,7 @@ instance ( Backend b
     => Transformable (Diagram b) where
   type TSpace (Diagram b) = BSpace b
   transform t (Diagram ps b ns)
-    = Diagram (map (transform t) ps)
+    = Diagram ((map . second) (transform t) ps)
               (transform t b)
               (transform t ns)
 
