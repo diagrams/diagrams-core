@@ -208,11 +208,11 @@ setAttr :: forall a. AttributeClass a => a -> Style -> Style
 setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (Attribute a)
 
 -- | The empty style contains no attributes; composition of styles is
---   left-biased union; i.e. if the two styles contain attributes of
---   the same type, the one from the left is taken.
+--   right-biased union; i.e. if the two styles contain attributes of
+--   the same type, the one from the right is taken.
 instance Monoid Style where
   mempty = Style M.empty
-  (Style s1) `mappend` (Style s2) = Style $ s1 `M.union` s2
+  (Style s1) `mappend` (Style s2) = Style $ s2 `M.union` s1
 
 -- | Create a style from a single attribute.
 attrToStyle :: forall a. AttributeClass a => a -> Style
