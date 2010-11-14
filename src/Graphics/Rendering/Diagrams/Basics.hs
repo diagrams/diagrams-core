@@ -148,7 +148,7 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
   renderDia b opts d = doRender b opts (mconcat $ map renderOne (prims d))
     where renderOne (s,p) = withStyle b s (render b p)
 
--- Note: as of version 2.7.2, Haddock doesn't seem to support
+-- Note: as of version 2.8.1, Haddock doesn't seem to support
 -- documentation for associated types; hence the comments next to
 -- BSpace, Render, etc. above are not Haddock comments.  Making them
 -- Haddock comments by adding a carat causes Haddock to choke with a
