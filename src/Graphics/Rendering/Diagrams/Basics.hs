@@ -36,9 +36,8 @@ module Graphics.Rendering.Diagrams.Basics
        ( -- * Backends
 
          Backend(..)
+       , MultiBackend(..)
        , Renderable(..)
-
-       , renderDia
 
          -- * Attributes
 
@@ -113,10 +112,13 @@ import Data.Ord (comparing)
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
 
--- | Abstract diagrams are rendered to particular formats by /backends/.
---   Each backend must be an instance of the 'Backend' class, and comes
---   with an associated vector space and rendering environment.
-class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)), Monoid (Render b) )
+-- | Abstract diagrams are rendered to particular formats by
+--   /backends/.  Each backend must be an instance of the 'Backend'
+--   class, and comes with an associated vector space and rendering
+--   environment.  A backend must provide the four associated types as
+--   well as implementations for 'withStyle' and 'doRender'.
+class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
+      , Monoid (Render b) )
     => Backend b where
   type BSpace b  :: *           -- The vector space associated with this backend
   type Render b  :: *           -- The type of rendering operations used by this
@@ -136,6 +138,16 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)), Monoid (Rende
                  -> Render b   -- ^ Rendering operation to perform
                  -> Result b   -- ^ Output of the rendering operation
 
+  -- | Render a diagram.  This has a default implementation in terms
+  --   of 'withStyle', 'doRender', and the 'render' operation from the
+  --   'Renderable' class ('withStyle' and 'render' are used to render
+  --   each primitive, the resulting operations are combined with
+  --   'mconcat', and the final operation run with 'doRender') but
+  --   backends may override it if desired.
+  renderDia :: b -> Options b -> Diagram b -> Result b
+  renderDia b opts d = doRender b opts (mconcat $ map renderOne (prims d))
+    where renderOne (s,p) = withStyle b s (render b p)
+
 -- Note: as of version 2.7.2, Haddock doesn't seem to support
 -- documentation for associated types; hence the comments next to
 -- BSpace, Render, etc. above are not Haddock comments.  Making them
@@ -144,10 +156,13 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b)), Monoid (Rende
 -- support this, at which time this comment can be deleted and the
 -- above comments made into proper Haddock comments.
 
--- | Render a diagram.
-renderDia :: Backend b => b -> Options b -> Diagram b -> Result b
-renderDia b opts d = doRender b opts (mconcat $ map renderOne (prims d))
-  where renderOne (s,p) = withStyle b s (render b p)
+-- | A class for backends which support rendering multiple diagrams,
+--   e.g. to a multi-page pdf or something similar.
+class Backend b => MultiBackend b where
+
+  -- | Render multiple diagrams at once.
+  renderDias :: b -> Options b -> [Diagram b] -> Result b
+
 
 -- | The 'Renderable' type class connects backends to primitives which
 --   they know how to render.

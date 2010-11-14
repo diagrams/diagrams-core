@@ -54,8 +54,8 @@ module Graphics.Rendering.Diagrams
          -- * Backends
 
        , Backend(..)
+       , MultiBackend(..)
        , Renderable(..)
-       , renderDia
 
          -- * Attributes and styles
 
@@ -87,6 +87,7 @@ module Graphics.Rendering.Diagrams
          --   diagrams-lib package for a number of higher-level
          --   diagram composition operators implemented in terms of
          --   these.
+
        , rebase
        , atop
 
