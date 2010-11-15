@@ -125,6 +125,7 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
                                 --   backend, which must be a monoid
   type Result b  :: *           -- The result of the rendering operation
   data Options b :: *           -- The rendering options for this backend
+  -- See Note [Haddock and associated types]
 
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
@@ -148,13 +149,19 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
   renderDia b opts d = doRender b opts (mconcat $ map renderOne (prims d))
     where renderOne (s,p) = withStyle b s (render b p)
 
--- Note: as of version 2.8.1, Haddock doesn't seem to support
--- documentation for associated types; hence the comments next to
--- BSpace, Render, etc. above are not Haddock comments.  Making them
--- Haddock comments by adding a carat causes Haddock to choke with a
--- parse error.  Hopefully at some point in the future Haddock will
--- support this, at which time this comment can be deleted and the
--- above comments made into proper Haddock comments.
+  -- See Note [backend token]
+
+{-
+~~~~ Note [Haddock and associated types]
+
+As of version 2.8.1, Haddock doesn't seem to support
+documentation for associated types; hence the comments next to
+BSpace, Render, etc. above are not Haddock comments.  Making them
+Haddock comments by adding a carat causes Haddock to choke with a
+parse error.  Hopefully at some point in the future Haddock will
+support this, at which time this comment can be deleted and the
+above comments made into proper Haddock comments.
+-}
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
@@ -162,6 +169,8 @@ class Backend b => MultiBackend b where
 
   -- | Render multiple diagrams at once.
   renderDias :: b -> Options b -> [Diagram b] -> Result b
+
+  -- See Note [backend token]
 
 
 -- | The 'Renderable' type class connects backends to primitives which
@@ -172,9 +181,18 @@ class (Backend b, Transformable t) => Renderable t b where
   -- transformable object, render it in the appropriate rendering
   -- context.
 
-  -- Note, the token is necessary for type inference: unifying Render
-  -- b with something else will never work, since Render is not
-  -- necessarily injective.
+  -- See Note [backend token]
+
+{-
+~~~~ Note [backend token]
+
+A bunch of methods here take a "backend token" as an argument.  The
+backend token is expected to carry no actual information; it is solely
+to help out the type system. The problem is that all these methods
+return some associated type applied to b (e.g. Render b) and unifying
+them with something else will never work, since type families are not
+necessarily injective.
+-}
 
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------
@@ -194,7 +212,7 @@ class Typeable a => AttributeClass a where
   combine :: a -> a -> a
   combine _ a = a
 
--- TODO: actually use combine below!
+-- TODO: actually use combine below?
 
 -- | An existential wrapper type to hold attributes.
 data Attribute = forall a. AttributeClass a => Attribute a
@@ -219,7 +237,7 @@ inStyle :: (M.Map String Attribute -> M.Map String Attribute)
 inStyle f (Style s) = Style (f s)
 
 -- | Extract an attribute from a style using the magic of type
---   inference.
+--   inference and "Data.Typeable".
 getAttr :: forall a. AttributeClass a => Style -> Maybe a
 getAttr (Style s) = M.lookup ty s >>= unwrapAttr
   where ty = (show . typeOf $ (undefined :: a))
