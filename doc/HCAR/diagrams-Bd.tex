@@ -1,0 +1,48 @@
+% diagrams-Bd.tex
+\begin{hcarentry}[updated]{diagrams}
+\report{Brent Yorgey}%11/10
+\status{active development}
+\makeheader
+
+The diagrams library provides an embedded domain-specific language for
+creating simple pictures and diagrams. Values of type \texttt{Diagram}
+are built up in a compositional style from various primitives and
+combinators, and can be rendered to a physical medium, such as a file
+in PNG, PS, PDF, or SVG format.  The overall vision is for diagrams to
+become a viable alternative to DSLs like MetaPost or Asymptote, but with
+the advantages of being \emph{purely functional} and
+\emph{embedded}.
+
+For example, consider the following diagram to illustrate the 24
+permutations of four objects:
+
+%**<img width=770 src="./permutations.jpg">
+%*ignore
+\begin{center}
+\includegraphics[width=0.47\textwidth]{html/permutations.jpg}
+\end{center}
+%*endignore
+
+The diagrams library was used to create this diagram with very
+little effort (about ten lines of Haskell, including the code to actually
+generate permutations).  The source code for this diagram, as well as
+other examples and further resources, can be found at
+\url{http:/code.haskell.org/diagrams/}.
+
+The library is currently undergoing a major rewrite, with the goal of
+basing the entire library on a more flexible, semantically elegant
+foundational core.  Good progress was made at the most recent
+Philadelphia hackathon, and a preliminary release is in the works.
+Planned features include pluggable rendering backends, support for
+arbitrary vector spaces and for animation, more sophisticated paths
+and path operations, and an xmonad-like core/contrib model for
+incorporating user-submitted extension modules.
+
+\FurtherReading
+\begin{compactitem}
+\item  \url{http://code.haskell.org/diagrams/} 
+\item  \url{http://byorgey.wordpress.com/2009/09/24/diagrams-0-2-1-and-future-plans/} 
+\item  \url{http://www.tug.org/metapost.html} 
+\item  \url{http://asymptote.sourceforge.net/}
+\end{compactitem}
+\end{hcarentry}
