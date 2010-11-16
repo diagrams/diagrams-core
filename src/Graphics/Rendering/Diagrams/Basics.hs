@@ -72,7 +72,7 @@ module Graphics.Rendering.Diagrams.Basics
 
          -- * Diagrams
 
-       , Diagram(..)
+       , AnnDiagram(..), Diagram
 
          -- ** Primitive operations
          -- $prim
@@ -80,6 +80,7 @@ module Graphics.Rendering.Diagrams.Basics
        , atop
 
        , rebaseBounds
+
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
@@ -145,7 +146,7 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
   --   each primitive, the resulting operations are combined with
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
-  renderDia :: b -> Options b -> Diagram b -> Result b
+  renderDia :: b -> Options b -> AnnDiagram b a -> Result b
   renderDia b opts d = doRender b opts (mconcat $ map renderOne (prims d))
     where renderOne (s,p) = withStyle b s (render b p)
 
@@ -168,7 +169,7 @@ above comments made into proper Haddock comments.
 class Backend b => MultiBackend b where
 
   -- | Render multiple diagrams at once.
-  renderDias :: b -> Options b -> [Diagram b] -> Result b
+  renderDias :: b -> Options b -> [AnnDiagram b a] -> Result b
 
   -- See Note [backend token]
 
@@ -267,11 +268,11 @@ addAttr a s = attrToStyle a <> s
 
 -- | Apply an attribute to a diagram.  Note that child attributes
 --   always have precedence over parent attributes.
-applyAttr :: AttributeClass a => a -> Diagram b -> Diagram b
+applyAttr :: AttributeClass a => a -> AnnDiagram b m -> AnnDiagram b m
 applyAttr = applyStyle . attrToStyle
 
 -- | Apply a style to a diagram.
-applyStyle :: Style -> Diagram b -> Diagram b
+applyStyle :: Style -> AnnDiagram b a -> AnnDiagram b a
 applyStyle s d = d { prims = (map . first) (s<>) (prims d) }
 
 ------------------------------------------------------------
@@ -410,13 +411,43 @@ listToVec bs ss = recompose $ zip bs ss
 -- TODO: At some point, we may want to abstract this into a type
 -- class...
 
--- | The basic 'Diagram' data type.  A diagram consists of a list of
---   primitives paired with styles, a functional convex bounding
---   region, and a set of named (local) points.
-data Diagram b = Diagram { prims  :: [(Style, Prim b)]
-                         , bounds :: Bounds (BSpace b)
-                         , names  :: NameSet (BSpace b)
-                         }
+-- TODO: Change the prims list into a joinlist?  Would it help to
+-- remember more structure?
+
+-- | The basic 'AnnDiagram' data type representing annotated
+--   diagrams.  A diagram consists of
+--
+--     * a list of primitives paired with styles
+--
+--     * a convex bounding region (represented functionally),
+--
+--     * a set of named (local) points, and
+--
+--     * a sampling function that associates an annotation (taken from
+--       some monoid) to each point in the vector space.
+--
+--   TODO: write more here.
+--   got idea for annotations from graphics-drawingcombinators.
+data AnnDiagram b a = Diagram { prims  :: [(Style, Prim b)]
+                              , bounds :: Bounds (BSpace b)
+                              , names  :: NameSet (BSpace b)
+                              , sample :: BSpace b -> a
+                              }
+  deriving (Functor)
+
+-- | The default sort of diagram is one where sampling at a point
+--   simply tells you whether that point is occupied or not.
+--   Transforming a default diagram into one with more interesting
+--   annotations can be done via the 'Functor' and 'Applicative'
+--   instances for @'AnnDiagram' b@.
+type Diagram b = AnnDiagram b Any
+
+instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
+           => Applicative (AnnDiagram b) where
+  pure a = Diagram mempty mempty mempty (const a)
+
+  (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
+    = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (\v -> smp1 v (smp2 v))
 
 ------------------------------------------------------------
 --  Primitive operations  ----------------------------------
@@ -432,12 +463,15 @@ data Diagram b = Diagram { prims  :: [(Style, Prim b)]
 rebase :: ( Backend b, v ~ BSpace b
           , InnerSpace v, HasLinearMap v, HasLinearMap (Scalar v)
           , AdditiveGroup (Scalar v), Fractional (Scalar v)
-          , Scalar (Scalar v) ~ Scalar v )
-       => LExpr v -> Diagram b -> Diagram b
-rebase e (Diagram ps b (NameSet s))
+          , Scalar (Scalar v) ~ Scalar v
+          , Transformable v, v ~ TSpace v
+          )
+       => LExpr v -> AnnDiagram b a -> AnnDiagram b a
+rebase e (Diagram ps b (NameSet s) smp)
   = Diagram { prims  = (map . second) (translate (negateV u)) ps
             , bounds = rebaseBounds u b
             , names  = NameSet $ M.map (map (^-^ u)) s
+            , sample = smp . translate (negateV u)
             }
   where u  = evalLExpr e (NameSet s)
 
@@ -459,27 +493,29 @@ instance ( Backend b
          , L.Field s
          , Ord s
          , HasLinearMap s )
-    => Transformable (Diagram b) where
-  type TSpace (Diagram b) = BSpace b
-  transform t (Diagram ps b ns)
+    => Transformable (AnnDiagram b a) where
+  type TSpace (AnnDiagram b a) = BSpace b
+  transform t (Diagram ps b ns smp)
     = Diagram ((map . second) (transform t) ps)
               (transform t b)
               (transform t ns)
+              (transform t smp)
 
 -- | Compose two diagrams by aligning their respective local origins.
 --   The new diagram has all the primitives and all the names from the
 --   two diagrams combined.  Put the first on top of the second (when
 --   such a notion makes sense in the digrams' vector space, such as
 --   R2; in other vector spaces, like R3, 'atop' is commutative).
-atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s)
-     => Diagram b -> Diagram b -> Diagram b
-atop (Diagram ps1 bs1 ns1) (Diagram ps2 bs2 ns2) =
-  Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2)
+atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
+     => AnnDiagram b a -> AnnDiagram b a -> AnnDiagram b a
+atop (Diagram ps1 bs1 ns1 smp1) (Diagram ps2 bs2 ns2 smp2) =
+  Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
 
 -- | Diagrams form a monoid since each of their three components do:
 --   the empty diagram has no primitives, a constantly zero bounding
 --   function, and no named points; diagrams compose via 'atop'.
-instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s) => Monoid (Diagram b) where
-  mempty  = Diagram mempty mempty mempty
+instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
+           => Monoid (AnnDiagram b a) where
+  mempty  = Diagram mempty mempty mempty mempty
   mappend = atop
 

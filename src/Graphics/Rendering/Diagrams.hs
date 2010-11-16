@@ -75,7 +75,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Diagrams
 
-       , Diagram(..)
+       , AnnDiagram(..), Diagram
 
          -- ** Primitive operations
 

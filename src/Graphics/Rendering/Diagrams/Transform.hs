@@ -154,6 +154,13 @@ instance (HasLinearMap v, HasLinearMap (Scalar v), Transformable v)
   type TSpace (NameSet v) = TSpace v
   transform t (NameSet ns) = NameSet $ M.map (map (transform t)) ns
 
+-- | It's useful to have the contravariant function instance by
+--   default; covariant instances (with @t@ in a positive position) can
+--   be written on a case-by-case basis.
+instance Transformable v => Transformable (v -> a) where
+  type TSpace (v -> a) = TSpace v
+  transform t f = f . transform (inv t)
+
 -- | Create a translation.
 translation :: (HasLinearMap v, HasLinearMap (Scalar v),
                 Scalar (Scalar v) ~ Scalar v)
