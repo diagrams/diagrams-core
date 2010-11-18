@@ -203,17 +203,8 @@ necessarily injective.
 -- was in turn based on ideas in /An Extensible Dynamically-Typed
 -- Hierarchy of Exceptions/, Simon Marlow, 2006.
 
--- | Every attribute must be an instance of @AttributeClass@.  The
---   'combine' method indicates how to combine two attributes of the
---   same type; by default the first one is ignored (since child
---   attributes should override parent attributes).  However for some
---   attributes (e.g. for transparent colors) it may make sense to
---   have some more interesting combining behavior.
+-- | Every attribute must be an instance of @AttributeClass@.
 class Typeable a => AttributeClass a where
-  combine :: a -> a -> a
-  combine _ a = a
-
--- TODO: actually use combine below?
 
 -- | An existential wrapper type to hold attributes.
 data Attribute = forall a. AttributeClass a => Attribute a
