@@ -18,8 +18,8 @@ Library
                        Graphics.Rendering.Diagrams.Basics,
                        Graphics.Rendering.Diagrams.Transform,
                        Graphics.Rendering.Diagrams.Expressions
-  Build-depends:       base >= 4.2 && < 4.3,
-                       containers >= 0.3 && < 0.4,
+  Build-depends:       base >= 4.2 && < 4.4,
+                       containers >= 0.3 && < 0.5,
                        vector-space >= 0.7 && < 0.8,
                        MemoTrie >= 0.4.7 && < 0.5,
                        hmatrix >= 0.10 && < 0.11
