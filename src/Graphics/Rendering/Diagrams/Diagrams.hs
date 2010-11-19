@@ -49,7 +49,8 @@ module Graphics.Rendering.Diagrams.Diagrams
 
        , AttributeClass(..)
        , Attribute(..)
-       , unwrapAttr
+       , mkAttr, unwrapAttr, attrTransformation
+       , freezeAttr, thawAttr
 
        , applyAttr
 
@@ -60,6 +61,8 @@ module Graphics.Rendering.Diagrams.Diagrams
 
        , attrToStyle
        , applyStyle
+
+       , freezeStyle, thawStyle
 
          -- * Primtives
 
@@ -77,6 +80,8 @@ module Graphics.Rendering.Diagrams.Diagrams
          -- $prim
        , rebase
        , atop
+
+       , freeze, thaw
 
        , rebaseBounds
 
@@ -120,7 +125,7 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
 
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
-                 -> Style      -- ^ Style to use
+                 -> Style (BSpace b)  -- ^ Style to use
                  -> Render b   -- ^ Rendering operation to run
                  -> Render b   -- ^ Rendering operation using the style locally
 
@@ -206,13 +211,16 @@ necessarily injective.
 class Typeable a => AttributeClass a where
 
 -- | An existential wrapper type to hold attributes.
-data Attribute :: * where
-  Attribute :: AttributeClass a => a -> Attribute
+data Attribute = forall a. AttributeClass a => Attribute a
 
 -- | Unwrap an unknown 'Attribute' type, performing a (dynamic)
 --   type check on the result.
-unwrapAttr :: AttributeClass a => Attribute -> Maybe a
-unwrapAttr (Attribute a) = cast a
+unwrapAttr :: AttributeClass a => Attribute v -> Maybe a
+unwrapAttr (Attribute a _ _) = cast a
+
+-- | Get the transformation that has been applied to an attribute.
+attrTransformation :: Attribute v -> Transformation v
+attrTransformation (Attribute _ _ t) = t
 
 ------------------------------------------------------------
 --  Styles  ------------------------------------------------
@@ -220,17 +228,19 @@ unwrapAttr (Attribute a) = cast a
 
 -- | A @Style@ is a collection of attributes, containing at most one
 --   attribute of any given type.
-newtype Style = Style (M.Map String Attribute)
+newtype Style v = Style (M.Map String (Attribute v))
   -- The String keys are serialized TypeRep values, corresponding to
   -- the type of the stored attribute.
 
-inStyle :: (M.Map String Attribute -> M.Map String Attribute)
-        -> Style -> Style
+inStyle :: (M.Map String (Attribute v) -> M.Map String (Attribute v))
+        -> Style v -> Style v
 inStyle f (Style s) = Style (f s)
 
 -- | Extract an attribute from a style using the magic of type
 --   inference and "Data.Typeable".
-getAttr :: forall a. AttributeClass a => Style -> Maybe a
+getAttr :: forall a v. ( HasLinearMap v, HasLinearMap (Scalar v)
+                       , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+             => Style v -> Maybe a
 getAttr (Style s) = M.lookup ty s >>= unwrapAttr
   where ty = (show . typeOf $ (undefined :: a))
   -- the unwrapAttr should never fail, since we maintain the invariant
@@ -238,33 +248,55 @@ getAttr (Style s) = M.lookup ty s >>= unwrapAttr
 
 -- | Add a new attribute to a style, or replace the old attribute of
 --   the same type if one exists.
-setAttr :: forall a. AttributeClass a => a -> Style -> Style
-setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (Attribute a)
+setAttr :: forall a v. ( HasLinearMap v, HasLinearMap (Scalar v)
+                       , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+             => a -> Style v -> Style v
+setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (mkAttr a)
 
 -- | The empty style contains no attributes; composition of styles is
 --   right-biased union; i.e. if the two styles contain attributes of
 --   the same type, the one from the right is taken.
-instance Monoid Style where
+instance Monoid (Style v) where
   mempty = Style M.empty
   (Style s1) `mappend` (Style s2) = Style $ s2 `M.union` s1
 
 -- | Create a style from a single attribute.
-attrToStyle :: forall a. AttributeClass a => a -> Style
-attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (Attribute a))
+attrToStyle :: forall a v. ( HasLinearMap v, HasLinearMap (Scalar v)
+                           , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+                 => a -> Style v
+attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a))
 
 -- | Attempt to add a new attribute to a style, but if an attribute of
 --   the same type already exists, do not replace it.
-addAttr :: forall a. AttributeClass a => a -> Style -> Style
+addAttr :: ( HasLinearMap v, HasLinearMap (Scalar v)
+           , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+             => a -> Style v -> Style v
 addAttr a s = attrToStyle a <> s
 
 -- | Apply an attribute to a diagram.  Note that child attributes
 --   always have precedence over parent attributes.
-applyAttr :: AttributeClass a => a -> AnnDiagram b m -> AnnDiagram b m
+applyAttr :: ( v ~ BSpace b, HasLinearMap v, HasLinearMap (Scalar v)
+             , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+               => a -> AnnDiagram b m -> AnnDiagram b m
 applyAttr = applyStyle . attrToStyle
 
 -- | Apply a style to a diagram.
-applyStyle :: Style -> AnnDiagram b a -> AnnDiagram b a
+applyStyle :: Style (BSpace b) -> AnnDiagram b a -> AnnDiagram b a
 applyStyle s d = d { prims = (map . first) (s<>) (prims d) }
+
+-- TODO: comment these and add to export list
+
+freezeStyle :: Style v -> Style v
+freezeStyle = (inStyle . fmap) freezeAttr
+
+thawStyle :: Style v -> Style v
+thawStyle = (inStyle . fmap) thawAttr
+
+freeze :: AnnDiagram b a -> AnnDiagram b a
+freeze d = d { prims = (map . first) freezeStyle (prims d) }
+
+thaw :: AnnDiagram b a -> AnnDiagram b a
+thaw d = d { prims = (map . first) thawStyle (prims d) }
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
@@ -277,7 +309,7 @@ data Prim b where
 
 -- | Convenience function for constructing a singleton list of
 --   primitives with empty style.
-prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> [(Style, Prim b)]
+prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> [(Style (BSpace b), Prim b)]
 prim p = [(mempty, Prim p)]
 
 -- Note that we also require the vector spaces for the backend and the
@@ -370,7 +402,7 @@ instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
 --
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
-data AnnDiagram b a = Diagram { prims  :: [(Style, Prim b)]
+data AnnDiagram b a = Diagram { prims  :: [(Style (BSpace b), Prim b)]
                               , bounds :: Bounds (BSpace b)
                               , names  :: NameSet (BSpace b)
                               , sample :: Point (BSpace b) -> a
@@ -459,4 +491,3 @@ instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
            => Monoid (AnnDiagram b a) where
   mempty  = Diagram mempty mempty mempty mempty
   mappend = atop
-

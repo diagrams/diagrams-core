@@ -63,10 +63,14 @@ module Graphics.Rendering.Diagrams
          -- * Attributes and styles
 
        , AttributeClass(..)
+       , Attribute, mkAttr, unwrapAttr, attrTransformation
+       , freezeAttr, thawAttr
+
        , Style
        , getAttr, setAttr, addAttr
        , applyAttr
        , applyStyle
+       , freezeStyle, thawStyle
 
          -- * Primtives
 
@@ -93,6 +97,10 @@ module Graphics.Rendering.Diagrams
 
        , rebase
        , atop
+
+       -- ** Other operations
+
+       , freeze, thaw
 
        ) where
 
