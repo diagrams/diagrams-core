@@ -155,7 +155,7 @@ instance (HasLinearMap v, HasLinearMap (Scalar v), Transformable v)
   transform t (NameSet ns) = NameSet $ M.map (map (transform t)) ns
 
 -- | It's useful to have the contravariant function instance by
---   default; covariant instances (with @t@ in a positive position) can
+--   default; covariant instances (with @v@ in a positive position) can
 --   be written on a case-by-case basis.
 instance Transformable v => Transformable (v -> a) where
   type TSpace (v -> a) = TSpace v
