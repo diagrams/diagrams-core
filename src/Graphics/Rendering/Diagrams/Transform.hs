@@ -76,8 +76,8 @@ infixr 7 :-:
 (<->) :: (HasLinearMap u, HasLinearMap v) => (u -> v) -> (v -> u) -> (u :-: v)
 f <-> g = linear f :-: linear g
 
--- | Linear maps from a vector space to itself form a monoid under
---   composition.
+-- | Invertible linear maps from a vector space to itself form a
+--   monoid under composition.
 instance HasLinearMap v => Monoid (v :-: v) where
   mempty = idL :-: idL
   (f :-: f') `mappend` (g :-: g') = (f *.* g :-: g' *.* f')
