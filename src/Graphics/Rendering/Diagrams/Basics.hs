@@ -330,7 +330,7 @@ instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
   type TSpace (Bounds v) = v
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
     Bounds $ \v ->
-      let v' = normalized $ apply (transp t) v
+      let v' = normalized $ lapp (transp t) v
           vi = apply (inv t) v
       in  b v' / (v' <.> vi)
 

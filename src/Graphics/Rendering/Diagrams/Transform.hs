@@ -91,44 +91,46 @@ lapp :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -
 lapp (f :-: _) = lapply f
 
 --------------------------------------------------
---  Projective transformations  ------------------
+--  Affine transformations  ----------------------
 --------------------------------------------------
 
--- | General transformations.  XXX more documentation...
-newtype Transformation v = Transformation ((v, Scalar v) :-: (v, Scalar v))
-
--- Note that transformations are implemented as invertible linear maps
--- in projective space.
+-- | General (affine) transformations, represented by an invertible
+-- linear map, its /transpose/, and a vector representing a
+-- translation component.
+data Transformation v = Transformation (v :-: v) (v :-: v) v
 
 -- | Invert a transformation.
-inv :: Transformation v -> Transformation v
-inv (Transformation t) = Transformation (linv t)
+inv :: HasLinearMap v => Transformation v -> Transformation v
+inv (Transformation t t' v) = Transformation (linv t) (linv t')
+                                             (negateV (lapp (linv t) v))
 
--- | Transformations are closed under composition.
-instance (HasLinearMap v, HasLinearMap (Scalar v)
-         ,Scalar (Scalar v) ~ Scalar v)
+-- | Get the transpose of a transformation (ignoring the translation
+--   component).
+transp :: Transformation v -> (v :-: v)
+transp (Transformation _ t' _) = t'
+
+-- | Transformations are closed under composition; @t1 <> t2@ is the
+--   transformation which performs first @t2@, then @t1@.
+instance ( HasLinearMap v, HasLinearMap (Scalar v)
+         , Scalar (Scalar v) ~ Scalar v)
     => Monoid (Transformation v) where
-  mempty = Transformation mempty
-  mappend (Transformation a2) (Transformation a1) = Transformation (a2 <> a1)
-
--- | Map from projective space back down to the normal vector space,
---   by dividing through by the extra scalar component.
-project :: (Fractional (Scalar v), VectorSpace v) => (v, Scalar v) -> v
-project (v,c) = v ^/ c
+  mempty = Transformation mempty mempty zeroV
+  mappend (Transformation t1 t1' v1) (Transformation t2 t2' v2)
+    = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
 
 -- | Apply a transformation to a vector.
-apply :: (HasLinearMap v, HasLinearMap (Scalar v),
-          Fractional (Scalar v), Scalar (Scalar v) ~ Scalar v)
+apply :: ( s ~ Scalar v,
+           HasLinearMap v, HasLinearMap s,
+           Fractional s, Scalar s ~ s)
       => Transformation v -> v -> v
-apply (Transformation a) v = project $ lapp a (v,1)
+apply (Transformation t _ v0) v = lapp t v ^+^ v0
 
--- | Create a general transformation from an invertible linear
---   transformation.
+-- | Create a general affine transformation from an invertible linear
+--   transformation, its transpose, and a translation component.
 fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v),
                Scalar (Scalar v) ~ Scalar v)
-           => (v :-: v) -> Transformation v
-fromLinear t = Transformation $ (\(v,c) -> (lapp t v, c)) <->
-                                (\(v,c) -> (lapp (linv t) v, c))
+           => (v :-: v) -> (v :-: v) -> v -> Transformation v
+fromLinear = Transformation
 
 ------------------------------------------------------------
 --  The 'Transformable' class  -----------------------------
@@ -162,14 +164,15 @@ instance Transformable v => Transformable (v -> a) where
   transform t f = f . transform (inv t)
 
 -- | Create a translation.
-translation :: (HasLinearMap v, HasLinearMap (Scalar v),
-                Scalar (Scalar v) ~ Scalar v)
+translation :: ( HasLinearMap v, HasLinearMap (Scalar v)
+               , Scalar (Scalar v) ~ Scalar v
+               , InnerSpace v, Num (Scalar v))
             => v -> Transformation v
-translation v0 = Transformation $ (\(v,c) -> (v ^+^ v0 ^* c,c)) <->
-                                  (\(v,c) -> (v ^-^ v0 ^* c,c))
+translation v0 = fromLinear mempty mempty v0
 
 -- | Translate by a vector.
-translate :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t))
+translate :: ( Transformable t, v ~ TSpace t, Scalar (Scalar v) ~ Scalar v
+             , InnerSpace v, Num (Scalar v) )
           => TSpace t -> t -> t
 translate = transform . translation
 
@@ -177,7 +180,8 @@ translate = transform . translation
 scaling :: (HasLinearMap v, HasLinearMap (Scalar v),
             Scalar (Scalar v) ~ Scalar v, Fractional (Scalar v))
         => Scalar v -> Transformation v
-scaling s = fromLinear $ (s *^) <-> (^/ s)
+scaling s = fromLinear lin lin zeroV   -- scaling is its own transpose
+  where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
 scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t),
