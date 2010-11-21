@@ -26,7 +26,7 @@ module Graphics.Rendering.Diagrams.Transform
 
          -- ** General transformations
        , Transformation(..)
-       , inv
+       , inv, transp
        , apply
        , fromLinear
 
@@ -63,11 +63,11 @@ import Graphics.Rendering.Diagrams.Expressions
 --  Transformations  ---------------------------------------
 ------------------------------------------------------------
 
---------------------------------------------------
---  Invertible linear transformations  -----------
---------------------------------------------------
+-------------------------------------------------------
+--  Invertible linear transformations  ----------------
+-------------------------------------------------------
 
--- | @(u :-: v)@ is an invertible linear map.
+-- | @(v1 :-: v2)@ is a linear map paired with its inverse.
 data (:-:) u v = (u :-* v) :-: (v :-* u)
 infixr 7 :-:
 

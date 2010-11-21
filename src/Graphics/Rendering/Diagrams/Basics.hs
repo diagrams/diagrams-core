@@ -63,13 +63,6 @@ module Graphics.Rendering.Diagrams.Basics
 
        , Bounds(..)
 
-         -- ** Bounds transformation
-
-       , OrientedSubspace(..)
-       , orthogonalSpace, orthogonalVec
-       , proj
-       , vecToList, listToVec
-
          -- * Diagrams
 
        , AnnDiagram(..), Diagram
@@ -87,10 +80,6 @@ import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Expressions
 
 import Data.Typeable
-
-import qualified Numeric.LinearAlgebra.Algorithms as L
-import qualified Data.Packed.Vector as LV
-import qualified Data.Packed.Matrix as LM
 
 import Data.VectorSpace
 import Data.Basis
@@ -334,66 +323,16 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
 --  Transforming bounding regions  -------------------------
 ------------------------------------------------------------
 
--- | The type of (n-1)-dimensional oriented subspaces.  An
--- \"oriented\" space consists of a set of basis vectors, together
--- with another vector indicating the orientation.
-data OrientedSubspace v = OS { osBasis       :: [v]
-                             , osOrientation :: v
-                             }
-  deriving Functor
-
--- map ortho basis generates n vectors spanning an
--- (n-1) dimensional space; dropping one gives us
--- a basis.  To help keep numerical error to a
--- minimum, drop the one with the smallest
--- magnitude.
-
--- | From a vector @v@, generate a set of vectors that span the
---   subspace orthogonal to @v@.
-orthogonalSpace :: (InnerSpace v, HasBasis v, Floating (Scalar v), Ord (Scalar v)) => v -> OrientedSubspace v
-orthogonalSpace v = OS { osBasis       = ssBasis
-                       , osOrientation = v
-                       }
-  where ssBasis = tail . sortBy (comparing magnitude) . map ortho $ basis
-        basis   = map (basisValue . fst) (decompose v)
-        ortho b = b ^-^ prj b
-        prj     = proj v
-
--- | From an oriented subspace, generate a vector which is orthogonal
---   to the subspace, with the same orientation (i.e., in the same
---   half-space as the orientation vector).
-orthogonalVec :: ( InnerSpace v, HasBasis v
-                 , s ~ Scalar v
-                 , L.Field s, Ord s, Num s )
-                   => OrientedSubspace v -> v
-orthogonalVec (OS vs o) = v'
-  where bs = map fst . decompose . head $ vs
-        v = listToVec bs
-          . LV.toList . L.nullVector . LM.fromLists
-          . map vecToList
-          $ vs
-        v' = if (v <.> o < 0) then negateV v else v
-
--- | @proj v u@ computes the projection of @u@ onto @v@.
-proj :: (InnerSpace v, Floating (Scalar v)) => v -> v -> v
-proj v u = (u <.> v') *^ v'
-  where v' = normalized v
-
 instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
-         , InnerSpace v, Floating (Scalar v), L.Field (Scalar v), Ord (Scalar v))
+         , Scalar (Scalar v) ~ Scalar v
+         , InnerSpace v, Floating (Scalar v) )
     => Transformable (Bounds v) where
-  type TSpace (Bounds v) = TSpace v
+  type TSpace (Bounds v) = v
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
     Bounds $ \v ->
-      let v' = orthogonalVec (fmap (transform $ inv t) (orthogonalSpace v))
-          vi = transform (inv t) v
-      in  b v' / (v' <.> vi) * magnitudeSq v'
-
-vecToList :: HasBasis v => v -> [Scalar v]
-vecToList = map snd . decompose
-
-listToVec :: HasBasis v => [Basis v] -> [Scalar v] -> v
-listToVec bs ss = recompose $ zip bs ss
+      let v' = normalized $ apply (transp t) v
+          vi = apply (inv t) v
+      in  b v' / (v' <.> vi)
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -481,8 +420,6 @@ instance ( Backend b
          , s ~ Scalar (BSpace b)
          , Scalar s ~ s
          , Floating s
-         , L.Field s
-         , Ord s
          , HasLinearMap s )
     => Transformable (AnnDiagram b a) where
   type TSpace (AnnDiagram b a) = BSpace b

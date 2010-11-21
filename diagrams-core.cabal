@@ -21,6 +21,5 @@ Library
   Build-depends:       base >= 4.2 && < 4.4,
                        containers >= 0.3 && < 0.5,
                        vector-space >= 0.7 && < 0.8,
-                       MemoTrie >= 0.4.7 && < 0.5,
-                       hmatrix >= 0.10 && < 0.11
+                       MemoTrie >= 0.4.7 && < 0.5
   hs-source-dirs:      src
