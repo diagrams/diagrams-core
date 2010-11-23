@@ -133,9 +133,7 @@ transp (Transformation _ t' _) = t'
 
 -- | Transformations are closed under composition; @t1 <> t2@ is the
 --   transformation which performs first @t2@, then @t1@.
-instance ( HasLinearMap v, HasLinearMap (Scalar v)
-         , Scalar (Scalar v) ~ Scalar v)
-    => Monoid (Transformation v) where
+instance HasLinearMap v => Monoid (Transformation v) where
   mempty = Transformation mempty mempty zeroV
   mappend (Transformation t1 t1' v1) (Transformation t2 t2' v2)
     = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
@@ -152,9 +150,7 @@ papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 
 -- | Create a general affine transformation from an invertible linear
 --   transformation, its transpose, and a translation component.
-fromLinear :: (HasLinearMap v, HasLinearMap (Scalar v),
-               Scalar (Scalar v) ~ Scalar v)
-           => (v :-: v) -> (v :-: v) -> v -> Transformation v
+fromLinear :: (v :-: v) -> (v :-: v) -> v -> Transformation v
 fromLinear = Transformation
 
 ------------------------------------------------------------
