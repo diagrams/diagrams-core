@@ -19,15 +19,20 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Transform
-       ( -- * Transformations
+       ( -- * Points
+
+         Point, (.-.), (.+^)
+
+         -- * Transformations
 
          -- ** Invertible linear transformations
-         (:-:)(..), (<->), linv, lapp
+       , (:-:)(..), (<->), linv, lapp
 
          -- ** General transformations
        , Transformation(..)
        , inv, transp
        , apply
+       , papply
        , fromLinear
 
          -- * The 'Transformable' class
@@ -58,6 +63,23 @@ import Graphics.Rendering.Diagrams.Expressions
 
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
+
+------------------------------------------------------------
+--  Points  ------------------------------------------------
+------------------------------------------------------------
+
+-- | @Point@ is a newtype wrapper around vectors that we wish to treat
+--   as points, so we don't get them mixed up.  Translations affect
+--   points, but leave vectors unchanged.
+newtype Point v = P v
+
+-- | Form a vector from the difference of two points.
+(.-.) :: VectorSpace v => Point v -> Point v -> v
+P v1 .-. P v2 = v1 ^-^v2
+
+-- | Add a point and a vector.
+(.+^) :: VectorSpace v => Point v -> v -> Point v
+P v1 .+^ v2 = P (v1 ^+^ v2)
 
 ------------------------------------------------------------
 --  Transformations  ---------------------------------------
@@ -118,12 +140,15 @@ instance ( HasLinearMap v, HasLinearMap (Scalar v)
   mappend (Transformation t1 t1' v1) (Transformation t2 t2' v2)
     = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
 
--- | Apply a transformation to a vector.
-apply :: ( s ~ Scalar v,
-           HasLinearMap v, HasLinearMap s,
-           Fractional s, Scalar s ~ s)
-      => Transformation v -> v -> v
-apply (Transformation t _ v0) v = lapp t v ^+^ v0
+-- | Apply a transformation to a vector.  Note that any translational
+--   component of the transformation will not affect the vector, since
+--   vectors are invariant under translation.
+apply :: HasLinearMap v => Transformation v -> v -> v
+apply (Transformation t _ _) = lapp t
+
+-- | Apply a transformation to a point.
+papply :: HasLinearMap v => Transformation v -> Point v -> Point v
+papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 
 -- | Create a general affine transformation from an invertible linear
 --   transformation, its transpose, and a translation component.
