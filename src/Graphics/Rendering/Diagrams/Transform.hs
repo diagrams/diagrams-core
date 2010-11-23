@@ -27,7 +27,7 @@ module Graphics.Rendering.Diagrams.Transform
 
          -- ** General transformations
        , Transformation(..)
-       , inv, transp
+       , inv, transp, transl
        , apply
        , papply
        , fromLinear
@@ -110,6 +110,10 @@ inv (Transformation t t' v) = Transformation (linv t) (linv t')
 --   component).
 transp :: Transformation v -> (v :-: v)
 transp (Transformation _ t' _) = t'
+
+-- | Get the translational component of a transformation.
+transl :: Transformation v -> v
+transl (Transformation _ _ v) = v
 
 -- | Transformations are closed under composition; @t1 <> t2@ is the
 --   transformation which performs first @t2@, then @t1@.

@@ -329,6 +329,7 @@ instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
     => Transformable (Bounds v) where
   type TSpace (Bounds v) = v
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
+    rebaseBounds (P . negateV . transl $ t) $
     Bounds $ \v ->
       let v' = normalized $ lapp (transp t) v
           vi = apply (inv t) v
