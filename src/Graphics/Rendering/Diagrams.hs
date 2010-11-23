@@ -47,10 +47,6 @@ module Graphics.Rendering.Diagrams
        , fromNames
        , rememberAs
 
-         -- * Expressions
-
-       , LExpr(..), evalLExpr
-
          -- * Backends
 
        , Backend(..)

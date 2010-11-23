@@ -403,7 +403,8 @@ rebase e (Diagram ps b (NameSet s) smp)
             , names  = NameSet $ M.map (map (^-^ u)) s
             , sample = smp . translate (negateV u)
             }
-  where u  = evalLExpr e (NameSet s)
+  where tr :: (Transformable t, TSpace t ~ v) => t -> t
+        tr = translate (p .-. origin)
 
 -- | Rebase a bounding function, that is, change the local origin with
 --   respect to which bounding queries are made.

@@ -28,9 +28,7 @@ module Graphics.Rendering.Diagrams.Expressions
 
        , Qualifiable(..)
 
-         -- * Linear expressions
 
-       , LExpr(..), evalLExpr
 
          -- * Name sets
 
@@ -106,22 +104,6 @@ instance Qualifiable Name where
     where (Name ns1) = toName n1
 
 ------------------------------------------------------------
---  Linear expressions  ------------------------------------
-------------------------------------------------------------
-
-data LExpr v = Var Name
-             | Const v
-             | LExpr v :+: LExpr v
-             | Scalar v :*: LExpr v
-
-evalLExpr :: VectorSpace v => LExpr v -> NameSet v -> v
-  -- XXX should have some sort of warning here if multiple matches found?
-evalLExpr (Var n) (NameSet names) = fromMaybe zeroV (M.lookup n names >>= listToMaybe)
-evalLExpr (Const v) _   = v
-evalLExpr (e1 :+: e2) names = evalLExpr e1 names ^+^ evalLExpr e2 names
-evalLExpr (s :*: e) names   = s *^ evalLExpr e names
-
-------------------------------------------------------------
 --  Name sets  ---------------------------------------------
 ------------------------------------------------------------
 
@@ -148,7 +130,6 @@ instance Qualifiable (NameSet v) where
 fromNames :: IsName n => [(n, v)] -> NameSet v
 fromNames = NameSet . M.fromList . map (toName *** (:[]))
 
--- | Evaluate the given expression and remember the resulting vector
---   under the given name.
-rememberAs :: VectorSpace v => Name -> LExpr v -> NameSet v -> NameSet v
-rememberAs n e s@(NameSet names) = NameSet $ M.insertWith (++) n [evalLExpr e s] names
+-- | Give a name to a point.
+rememberAs :: VectorSpace v => Name -> v -> NameSet v -> NameSet v
+rememberAs n p s@(NameSet names) = NameSet $ M.insertWith (++) n [p] names

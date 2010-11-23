@@ -26,7 +26,7 @@ module Graphics.Rendering.Diagrams.Transform
          -- * Transformations
 
          -- ** Invertible linear transformations
-       , (:-:)(..), (<->), linv, lapp
+         (:-:)(..), (<->), linv, lapp
 
          -- ** General transformations
        , Transformation(..)
