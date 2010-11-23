@@ -19,10 +19,7 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Transform
-       ( -- * Points
-
-         Point, (.-.), (.+^)
-
+       (
          -- * Transformations
 
          -- ** Invertible linear transformations
@@ -63,23 +60,6 @@ import Graphics.Rendering.Diagrams.Expressions
 
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
-
-------------------------------------------------------------
---  Points  ------------------------------------------------
-------------------------------------------------------------
-
--- | @Point@ is a newtype wrapper around vectors that we wish to treat
---   as points, so we don't get them mixed up.  Translations affect
---   points, but leave vectors unchanged.
-newtype Point v = P v
-
--- | Form a vector from the difference of two points.
-(.-.) :: VectorSpace v => Point v -> Point v -> v
-P v1 .-. P v2 = v1 ^-^v2
-
--- | Add a point and a vector.
-(.+^) :: VectorSpace v => Point v -> v -> Point v
-P v1 .+^ v2 = P (v1 ^+^ v2)
 
 ------------------------------------------------------------
 --  Transformations  ---------------------------------------
@@ -150,8 +130,8 @@ papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 
 -- | Create a general affine transformation from an invertible linear
 --   transformation, its transpose, and a translation component.
-fromLinear :: (v :-: v) -> (v :-: v) -> v -> Transformation v
-fromLinear = Transformation
+fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
+fromLinear l1 l2 = Transformation l1 l2 zeroV
 
 ------------------------------------------------------------
 --  The 'Transformable' class  -----------------------------
@@ -172,10 +152,10 @@ instance Transformable t => Transformable [t] where
   type TSpace [t] = TSpace t
   transform t = map (transform t)
 
-instance (HasLinearMap v, HasLinearMap (Scalar v), Transformable v)
+instance (HasLinearMap v, HasLinearMap (Scalar v))
     => Transformable (NameSet v) where
-  type TSpace (NameSet v) = TSpace v
-  transform t (NameSet ns) = NameSet $ M.map (map (transform t)) ns
+  type TSpace (NameSet v) = v
+  transform t (NameSet ns) = NameSet $ M.map (map (papply t)) ns
 
 -- | It's useful to have the contravariant function instance by
 --   default; covariant instances (with @v@ in a positive position) can
@@ -184,12 +164,16 @@ instance Transformable v => Transformable (v -> a) where
   type TSpace (v -> a) = TSpace v
   transform t f = f . transform (inv t)
 
+instance (HasLinearMap v, HasLinearMap (Scalar v)) => Transformable (Point v) where
+  type TSpace (Point v) = v
+  transform t p = papply t p
+
 -- | Create a translation.
 translation :: ( HasLinearMap v, HasLinearMap (Scalar v)
                , Scalar (Scalar v) ~ Scalar v
                , InnerSpace v, Num (Scalar v))
             => v -> Transformation v
-translation v0 = fromLinear mempty mempty v0
+translation = Transformation mempty mempty
 
 -- | Translate by a vector.
 translate :: ( Transformable t, v ~ TSpace t, Scalar (Scalar v) ~ Scalar v
@@ -201,7 +185,7 @@ translate = transform . translation
 scaling :: (HasLinearMap v, HasLinearMap (Scalar v),
             Scalar (Scalar v) ~ Scalar v, Fractional (Scalar v))
         => Scalar v -> Transformation v
-scaling s = fromLinear lin lin zeroV   -- scaling is its own transpose
+scaling s = fromLinear lin lin      -- scaling is its own transpose
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.

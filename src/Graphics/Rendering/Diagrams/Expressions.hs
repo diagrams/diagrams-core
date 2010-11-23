@@ -1,4 +1,7 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances
+           , FlexibleInstances
+           , DeriveFunctor
+  #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Expressions
@@ -22,13 +25,15 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Expressions
-       ( -- * Names
+       ( -- * Points
 
-         AName(..), Name(..), IsName(..)
+         Point(..), origin, (.-.), (.+^), (*.)
+
+         -- * Names
+
+       , AName(..), Name(..), IsName(..)
 
        , Qualifiable(..)
-
-
 
          -- * Name sets
 
@@ -46,6 +51,31 @@ import qualified Data.Map as M
 import Data.Monoid
 import Data.Maybe (fromMaybe, listToMaybe)
 import Control.Arrow ((***))
+
+------------------------------------------------------------
+--  Points  ------------------------------------------------
+------------------------------------------------------------
+
+-- | @Point@ is a newtype wrapper around vectors that we wish to treat
+--   as points, so we don't get them mixed up.  Translations affect
+--   points, but leave vectors unchanged.
+newtype Point v = P v
+  deriving (Eq, Ord, Read, Show, Functor)
+
+origin :: AdditiveGroup v => Point v
+origin = P zeroV
+
+-- | Form a vector from the difference of two points.
+(.-.) :: AdditiveGroup v => Point v -> Point v -> v
+P v1 .-. P v2 = v1 ^-^v2
+
+-- | Add a point and a vector.
+(.+^) :: AdditiveGroup v => Point v -> v -> Point v
+P v1 .+^ v2 = P (v1 ^+^ v2)
+
+-- | Scale a point.
+(*.) :: VectorSpace v => Scalar v -> Point v -> Point v
+s *. P v = P (s *^ v)
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
@@ -107,9 +137,9 @@ instance Qualifiable Name where
 --  Name sets  ---------------------------------------------
 ------------------------------------------------------------
 
--- | A 'NameSet' is a map from names to vectors, possibly with
---   multiple vectors associated with each name.
-newtype NameSet v = NameSet (M.Map Name [v])
+-- | A 'NameSet' is a map from names to points, possibly with
+--   multiple points associated with each name.
+newtype NameSet v = NameSet (M.Map Name [Point v])
 
 -- | 'NameSet's form a monoid with the empty map as the identity, and
 --   map union as the binary operation.  No information is ever lost:
@@ -126,10 +156,10 @@ instance Monoid (NameSet v) where
 instance Qualifiable (NameSet v) where
   n |> (NameSet names) = NameSet $ M.mapKeys (n |>) names
 
--- | Construct a 'NameSet' from a list of (name, vector) pairs.
-fromNames :: IsName n => [(n, v)] -> NameSet v
+-- | Construct a 'NameSet' from a list of (name, point) pairs.
+fromNames :: IsName n => [(n, Point v)] -> NameSet v
 fromNames = NameSet . M.fromList . map (toName *** (:[]))
 
 -- | Give a name to a point.
-rememberAs :: VectorSpace v => Name -> v -> NameSet v -> NameSet v
+rememberAs :: VectorSpace v => Name -> Point v -> NameSet v -> NameSet v
 rememberAs n p s@(NameSet names) = NameSet $ M.insertWith (++) n [p] names

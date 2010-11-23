@@ -361,7 +361,7 @@ instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
 data AnnDiagram b a = Diagram { prims  :: [(Style, Prim b)]
                               , bounds :: Bounds (BSpace b)
                               , names  :: NameSet (BSpace b)
-                              , sample :: BSpace b -> a
+                              , sample :: Point (BSpace b) -> a
                               }
   deriving (Functor)
 
@@ -390,18 +390,19 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
-rebase :: ( Backend b, v ~ BSpace b
+rebase :: forall b v a.
+          ( Backend b, v ~ BSpace b
           , InnerSpace v, HasLinearMap v, HasLinearMap (Scalar v)
           , AdditiveGroup (Scalar v), Fractional (Scalar v)
           , Scalar (Scalar v) ~ Scalar v
           , Transformable v, v ~ TSpace v
           )
-       => LExpr v -> AnnDiagram b a -> AnnDiagram b a
-rebase e (Diagram ps b (NameSet s) smp)
-  = Diagram { prims  = (map . second) (translate (negateV u)) ps
-            , bounds = rebaseBounds u b
-            , names  = NameSet $ M.map (map (^-^ u)) s
-            , sample = smp . translate (negateV u)
+       => Point v -> AnnDiagram b a -> AnnDiagram b a
+rebase p (Diagram ps b (NameSet s) smp)
+  = Diagram { prims  = (map . second) tr ps
+            , bounds = rebaseBounds p b
+            , names  = NameSet $ M.map (map tr) s
+            , sample = smp . tr
             }
   where tr :: (Transformable t, TSpace t ~ v) => t -> t
         tr = translate (p .-. origin)
@@ -409,8 +410,8 @@ rebase e (Diagram ps b (NameSet s) smp)
 -- | Rebase a bounding function, that is, change the local origin with
 --   respect to which bounding queries are made.
 rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
-             => v -> Bounds v -> Bounds v
-rebaseBounds u (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
+             => Point v -> Bounds v -> Bounds v
+rebaseBounds (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.

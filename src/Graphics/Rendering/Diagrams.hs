@@ -26,8 +26,12 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams
-       ( -- * Transformations
-         Transformation
+       ( -- * Points
+
+         Point(..), origin, (.-.), (.+^), (*.)
+
+         -- * Transformations
+       , Transformation
        , inv
        , apply
        , fromLinear
