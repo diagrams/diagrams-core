@@ -393,9 +393,8 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 rebase :: forall b v a.
           ( Backend b, v ~ BSpace b
           , InnerSpace v, HasLinearMap v, HasLinearMap (Scalar v)
-          , AdditiveGroup (Scalar v), Fractional (Scalar v)
+          , Fractional (Scalar v)
           , Scalar (Scalar v) ~ Scalar v
-          , Transformable v, v ~ TSpace v
           )
        => Point v -> AnnDiagram b a -> AnnDiagram b a
 rebase p (Diagram ps b (NameSet s) smp)
