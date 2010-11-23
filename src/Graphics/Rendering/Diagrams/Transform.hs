@@ -147,8 +147,7 @@ class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 
 -- | Type class for things which can be transformed.
-class (HasLinearMap (TSpace t), HasLinearMap (Scalar (TSpace t)))
-    => Transformable t where
+class HasLinearMap (TSpace t) => Transformable t where
   type TSpace t :: *         -- Vector space of transformations
   transform :: Transformation (TSpace t) -> t -> t
 
@@ -173,10 +172,7 @@ instance (HasLinearMap v, HasLinearMap (Scalar v)) => Transformable (Point v) wh
   transform t p = papply t p
 
 -- | Create a translation.
-translation :: ( HasLinearMap v, HasLinearMap (Scalar v)
-               , Scalar (Scalar v) ~ Scalar v
-               , InnerSpace v, Num (Scalar v))
-            => v -> Transformation v
+translation :: HasLinearMap v => v -> Transformation v
 translation = Transformation mempty mempty
 
 -- | Translate by a vector.
@@ -186,15 +182,13 @@ translate :: ( Transformable t, v ~ TSpace t, Scalar (Scalar v) ~ Scalar v
 translate = transform . translation
 
 -- | Create a scale transformation.
-scaling :: (HasLinearMap v, HasLinearMap (Scalar v),
-            Scalar (Scalar v) ~ Scalar v, Fractional (Scalar v))
+scaling :: (HasLinearMap v, Fractional (Scalar v))
         => Scalar v -> Transformation v
 scaling s = fromLinear lin lin      -- scaling is its own transpose
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (Transformable t, Scalar (Scalar (TSpace t)) ~ Scalar (TSpace t),
-          Fractional (Scalar (TSpace t)))
+scale :: (Transformable t, Fractional (Scalar (TSpace t)))
       => Scalar (TSpace t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
