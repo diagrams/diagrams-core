@@ -167,7 +167,7 @@ instance Transformable v => Transformable (v -> a) where
   type TSpace (v -> a) = TSpace v
   transform t f = f . transform (inv t)
 
-instance (HasLinearMap v, HasLinearMap (Scalar v)) => Transformable (Point v) where
+instance HasLinearMap v => Transformable (Point v) where
   type TSpace (Point v) = v
   transform t p = papply t p
 
@@ -176,8 +176,7 @@ translation :: HasLinearMap v => v -> Transformation v
 translation = Transformation mempty mempty
 
 -- | Translate by a vector.
-translate :: ( Transformable t, v ~ TSpace t, Scalar (Scalar v) ~ Scalar v
-             , InnerSpace v, Num (Scalar v) )
+translate :: (Transformable t, HasLinearMap (TSpace t))
           => TSpace t -> t -> t
 translate = transform . translation
 
