@@ -129,15 +129,24 @@ class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
                  -> Render b   -- ^ Rendering operation to perform
                  -> Result b   -- ^ Output of the rendering operation
 
+  -- | 'adjustDia' allows the backend to make adjustments to the final
+  --   diagram (e.g. to adjust the size based on the options) before
+  --   rendering it.  A default implementation is provided which makes
+  --   no adjustments.
+  adjustDia :: b -> Options b -> AnnDiagram b a -> AnnDiagram b a
+  adjustDia _ _ d = d
+
   -- | Render a diagram.  This has a default implementation in terms
-  --   of 'withStyle', 'doRender', and the 'render' operation from the
-  --   'Renderable' class ('withStyle' and 'render' are used to render
-  --   each primitive, the resulting operations are combined with
+  --   of 'adjustDia', 'withStyle', 'doRender', and the 'render'
+  --   operation from the 'Renderable' class (first 'adjustDia' is
+  --   used, then 'withStyle' and 'render' are used to render each
+  --   primitive, the resulting operations are combined with
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
   renderDia :: b -> Options b -> AnnDiagram b a -> Result b
-  renderDia b opts d = doRender b opts (mconcat $ map renderOne (prims d))
-    where renderOne (s,p) = withStyle b s (render b p)
+  renderDia b opts =
+    doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
+      where renderOne (s,p) = withStyle b s (render b p)
 
   -- See Note [backend token]
 
