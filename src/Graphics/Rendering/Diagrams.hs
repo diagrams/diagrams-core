@@ -70,7 +70,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Primtives
 
-       , Prim(..)
+       , Prim(..), prim
 
          -- * Bounds
 
