@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances
            , FlexibleInstances
+           , TypeFamilies
            , DeriveFunctor
   #-}
 -----------------------------------------------------------------------------
@@ -45,6 +46,7 @@ module Graphics.Rendering.Diagrams.Expressions
        ) where
 
 import Data.VectorSpace
+import qualified Data.AffineSpace as AS
 
 import Data.List (intercalate)
 import qualified Data.Map as M
@@ -62,16 +64,22 @@ import Control.Arrow ((***))
 newtype Point v = P v
   deriving (Eq, Ord, Read, Show, Functor)
 
+-- | The origin of the vector space @v@.
 origin :: AdditiveGroup v => Point v
 origin = P zeroV
 
--- | Form a vector from the difference of two points.
-(.-.) :: AdditiveGroup v => Point v -> Point v -> v
-P v1 .-. P v2 = v1 ^-^v2
+instance AdditiveGroup v => AS.AffineSpace (Point v) where
+  type AS.Diff (Point v) = v
+  P v1 .-. P v2 = v1 ^-^v2
+  P v1 .+^ v2   = P (v1 ^+^ v2)
 
--- | Add a point and a vector.
-(.+^) :: AdditiveGroup v => Point v -> v -> Point v
-P v1 .+^ v2 = P (v1 ^+^ v2)
+-- | Form a vector as the difference of two points.
+(.-.) :: AS.AffineSpace p => p -> p -> AS.Diff p
+(.-.) = (AS..-.)
+
+-- | Add a vector to a point, producing a new point.
+(.+^) :: AS.AffineSpace p => p -> AS.Diff p -> p
+(.+^) = (AS..+^)
 
 -- | Scale a point.
 (*.) :: VectorSpace v => Scalar v -> Point v -> Point v
