@@ -96,9 +96,9 @@ module Graphics.Rendering.Diagrams
 
        ) where
 
-import Graphics.Rendering.Diagrams.Basics
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
+import Graphics.Rendering.Diagrams.Diagrams
 
 

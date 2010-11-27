@@ -11,7 +11,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Basics
+-- Module      :  Graphics.Rendering.Diagrams.Diagrams
 -- Copyright   :  (c) Brent Yorgey 2010
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  byorgey@cis.upenn.edu
@@ -30,9 +30,15 @@
 --
 -----------------------------------------------------------------------------
 
--- TODO: this module probably wants breaking up into smaller modules...
+{- ~~~~ Note [breaking up basics module]
 
-module Graphics.Rendering.Diagrams.Basics
+   This module is getting somewhat monolithic, and breaking it up into
+   a collection of smaller modules would be a good idea in principle.
+   However, it's not as easy as it sounds: most of the stuff here depends
+   on other stuff in various cyclic ways.
+-}
+
+module Graphics.Rendering.Diagrams.Diagrams
        ( -- * Backends
 
          Backend(..)
@@ -79,22 +85,16 @@ module Graphics.Rendering.Diagrams.Basics
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
+import Graphics.Rendering.Diagrams.Util
 
 import Data.Typeable
 
 import Data.VectorSpace
-import Data.Basis
-import Data.MemoTrie
 
 import qualified Data.Map as M
 import Data.Monoid
 import Control.Arrow (first, second)
-import Control.Applicative hiding (Const)
-import Data.List (sortBy)
-import Data.Ord (comparing)
-
-(<>) :: Monoid m => m -> m -> m
-(<>) = mappend
+import Control.Applicative
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
