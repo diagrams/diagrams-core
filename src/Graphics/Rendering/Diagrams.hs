@@ -18,7 +18,10 @@
 --   * "Graphics.Rendering.Diagrams.Transform" for invertible linear
 --     and projective transformations
 --
---   * "Graphics.Rendering.Diagrams.Expressions" for names and expressions
+--   * "Graphics.Rendering.Diagrams.Points" for points (as distinct from vectors)
+--
+--   * "Graphics.Rendering.Diagrams.Names" for names used to identify locations
+--     within diagrams
 --
 --   * "Graphics.Rendering.Diagrams.Basics" for backends, the
 --     'Diagram' type itself, and primitive diagram operations.
@@ -95,6 +98,7 @@ module Graphics.Rendering.Diagrams
 
 import Graphics.Rendering.Diagrams.Basics
 import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Expressions
+import Graphics.Rendering.Diagrams.Points
+import Graphics.Rendering.Diagrams.Names
 
 

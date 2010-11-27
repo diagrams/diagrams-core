@@ -56,7 +56,8 @@ import Data.MemoTrie
 import Data.Monoid
 import qualified Data.Map as M
 
-import Graphics.Rendering.Diagrams.Expressions
+import Graphics.Rendering.Diagrams.Points
+import Graphics.Rendering.Diagrams.Names
 
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend

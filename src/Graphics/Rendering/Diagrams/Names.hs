@@ -1,11 +1,9 @@
 {-# LANGUAGE TypeSynonymInstances
            , FlexibleInstances
-           , TypeFamilies
-           , DeriveFunctor
   #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Expressions
+-- Module      :  Graphics.Rendering.Diagrams.Names
 -- Copyright   :  (c) Brent Yorgey 2010
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  byorgey@cis.upenn.edu
@@ -13,8 +11,8 @@
 -- Portability :  portable
 --
 -- An embedded domain-specific language for describing and rendering
--- diagrams.  This module provides names and expressions for referring
--- to locations within diagrams.
+-- diagrams.  This module defines a type of names, for referring to
+-- locations within diagrams, and related types.
 --
 -- Note that end users should rarely (if ever) need to import this
 -- module directly; instead, import "Graphics.Rendering.Diagrams",
@@ -25,14 +23,10 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Expressions
-       ( -- * Points
+module Graphics.Rendering.Diagrams.Names
+       (-- * Names
 
-         Point(..), origin, (.-.), (.+^), (*.)
-
-         -- * Names
-
-       , AName(..), Name(..), IsName(..)
+         AName(..), Name(..), IsName(..)
 
        , Qualifiable(..)
 
@@ -45,45 +39,13 @@ module Graphics.Rendering.Diagrams.Expressions
        , rememberAs
        ) where
 
-import Data.VectorSpace
-import qualified Data.AffineSpace as AS
+import Graphics.Rendering.Diagrams.Points
 
 import Data.List (intercalate)
 import qualified Data.Map as M
 import Data.Monoid
 import Data.Maybe (fromMaybe, listToMaybe)
 import Control.Arrow ((***))
-
-------------------------------------------------------------
---  Points  ------------------------------------------------
-------------------------------------------------------------
-
--- | @Point@ is a newtype wrapper around vectors that we wish to treat
---   as points, so we don't get them mixed up.  Translations affect
---   points, but leave vectors unchanged.
-newtype Point v = P v
-  deriving (Eq, Ord, Read, Show, Functor)
-
--- | The origin of the vector space @v@.
-origin :: AdditiveGroup v => Point v
-origin = P zeroV
-
-instance AdditiveGroup v => AS.AffineSpace (Point v) where
-  type AS.Diff (Point v) = v
-  P v1 .-. P v2 = v1 ^-^v2
-  P v1 .+^ v2   = P (v1 ^+^ v2)
-
--- | Form a vector as the difference of two points.
-(.-.) :: AS.AffineSpace p => p -> p -> AS.Diff p
-(.-.) = (AS..-.)
-
--- | Add a vector to a point, producing a new point.
-(.+^) :: AS.AffineSpace p => p -> AS.Diff p -> p
-(.+^) = (AS..+^)
-
--- | Scale a point.
-(*.) :: VectorSpace v => Scalar v -> Point v -> Point v
-s *. P v = P (s *^ v)
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
@@ -169,5 +131,5 @@ fromNames :: IsName n => [(n, Point v)] -> NameSet v
 fromNames = NameSet . M.fromList . map (toName *** (:[]))
 
 -- | Give a name to a point.
-rememberAs :: VectorSpace v => Name -> Point v -> NameSet v -> NameSet v
+rememberAs :: Name -> Point v -> NameSet v -> NameSet v
 rememberAs n p s@(NameSet names) = NameSet $ M.insertWith (++) n [p] names

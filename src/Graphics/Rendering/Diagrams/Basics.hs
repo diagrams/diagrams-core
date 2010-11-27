@@ -77,7 +77,8 @@ module Graphics.Rendering.Diagrams.Basics
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Expressions
+import Graphics.Rendering.Diagrams.Points
+import Graphics.Rendering.Diagrams.Names
 
 import Data.Typeable
 
