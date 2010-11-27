@@ -134,7 +134,8 @@ papply :: HasLinearMap v => Transformation v -> Point v -> Point v
 papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 
 -- | Create a general affine transformation from an invertible linear
---   transformation, its transpose, and a translation component.
+--   transformation and its transpose.  The translational component is
+--   assumed to be zero.
 fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
 fromLinear l1 l2 = Transformation l1 l2 zeroV
 
