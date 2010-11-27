@@ -148,9 +148,13 @@ fromLinear l1 l2 = Transformation l1 l2 zeroV
 class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 
--- | Type class for things which can be transformed.
+-- | Type class for things which can be transformed.  @TSpace t@ is
+--   the associated vector space over which transformations are
+--   constructed.
 class HasLinearMap (TSpace t) => Transformable t where
   type TSpace t :: *         -- Vector space of transformations
+
+  -- | Apply a transformation to an object.
   transform :: Transformation (TSpace t) -> t -> t
 
 instance Transformable t => Transformable [t] where
