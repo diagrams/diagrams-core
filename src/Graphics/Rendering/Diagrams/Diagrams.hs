@@ -206,7 +206,8 @@ necessarily injective.
 class Typeable a => AttributeClass a where
 
 -- | An existential wrapper type to hold attributes.
-data Attribute = forall a. AttributeClass a => Attribute a
+data Attribute :: * where
+  Attribute :: AttributeClass a => a -> Attribute
 
 -- | Unwrap an unknown 'Attribute' type, performing a (dynamic)
 --   type check on the result.
