@@ -211,7 +211,32 @@ necessarily injective.
 class Typeable a => AttributeClass a where
 
 -- | An existential wrapper type to hold attributes.
-data Attribute = forall a. AttributeClass a => Attribute a
+data Attribute :: * -> * where
+  Attribute :: AttributeClass a => a -> Bool -> Transformation v -> Attribute v
+
+-- | Attributes can be transformed; it is up to the backend to decide
+--   how to treat transformed attributes.
+instance HasLinearMap v => Transformable (Attribute v) where
+  type TSpace (Attribute v) = v
+  transform t   (Attribute a True x)  = Attribute a True (t <> x)
+  transform t a@(Attribute _ False _) = a
+
+-- TODO: add to export lists etc.
+
+-- | Create an (untransformed, unfrozen) attribute.
+mkAttr :: ( HasLinearMap v, AttributeClass a)
+            => a -> Attribute v
+mkAttr a = Attribute a False mempty
+
+-- | Freeze an attribute, i.e. it will now be affected by
+--   transformations.
+freezeAttr :: Attribute v -> Attribute v
+freezeAttr (Attribute a _ t) = Attribute a True t
+
+-- | Thaw an attribute, i.e. it will no longer be affected by
+--   transformations.
+thawAttr :: Attribute v -> Attribute v
+thawAttr (Attribute a _ t) = Attribute a False t
 
 -- | Unwrap an unknown 'Attribute' type, performing a (dynamic)
 --   type check on the result.
@@ -238,8 +263,7 @@ inStyle f (Style s) = Style (f s)
 
 -- | Extract an attribute from a style using the magic of type
 --   inference and "Data.Typeable".
-getAttr :: forall a v. ( HasLinearMap v, HasLinearMap (Scalar v)
-                       , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+getAttr :: forall a v. (HasLinearMap v, AttributeClass a)
              => Style v -> Maybe a
 getAttr (Style s) = M.lookup ty s >>= unwrapAttr
   where ty = (show . typeOf $ (undefined :: a))
@@ -248,8 +272,7 @@ getAttr (Style s) = M.lookup ty s >>= unwrapAttr
 
 -- | Add a new attribute to a style, or replace the old attribute of
 --   the same type if one exists.
-setAttr :: forall a v. ( HasLinearMap v, HasLinearMap (Scalar v)
-                       , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+setAttr :: forall a v. (HasLinearMap v, AttributeClass a)
              => a -> Style v -> Style v
 setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (mkAttr a)
 
@@ -261,22 +284,19 @@ instance Monoid (Style v) where
   (Style s1) `mappend` (Style s2) = Style $ s2 `M.union` s1
 
 -- | Create a style from a single attribute.
-attrToStyle :: forall a v. ( HasLinearMap v, HasLinearMap (Scalar v)
-                           , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+attrToStyle :: forall a v. (HasLinearMap v, AttributeClass a)
                  => a -> Style v
 attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a))
 
 -- | Attempt to add a new attribute to a style, but if an attribute of
 --   the same type already exists, do not replace it.
-addAttr :: ( HasLinearMap v, HasLinearMap (Scalar v)
-           , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+addAttr :: (HasLinearMap v, AttributeClass a)
              => a -> Style v -> Style v
 addAttr a s = attrToStyle a <> s
 
 -- | Apply an attribute to a diagram.  Note that child attributes
 --   always have precedence over parent attributes.
-applyAttr :: ( v ~ BSpace b, HasLinearMap v, HasLinearMap (Scalar v)
-             , Scalar (Scalar v) ~ Scalar v, AttributeClass a)
+applyAttr :: (v ~ BSpace b, HasLinearMap v, AttributeClass a)
                => a -> AnnDiagram b m -> AnnDiagram b m
 applyAttr = applyStyle . attrToStyle
 
