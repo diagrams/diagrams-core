@@ -18,9 +18,8 @@ Library
                        Graphics.Rendering.Diagrams.Transform,
                        Graphics.Rendering.Diagrams.Points,
                        Graphics.Rendering.Diagrams.Names,
+                       Graphics.Rendering.Diagrams.Util,
                        Graphics.Rendering.Diagrams.Diagrams
-
-  Other-modules:       Graphics.Rendering.Diagrams.Util
 
   Build-depends:       base >= 4.2 && < 4.4,
                        containers >= 0.3 && < 0.5,
