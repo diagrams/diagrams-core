@@ -74,17 +74,19 @@ mm :: M2 -> M2 -> M2
 mm (M2 (a1,b1) (c1,d1)) (M2 (a2,b2) (c2,d2))
   = M2 (a1*a2 + b1*c2, a1*b2 + b1*d2) (c1*a2 + d1*c2, c1*b2 + d1*d2)
 
+-- | Convert a matrix to a (linear) function.
 m2f :: M2 -> (Q2 -> Q2)
 m2f (M2 (a,b) (c,d)) (x,y) = (a*x + b*y, c*x + d*y)
 
+-- | Convert a linear function to a matrix.
 f2m :: (Q2 -> Q2) -> M2
 f2m f = mtrans $ M2 (f (1,0)) (f (0,1))
 
-prop_f2m_m2f m = f2m (m2f m) == m
-
+-- | Convert a matrix to an invertible linear map.
 m2l :: M2 -> I2
 m2l m = m2f m <-> m2f (minv m)
 
+-- | Convert a linear map to a matrix.
 l2m :: (Q2 :-* Q2) -> M2
 l2m l = mtrans $ M2 (lapply l (1,0)) (lapply l (0,1))
 
@@ -115,12 +117,6 @@ instance Show I2 where
 instance Eq I2 where
   f == g = lapp f (1,0) == lapp g (1,0) && lapp f (0,1) == lapp g (0,1)
 
-prop_linv_L :: I2 -> Bool
-prop_linv_L l = (linv l <> l) == mempty
-
-prop_linv_R :: I2 -> Bool
-prop_linv_R l = (l <> linv l) == mempty
-
 instance Arbitrary (Transformation Q2) where
   arbitrary = do
     m <- arbitrary
@@ -148,6 +144,19 @@ tValid (Transformation t t' _) = iValid t && iValid t'
 ------------------------------------------------------------
 --  Properties  --------------------------------------------
 ------------------------------------------------------------
+
+-- **** Linear function properties
+
+-- f2m and m2f are inverse.
+prop_f2m_m2f m = f2m (m2f m) == m
+
+-- linv gives a left inverse.
+prop_linv_L :: I2 -> Bool
+prop_linv_L l = (linv l <> l) == mempty
+
+-- linv gives a right inverse.
+prop_linv_R :: I2 -> Bool
+prop_linv_R l = (l <> linv l) == mempty
 
 -- **** Transformation properties
 
@@ -187,7 +196,13 @@ prop_scale_scales s v = s /= 0 ==> scale s v == v'
 --  Collecting test results  -------------------------------
 ------------------------------------------------------------
 
-tests = [ testGroup "Transformations"
+tests = [ testGroup "Linear functions"
+          [ testProperty "Matrix/function conversion" prop_f2m_m2f
+          , testProperty "Linear left inverse"        prop_linv_L
+          , testProperty "Linear right inverse"       prop_linv_R
+          ]
+
+        , testGroup "Transformations"
           [ testProperty "Matrix inversion"        prop_minv
           , testProperty "Transformation validity" prop_tValid
           , testProperty "Inversion validity"      prop_inv_valid
