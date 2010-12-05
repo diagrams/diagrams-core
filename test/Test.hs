@@ -9,6 +9,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Data.Ratio
 import Control.Monad
 import Data.Monoid
+import Control.Applicative
 
 import Data.Basis
 import Data.LinearMap
@@ -140,6 +141,23 @@ tValid (Transformation t t' _) = iValid t && iValid t'
                               && mtrans m == mt && mtrans m' == mt'
   where (m ,m' ) = i2m t
         (mt,mt') = i2m t'
+
+-- Transformations on Q2 as free monoid on a set of primitive generators
+
+data PrimTransf = ScaleT (NonZero Rational) (NonZero Rational)
+                | RotateT Double
+                | ReflectT
+                | TranslateT Rational Rational
+  deriving (Show)
+
+instance Arbitrary PrimTransf where
+  arbitrary = oneof [ ScaleT <$> arbitrary <*> arbitrary
+                    , RotateT <$> arbitrary
+                    , return ReflectT
+                    , TranslateT <$> arbitrary <*> arbitrary
+                    ]
+
+type FreeTransf = [PrimTransf]
 
 ------------------------------------------------------------
 --  Properties  --------------------------------------------
