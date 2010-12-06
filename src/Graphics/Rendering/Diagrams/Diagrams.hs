@@ -468,7 +468,7 @@ rebase p (Diagram ps b (NameSet s) smp)
             , sample = smp . tr
             }
   where tr :: (Transformable t, TSpace t ~ v) => t -> t
-        tr = translate (p .-. origin)
+        tr = translate (origin .-. p)
 
 -- | Rebase a bounding function, that is, change the local origin with
 --   respect to which bounding queries are made.
