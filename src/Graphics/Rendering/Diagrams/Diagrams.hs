@@ -441,7 +441,7 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
   pure a = Diagram mempty mempty mempty (const a)
 
   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
-    = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (\v -> smp1 v (smp2 v))
+    = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
 ------------------------------------------------------------
 --  Primitive operations  ----------------------------------
