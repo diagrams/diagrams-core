@@ -386,9 +386,8 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
 --  Transforming bounding regions  -------------------------
 ------------------------------------------------------------
 
-instance ( Transformable v, HasLinearMap v, HasLinearMap (Scalar v)
-         , Scalar (Scalar v) ~ Scalar v
-         , InnerSpace v, Floating (Scalar v) )
+instance ( HasLinearMap v, InnerSpace v
+         , s ~ Scalar v, Floating s, AdditiveGroup s )
     => Transformable (Bounds v) where
   type TSpace (Bounds v) = v
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
@@ -475,14 +474,9 @@ rebaseBounds (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
-instance ( Backend b
-         , InnerSpace (BSpace b)
-         , TSpace (BSpace b) ~ BSpace b
-         , Transformable (BSpace b)
-         , s ~ Scalar (BSpace b)
-         , Scalar s ~ s
-         , Floating s
-         , HasLinearMap s )
+instance ( Backend b, InnerSpace (BSpace b)
+         , s ~ Scalar (BSpace b), Floating s, AdditiveGroup s
+         )
     => Transformable (AnnDiagram b a) where
   type TSpace (AnnDiagram b a) = BSpace b
   transform t (Diagram ps b ns smp)

@@ -161,8 +161,7 @@ instance Transformable t => Transformable [t] where
   type TSpace [t] = TSpace t
   transform t = map (transform t)
 
-instance (HasLinearMap v, HasLinearMap (Scalar v))
-    => Transformable (NameSet v) where
+instance HasLinearMap v => Transformable (NameSet v) where
   type TSpace (NameSet v) = v
   transform t (NameSet ns) = NameSet $ M.map (map (papply t)) ns
 
