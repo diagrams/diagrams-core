@@ -449,9 +449,6 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 
 -- XXX rebase ought to be implemented in terms of transform?
 
--- TODO: does rebase really need to involve expressions?  Can't those
--- go in the standard library?
-
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
 rebase :: forall b v a.
