@@ -113,8 +113,7 @@ import Control.Applicative
 --   class, and comes with an associated vector space and rendering
 --   environment.  A backend must provide the four associated types as
 --   well as implementations for 'withStyle' and 'doRender'.
-class ( HasLinearMap (BSpace b), HasLinearMap (Scalar (BSpace b))
-      , Monoid (Render b) )
+class ( HasLinearMap (BSpace b), Monoid (Render b) )
     => Backend b where
   type BSpace b  :: *           -- The vector space associated with this backend
   type Render b  :: *           -- The type of rendering operations used by this
@@ -450,11 +449,10 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 
 -- | @'rebase' u d@ is the same as @d@, except with the local origin
 --   moved to @u@.
-rebase :: forall b v a.
-          ( Backend b, v ~ BSpace b
-          , InnerSpace v, HasLinearMap v, HasLinearMap (Scalar v)
-          , Fractional (Scalar v)
-          , Scalar (Scalar v) ~ Scalar v
+rebase :: forall b v s a.
+          ( Backend b, v ~ BSpace b, s ~ Scalar v
+          , InnerSpace v, HasLinearMap v
+          , Fractional s, AdditiveGroup s
           )
        => Point v -> AnnDiagram b a -> AnnDiagram b a
 rebase p (Diagram ps b (NameSet s) smp)
@@ -463,6 +461,8 @@ rebase p (Diagram ps b (NameSet s) smp)
             , names  = NameSet $ M.map (map tr) s
             , sample = smp . tr
             }
+        -- the scoped type variables are necessary here since GHC no longer
+        -- generalizes let-bound functions
   where tr :: (Transformable t, TSpace t ~ v) => t -> t
         tr = translate (origin .-. p)
 
