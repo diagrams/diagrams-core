@@ -7,6 +7,7 @@
            , DeriveFunctor
            , ExistentialQuantification
            , ScopedTypeVariables
+           , TupleSections
            #-}
 
 -----------------------------------------------------------------------------
@@ -98,7 +99,7 @@ import Data.VectorSpace
 
 import qualified Data.Map as M
 import Data.Monoid
-import Control.Arrow (first, second)
+import Control.Arrow (first, (***))
 import Control.Applicative
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
@@ -237,10 +238,11 @@ freezeAttr (Attribute a _ t) = Attribute a True t
 thawAttr :: Attribute v -> Attribute v
 thawAttr (Attribute a _ t) = Attribute a False t
 
--- | Unwrap an unknown 'Attribute' type, performing a (dynamic)
---   type check on the result.
-unwrapAttr :: AttributeClass a => Attribute v -> Maybe a
-unwrapAttr (Attribute a _ _) = cast a
+-- | Unwrap an unknown 'Attribute' type, performing a (dynamic) type
+--   check on the result, returning both the attribute and its
+--   accompanying transformation.
+unwrapAttr :: AttributeClass a => Attribute v -> Maybe (a, Transformation v)
+unwrapAttr (Attribute a _ t) = (,t) <$> cast a
 
 -- | Get the transformation that has been applied to an attribute.
 attrTransformation :: Attribute v -> Transformation v
@@ -260,10 +262,14 @@ inStyle :: (M.Map String (Attribute v) -> M.Map String (Attribute v))
         -> Style v -> Style v
 inStyle f (Style s) = Style (f s)
 
--- | Extract an attribute from a style using the magic of type
---   inference and "Data.Typeable".
+instance HasLinearMap v => Transformable (Style v) where
+  type TSpace (Style v) = v
+  transform = inStyle . M.map . transform
+
+-- | Extract an attribute and the accompanying transformation from a
+--   style using the magic of type inference and "Data.Typeable".
 getAttr :: forall a v. (HasLinearMap v, AttributeClass a)
-             => Style v -> Maybe a
+             => Style v -> Maybe (a, Transformation v)
 getAttr (Style s) = M.lookup ty s >>= unwrapAttr
   where ty = (show . typeOf $ (undefined :: a))
   -- the unwrapAttr should never fail, since we maintain the invariant
@@ -456,7 +462,7 @@ rebase :: forall b v s a.
           )
        => Point v -> AnnDiagram b a -> AnnDiagram b a
 rebase p (Diagram ps b (NameSet s) smp)
-  = Diagram { prims  = (map . second) tr ps
+  = Diagram { prims  = map (tr *** tr) ps
             , bounds = rebaseBounds p b
             , names  = NameSet $ M.map (map tr) s
             , sample = smp . tr
@@ -480,7 +486,7 @@ instance ( Backend b, InnerSpace (BSpace b)
     => Transformable (AnnDiagram b a) where
   type TSpace (AnnDiagram b a) = BSpace b
   transform t (Diagram ps b ns smp)
-    = Diagram ((map . second) (transform t) ps)
+    = Diagram (map (transform t *** transform t) ps)
               (transform t b)
               (transform t ns)
               (transform t smp)
