@@ -55,6 +55,7 @@ import Data.MemoTrie
 
 import Data.Monoid
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
@@ -160,6 +161,14 @@ class HasLinearMap (TSpace t) => Transformable t where
 instance Transformable t => Transformable [t] where
   type TSpace [t] = TSpace t
   transform t = map (transform t)
+
+instance (Transformable t, Ord t) => Transformable (S.Set t) where
+  type TSpace (S.Set t) = TSpace t
+  transform t = S.map (transform t)
+
+instance Transformable t => Transformable (M.Map k t) where
+  type TSpace (M.Map k t) = TSpace t
+  transform t = M.map (transform t)
 
 instance HasLinearMap v => Transformable (NameSet v) where
   type TSpace (NameSet v) = v
