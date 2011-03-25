@@ -69,10 +69,6 @@ module Graphics.Rendering.Diagrams.Diagrams
 
        , Prim(..), prim
 
-         -- * Bounds
-
-       , Bounds(..)
-
          -- * Diagrams
 
        , AnnDiagram(..), Diagram
@@ -84,11 +80,10 @@ module Graphics.Rendering.Diagrams.Diagrams
 
        , freeze, thaw
 
-       , rebaseBounds
-
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
+import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Util
@@ -354,55 +349,6 @@ instance Backend b => Renderable (Prim b) b where
   render b (Prim p) = render b p
 
 ------------------------------------------------------------
---  Bounds  ------------------------------------------------
-------------------------------------------------------------
-
--- | Every diagram comes equipped with a bounding function.
---   Intuitively, the bounding function for a diagram tells us the
---   minimum distance we have to go in any given direction to get to a
---   (hyper)plane entirely containing the diagram on one side of
---   it. Formally, given a vector @v@, it returns a scalar @s@ such
---   that
---
---     * for every vector @u@ with its endpoint inside the diagram,
---       if the projection of @u@ onto @v@ is @s' *^ v@, then @s' <= s@.
---
---     * @s@ is the smallest such scalar.
---
---   Essentially, bounding functions are a functional representation
---   of convex bounding regions.  The idea for this representation
---   came from Sebastian Setzer: see <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.
---
---   XXX add some diagrams here to illustrate!  Note that Haddock supports
---   inline images, using a \<\<url\>\> syntax.
-newtype Bounds v = Bounds (v -> Scalar v)
-
--- | Bounding functions form a monoid, with the constantly zero
---   function (/i.e./ the empty region) as the identity, and pointwise
---   maximum as composition.  Hence, if @b1@ is the bounding function
---   for diagram @d1@, and @b2@ is the bounding function for @d2@,
---   then @b1 \`mappend\` b2@ is the bounding function for @d1
---   \`atop\` d2@.
-instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
-  mempty = Bounds $ const zeroV
-  mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
-
-------------------------------------------------------------
---  Transforming bounding regions  -------------------------
-------------------------------------------------------------
-
-instance ( HasLinearMap v, InnerSpace v
-         , s ~ Scalar v, Floating s, AdditiveGroup s )
-    => Transformable (Bounds v) where
-  type TSpace (Bounds v) = v
-  transform t (Bounds b) =   -- XXX add lots of comments explaining this!
-    rebaseBounds (P . negateV . transl $ t) $
-    Bounds $ \v ->
-      let v' = normalized $ lapp (transp t) v
-          vi = apply (inv t) v
-      in  b v' / (v' <.> vi)
-
-------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
 
@@ -426,10 +372,10 @@ instance ( HasLinearMap v, InnerSpace v
 --
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
-data AnnDiagram b a = Diagram { prims  :: [(Style (BSpace b), Prim b)]
-                              , bounds :: Bounds (BSpace b)
-                              , names  :: NameSet (BSpace b)
-                              , sample :: Point (BSpace b) -> a
+data AnnDiagram b a = Diagram { prims   :: [(Style (BSpace b), Prim b)]
+                              , bounds_ :: Bounds (BSpace b)
+                              , names   :: NameSet (BSpace b)
+                              , sample  :: Point (BSpace b) -> a
                               }
   deriving (Functor)
 
@@ -439,6 +385,10 @@ data AnnDiagram b a = Diagram { prims  :: [(Style (BSpace b), Prim b)]
 --   annotations can be done via the 'Functor' and 'Applicative'
 --   instances for @'AnnDiagram' b@.
 type Diagram b = AnnDiagram b Any
+
+instance Boundable (AnnDiagram b a) where
+  type BoundSpace (AnnDiagram b a) = BSpace b
+  bounds (Diagram {bounds_ = Bounds b}) = b
 
 instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
            => Applicative (AnnDiagram b) where
@@ -462,21 +412,15 @@ rebase :: forall b v s a.
           )
        => Point v -> AnnDiagram b a -> AnnDiagram b a
 rebase p (Diagram ps b (NameSet s) smp)
-  = Diagram { prims  = map (tr *** tr) ps
-            , bounds = rebaseBounds p b
-            , names  = NameSet $ M.map (map tr) s
-            , sample = smp . tr
+  = Diagram { prims   = map (tr *** tr) ps
+            , bounds_ = rebaseBounds p b
+            , names   = NameSet $ M.map (map tr) s
+            , sample  = smp . tr
             }
         -- the scoped type variables are necessary here since GHC no longer
         -- generalizes let-bound functions
   where tr :: (Transformable t, TSpace t ~ v) => t -> t
         tr = translate (origin .-. p)
-
--- | Rebase a bounding function, that is, change the local origin with
---   respect to which bounding queries are made.
-rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
-             => Point v -> Bounds v -> Bounds v
-rebaseBounds (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
