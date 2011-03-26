@@ -173,11 +173,11 @@ class Backend b => MultiBackend b where
   -- See Note [backend token]
 
 
--- | The 'Renderable' type class connects backends to primitives which
+-- | The Renderable type class connects backends to primitives which
 --   they know how to render.
 class (Backend b, Transformable t) => Renderable t b where
   render :: b -> t -> Render b
-  -- ^ Given a token representing the backend, a style, and a
+  -- ^ Given a token representing the backen and a
   -- transformable object, render it in the appropriate rendering
   -- context.
 

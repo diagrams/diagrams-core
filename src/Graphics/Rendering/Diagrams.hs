@@ -23,8 +23,13 @@
 --   * "Graphics.Rendering.Diagrams.Names" for names used to identify locations
 --     within diagrams
 --
---   * "Graphics.Rendering.Diagrams.Basics" for backends, the
---     'Diagram' type itself, and primitive diagram operations.
+--   * "Graphics.Rendering.Diagrams.Bounds" for functional bounding regions.
+--
+--   * "Graphics.Rendering.Diagrams.HasOrigin" for a type class governing things
+--     with an intrinsic notion of a \"local origin\".
+--
+--   * "Graphics.Rendering.Diagrams.Basics" for backends and the
+--     'Diagram' type itself.
 --
 -----------------------------------------------------------------------------
 
@@ -37,13 +42,14 @@ module Graphics.Rendering.Diagrams
        , Transformation
        , inv
        , apply
+       , papply
        , fromLinear
 
          -- ** Some specific transformations
        , translation, translate
        , scaling, scale
 
-         -- ** The 'Transformable' class
+         -- ** The Transformable class
 
        , Transformable(..)
 

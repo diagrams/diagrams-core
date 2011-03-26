@@ -32,7 +32,7 @@ module Graphics.Rendering.Diagrams.Transform
        , papply
        , fromLinear
 
-         -- * The 'Transformable' class
+         -- * The Transformable class
 
        , HasLinearMap
        , Transformable(..)
@@ -141,7 +141,7 @@ fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
 fromLinear l1 l2 = Transformation l1 l2 zeroV
 
 ------------------------------------------------------------
---  The 'Transformable' class  -----------------------------
+--  The Transformable class  -----------------------------
 ------------------------------------------------------------
 
 -- | 'HasLinearMap' is a poor man's class constraint synonym, just to
