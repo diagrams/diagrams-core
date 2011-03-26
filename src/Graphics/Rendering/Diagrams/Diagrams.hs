@@ -388,7 +388,7 @@ type Diagram b = AnnDiagram b Any
 
 instance Boundable (AnnDiagram b a) where
   type BoundSpace (AnnDiagram b a) = BSpace b
-  bounds (Diagram {bounds_ = Bounds b}) = b
+  bounds (Diagram {bounds_ = b}) = b
 
 instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
            => Applicative (AnnDiagram b) where
