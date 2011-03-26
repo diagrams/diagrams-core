@@ -134,7 +134,7 @@ class ( HasLinearMap (BSpace b), Monoid (Render b) )
   --   diagram (e.g. to adjust the size based on the options) before
   --   rendering it.  A default implementation is provided which makes
   --   no adjustments.
-  adjustDia :: b -> Options b -> AnnDiagram b a -> AnnDiagram b a
+  adjustDia :: b -> Options b -> AnnDiagram b m -> AnnDiagram b m
   adjustDia _ _ d = d
 
   -- | Render a diagram.  This has a default implementation in terms
@@ -144,7 +144,7 @@ class ( HasLinearMap (BSpace b), Monoid (Render b) )
   --   primitive, the resulting operations are combined with
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
-  renderDia :: b -> Options b -> AnnDiagram b a -> Result b
+  renderDia :: b -> Options b -> AnnDiagram b m -> Result b
   renderDia b opts =
     doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
       where renderOne (s,p) = withStyle b s (render b p)
@@ -168,7 +168,7 @@ above comments made into proper Haddock comments.
 class Backend b => MultiBackend b where
 
   -- | Render multiple diagrams at once.
-  renderDias :: b -> Options b -> [AnnDiagram b a] -> Result b
+  renderDias :: b -> Options b -> [AnnDiagram b m] -> Result b
 
   -- See Note [backend token]
 
@@ -301,7 +301,7 @@ applyAttr :: (v ~ BSpace b, HasLinearMap v, AttributeClass a)
 applyAttr = applyStyle . attrToStyle
 
 -- | Apply a style to a diagram.
-applyStyle :: Style (BSpace b) -> AnnDiagram b a -> AnnDiagram b a
+applyStyle :: Style (BSpace b) -> AnnDiagram b m -> AnnDiagram b m
 applyStyle s d = d { prims = (map . first) (s<>) (prims d) }
 
 -- TODO: comment these and add to export list
@@ -312,10 +312,10 @@ freezeStyle = (inStyle . fmap) freezeAttr
 thawStyle :: Style v -> Style v
 thawStyle = (inStyle . fmap) thawAttr
 
-freeze :: AnnDiagram b a -> AnnDiagram b a
+freeze :: AnnDiagram b m -> AnnDiagram b m
 freeze d = d { prims = (map . first) freezeStyle (prims d) }
 
-thaw :: AnnDiagram b a -> AnnDiagram b a
+thaw :: AnnDiagram b m -> AnnDiagram b m
 thaw d = d { prims = (map . first) thawStyle (prims d) }
 
 ------------------------------------------------------------
@@ -372,10 +372,10 @@ instance Backend b => Renderable (Prim b) b where
 --
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
-data AnnDiagram b a = Diagram { prims   :: [(Style (BSpace b), Prim b)]
+data AnnDiagram b m = Diagram { prims   :: [(Style (BSpace b), Prim b)]
                               , bounds_ :: Bounds (BSpace b)
                               , names   :: NameSet (BSpace b)
-                              , sample  :: Point (BSpace b) -> a
+                              , sample  :: Point (BSpace b) -> m
                               }
   deriving (Functor)
 
@@ -402,16 +402,16 @@ type Diagram b = AnnDiagram b Any
 --   The first diagram goes on top of the second (when such a notion
 --   makes sense in the digrams' vector space, such as R2; in other
 --   vector spaces, like R3, @mappend@ is commutative).
-instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
-           => Monoid (AnnDiagram b a) where
+instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid m)
+           => Monoid (AnnDiagram b m) where
   mempty  = Diagram mempty mempty mempty mempty
   mappend (Diagram ps1 bs1 ns1 smp1) (Diagram ps2 bs2 ns2 smp2) =
     Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
 
 -- | A convenient synonym for 'mappend' on diagrams (to help remember
 --   which diagram goes on top of which when combining them).
-atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
-     => AnnDiagram b a -> AnnDiagram b a -> AnnDiagram b a
+atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid m)
+     => AnnDiagram b m -> AnnDiagram b m -> AnnDiagram b m
 atop = mappend
 
 ---- Applicative
@@ -431,8 +431,8 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 
 ---- Boundable
 
-instance Boundable (AnnDiagram b a) where
-  type BoundSpace (AnnDiagram b a) = BSpace b
+instance Boundable (AnnDiagram b m) where
+  type BoundSpace (AnnDiagram b m) = BSpace b
   bounds (Diagram {bounds_ = b}) = b
 
 ---- HasOrigin
@@ -443,9 +443,9 @@ instance ( Backend b, v ~ BSpace b, s ~ Scalar v
           , InnerSpace v, HasLinearMap v
           , Fractional s, AdditiveGroup s
           )
-       => HasOrigin (AnnDiagram b a) where
+       => HasOrigin (AnnDiagram b m) where
 
-  type OriginSpace (AnnDiagram b a) = BSpace b
+  type OriginSpace (AnnDiagram b m) = BSpace b
 
   moveOriginTo p (Diagram ps b (NameSet s) smp)
     = Diagram { prims   = map (tr *** tr) ps
@@ -465,8 +465,8 @@ instance ( Backend b, v ~ BSpace b, s ~ Scalar v
 instance ( Backend b, InnerSpace (BSpace b)
          , s ~ Scalar (BSpace b), Floating s, AdditiveGroup s
          )
-    => Transformable (AnnDiagram b a) where
-  type TSpace (AnnDiagram b a) = BSpace b
+    => Transformable (AnnDiagram b m) where
+  type TSpace (AnnDiagram b m) = BSpace b
   transform t (Diagram ps b ns smp)
     = Diagram (map (transform t *** transform t) ps)
               (transform t b)
