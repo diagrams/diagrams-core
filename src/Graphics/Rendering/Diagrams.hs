@@ -81,25 +81,16 @@ module Graphics.Rendering.Diagrams
        , Bounds(..)
        , Boundable(..)
 
+         -- * Things with local origins
+
+       , HasOrigin(..)
+
          -- * Diagrams
 
        , AnnDiagram(..), Diagram
-
-         -- ** Primitive operations
-
-         -- | There are two fundamental operations for manipulating
-         --   and composing diagrams. All other convenient diagram
-         --   composition methods can be implemented in terms of
-         --   these, with the help of 'NameSet's, expressions, and
-         --   bounding functions.  See the standard library in the
-         --   diagrams-lib package for a number of higher-level
-         --   diagram composition operators implemented in terms of
-         --   these.
-
-       , rebase
        , atop
 
-       -- ** Other operations
+         -- ** Freezing and thawing
 
        , freeze, thaw
 
@@ -107,6 +98,7 @@ module Graphics.Rendering.Diagrams
 
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
+import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Diagrams

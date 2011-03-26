@@ -75,7 +75,6 @@ module Graphics.Rendering.Diagrams.Diagrams
 
          -- ** Primitive operations
          -- $prim
-       , rebase
        , atop
 
        , freeze, thaw
@@ -84,6 +83,7 @@ module Graphics.Rendering.Diagrams.Diagrams
 
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
+import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Util
@@ -386,10 +386,42 @@ data AnnDiagram b a = Diagram { prims   :: [(Style (BSpace b), Prim b)]
 --   instances for @'AnnDiagram' b@.
 type Diagram b = AnnDiagram b Any
 
-instance Boundable (AnnDiagram b a) where
-  type BoundSpace (AnnDiagram b a) = BSpace b
-  bounds (Diagram {bounds_ = b}) = b
+------------------------------------------------------------
+--  Instances
+------------------------------------------------------------
 
+---- Monoid
+
+-- | Diagrams form a monoid since each of their components do:
+--   the empty diagram has no primitives, a constantly zero bounding
+--   function, no named points, and a constantly empty sampling function.
+--
+--   Diagrams compose by aligning their respective local origins.  The
+--   new diagram has all the primitives and all the names from the two
+--   diagrams combined, and sampling functions are combined pointwise.
+--   The first diagram goes on top of the second (when such a notion
+--   makes sense in the digrams' vector space, such as R2; in other
+--   vector spaces, like R3, @mappend@ is commutative).
+instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
+           => Monoid (AnnDiagram b a) where
+  mempty  = Diagram mempty mempty mempty mempty
+  mappend (Diagram ps1 bs1 ns1 smp1) (Diagram ps2 bs2 ns2 smp2) =
+    Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
+
+-- | A convenient synonym for 'mappend' on diagrams (to help remember
+--   which diagram goes on top of which when combining them).
+atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
+     => AnnDiagram b a -> AnnDiagram b a -> AnnDiagram b a
+atop = mappend
+
+---- Applicative
+
+-- | A diagram with annotations of type @(a -> b)@ can be \"applied\"
+--   to a diagram with annotations of type @a@, resulting in a
+--   combined diagram with annotations of type @b@.  In particular,
+--   all components of the two diagrams are combined as in the
+--   @Monoid@ instance, except the annotations which are combined via
+--   @(<*>)@.
 instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
            => Applicative (AnnDiagram b) where
   pure a = Diagram mempty mempty mempty (const a)
@@ -397,30 +429,36 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
-------------------------------------------------------------
---  Primitive operations  ----------------------------------
-------------------------------------------------------------
+---- Boundable
 
--- XXX rebase ought to be implemented in terms of transform?
+instance Boundable (AnnDiagram b a) where
+  type BoundSpace (AnnDiagram b a) = BSpace b
+  bounds (Diagram {bounds_ = b}) = b
 
--- | @'rebase' u d@ is the same as @d@, except with the local origin
---   moved to @u@.
-rebase :: forall b v s a.
-          ( Backend b, v ~ BSpace b, s ~ Scalar v
+---- HasOrigin
+
+-- | Every diagram has an intrinsic \"local origin\" which is the
+--   basis for all combining operations.
+instance ( Backend b, v ~ BSpace b, s ~ Scalar v
           , InnerSpace v, HasLinearMap v
           , Fractional s, AdditiveGroup s
           )
-       => Point v -> AnnDiagram b a -> AnnDiagram b a
-rebase p (Diagram ps b (NameSet s) smp)
-  = Diagram { prims   = map (tr *** tr) ps
-            , bounds_ = rebaseBounds p b
-            , names   = NameSet $ M.map (map tr) s
-            , sample  = smp . tr
-            }
-        -- the scoped type variables are necessary here since GHC no longer
-        -- generalizes let-bound functions
-  where tr :: (Transformable t, TSpace t ~ v) => t -> t
-        tr = translate (origin .-. p)
+       => HasOrigin (AnnDiagram b a) where
+
+  type OriginSpace (AnnDiagram b a) = BSpace b
+
+  moveOriginTo p (Diagram ps b (NameSet s) smp)
+    = Diagram { prims   = map (tr *** tr) ps
+              , bounds_ = moveOriginTo p b
+              , names   = NameSet $ M.map (map tr) s
+              , sample  = smp . tr
+              }
+          -- the scoped type variables are necessary here since GHC no longer
+          -- generalizes let-bound functions
+    where tr :: (Transformable t, TSpace t ~ v) => t -> t
+          tr = translate (origin .-. p)
+
+---- Transformable
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
@@ -434,21 +472,3 @@ instance ( Backend b, InnerSpace (BSpace b)
               (transform t b)
               (transform t ns)
               (transform t smp)
-
--- | Compose two diagrams by aligning their respective local origins.
---   The new diagram has all the primitives and all the names from the
---   two diagrams combined.  Put the first on top of the second (when
---   such a notion makes sense in the digrams' vector space, such as
---   R2; in other vector spaces, like R3, 'atop' is commutative).
-atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
-     => AnnDiagram b a -> AnnDiagram b a -> AnnDiagram b a
-atop (Diagram ps1 bs1 ns1 smp1) (Diagram ps2 bs2 ns2 smp2) =
-  Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
-
--- | Diagrams form a monoid since each of their three components do:
---   the empty diagram has no primitives, a constantly zero bounding
---   function, and no named points; diagrams compose via 'atop'.
-instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid a)
-           => Monoid (AnnDiagram b a) where
-  mempty  = Diagram mempty mempty mempty mempty
-  mappend = atop

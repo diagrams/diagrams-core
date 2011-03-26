@@ -22,11 +22,11 @@
 module Graphics.Rendering.Diagrams.Bounds
        ( Boundable(..)
        , Bounds(..)
-       , rebaseBounds
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Points
+import Graphics.Rendering.Diagrams.HasOrigin
 
 import Data.VectorSpace
 
@@ -67,6 +67,14 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
   mempty = Bounds $ const zeroV
   mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
 
+-- | The local origin of a bounding function is the points with
+--   respect to which bounding queries are made, i.e. the point from
+--   which the input vectors are taken to originate.
+instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
+         => HasOrigin (Bounds v) where
+  type OriginSpace (Bounds v) = v
+
+  moveOriginTo (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 ------------------------------------------------------------
 --  Transforming bounding regions  -------------------------
@@ -77,18 +85,11 @@ instance ( HasLinearMap v, InnerSpace v
     => Transformable (Bounds v) where
   type TSpace (Bounds v) = v
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
-    rebaseBounds (P . negateV . transl $ t) $
+    moveOriginTo (P . negateV . transl $ t) $
     Bounds $ \v ->
       let v' = normalized $ lapp (transp t) v
           vi = apply (inv t) v
       in  b v' / (v' <.> vi)
-
--- | Rebase a bounding function, that is, change the local origin with
---   respect to which bounding queries are made.
-rebaseBounds :: (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
-             => Point v -> Bounds v -> Bounds v
-rebaseBounds (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
-
 
 ------------------------------------------------------------
 --  Boundable class
