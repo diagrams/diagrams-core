@@ -4,11 +4,9 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Points
--- Copyright   :  (c) Brent Yorgey 2010
+-- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
--- Maintainer  :  byorgey@cis.upenn.edu
--- Stability   :  experimental
--- Portability :  portable
+-- Maintainer  :  diagrams-discuss@googlegroups.com
 --
 -- An embedded domain-specific language for describing and rendering
 -- diagrams.  This module defines a type of points (as distinct from

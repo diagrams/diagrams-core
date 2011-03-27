@@ -5,10 +5,9 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Bounds
--- Copyright   :  (c) Brent Yorgey 2011
+-- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
--- Maintainer  :  byorgey@cis.upenn.edu
--- Stability   :  experimental
+-- Maintainer  :  diagrams-discuss@googlegroups.com
 --
 -- Graphics.Rendering.Diagrams defines the core library of primitives
 -- forming the basis of an embedded domain-specific language for

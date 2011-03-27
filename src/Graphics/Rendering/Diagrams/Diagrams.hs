@@ -13,11 +13,9 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Diagrams
--- Copyright   :  (c) Brent Yorgey 2010
+-- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
--- Maintainer  :  byorgey@cis.upenn.edu
--- Stability   :  experimental
--- Portability :  portable
+-- Maintainer  :  diagrams-discuss@googlegroups.com
 --
 -- The core library of primitives forming the basis of an embedded
 -- domain-specific language for describing and rendering diagrams.
