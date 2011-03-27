@@ -42,7 +42,7 @@ module Graphics.Rendering.Diagrams.Transform
          --   space, but a few can be defined generically over any
          --   vector space.
 
-       , translation, translate, moveTo
+       , translation, translate
        , scaling, scale
 
        ) where
@@ -193,11 +193,6 @@ translation = Transformation mempty mempty
 translate :: (Transformable t, HasLinearMap (TSpace t))
           => TSpace t -> t -> t
 translate = transform . translation
-
--- | Apply the translation that sends the origin to the given point.
-moveTo :: (Transformable t, HasLinearMap (TSpace t))
-       => Point (TSpace t) -> t -> t
-moveTo p = translate (p .-. origin)
 
 -- | Create a scale transformation.
 scaling :: (HasLinearMap v, Fractional (Scalar v))

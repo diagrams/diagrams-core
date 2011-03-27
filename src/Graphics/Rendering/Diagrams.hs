@@ -46,7 +46,7 @@ module Graphics.Rendering.Diagrams
        , fromLinear
 
          -- ** Some specific transformations
-       , translation, translate
+       , translation, translate, moveTo
        , scaling, scale
 
          -- ** The Transformable class
