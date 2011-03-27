@@ -20,13 +20,13 @@ module Graphics.Rendering.Diagrams.HasOrigin
 
 import Graphics.Rendering.Diagrams.Points
 
-import Data.AdditiveGroup (AdditiveGroup)
 import Data.AffineSpace ((.-^))
+import Data.VectorSpace
 
 -- | Class of types which have an intrinsic notion of a \"local
 --   origin\", i.e. things which are not invariant under translation,
 --   and which allow the origin to be moved.
-class HasOrigin t where
+class VectorSpace (OriginSpace t) => HasOrigin t where
   type OriginSpace t :: *
 
   -- | Move the local origin to another point.
@@ -40,11 +40,10 @@ moveOriginBy = moveOriginTo . P
 --   Note that this is dual to 'moveOriginTo'.  In 'moveOriginTo' we
 --   think of fixing the diagram and moving the origin.  In 'moveTo'
 --   we think of fixing the origin and moving the diagram.
-moveTo :: (HasOrigin t, AdditiveGroup (OriginSpace t))
-       => Point (OriginSpace t) -> t -> t
+moveTo :: HasOrigin t => Point (OriginSpace t) -> t -> t
 moveTo = moveOriginBy . (origin .-.)
 
 
-instance AdditiveGroup v => HasOrigin (Point v) where
+instance VectorSpace v => HasOrigin (Point v) where
   type OriginSpace (Point v) = v
   moveOriginTo (P u) p = p .-^ u
