@@ -22,6 +22,8 @@
 module Graphics.Rendering.Diagrams.Bounds
        ( Boundable(..)
        , Bounds(..)
+       , diameter
+       , radius
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
@@ -112,3 +114,21 @@ instance Boundable (Bounds v) where
   type BoundSpace (Bounds v) = v
 
   bounds = id
+
+------------------------------------------------------------
+--  Computing with bounds
+------------------------------------------------------------
+
+-- | Compute the diameter of a boundable object along a particular
+--   vector.
+diameter :: (Boundable a, v ~ BoundSpace a, AdditiveGroup (Scalar v), AdditiveGroup v)
+         => v -> a -> Scalar v
+diameter v a = f v ^+^ f (negateV v)
+  where f = getBoundFunc (bounds a)
+
+-- | Compute the radius (1\/2 the diameter) of a boundable object
+--   along a particular vector.
+radius :: (Boundable a, v ~ BoundSpace a, AdditiveGroup (Scalar v), Fractional (Scalar v),
+           AdditiveGroup v)
+       => v -> a -> Scalar v
+radius v a = 0.5 * diameter v a

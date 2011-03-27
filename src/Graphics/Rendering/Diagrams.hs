@@ -86,10 +86,11 @@ module Graphics.Rendering.Diagrams
 
        , Bounds(..)
        , Boundable(..)
+       , diameter, radius
 
          -- * Things with local origins
 
-       , HasOrigin(..)
+       , HasOrigin(..), moveOriginBy
 
          -- * Diagrams
 

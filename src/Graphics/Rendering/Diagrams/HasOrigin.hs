@@ -14,7 +14,7 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.HasOrigin
-       ( HasOrigin(..)
+       ( HasOrigin(..), moveOriginBy
        ) where
 
 import Graphics.Rendering.Diagrams.Points
@@ -22,10 +22,18 @@ import Graphics.Rendering.Diagrams.Points
 import Data.AdditiveGroup (AdditiveGroup)
 import Data.AffineSpace ((.-^))
 
+-- | Class of types which have an intrinsic notion of a \"local
+--   origin\", i.e. things which are not invariant under translation,
+--   and which allow the origin to be moved.
 class HasOrigin t where
   type OriginSpace t :: *
 
+  -- | Move the local origin to another point.
   moveOriginTo :: Point (OriginSpace t) -> t -> t
+
+-- | Move the local origin by a relative vector.
+moveOriginBy :: HasOrigin t => OriginSpace t -> t -> t
+moveOriginBy = moveOriginTo . P
 
 instance AdditiveGroup v => HasOrigin (Point v) where
   type OriginSpace (Point v) = v
