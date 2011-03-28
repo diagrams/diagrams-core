@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies
+           , FlexibleInstances
            , FlexibleContexts
            , UndecidableInstances
   #-}
@@ -23,6 +24,8 @@ module Graphics.Rendering.Diagrams.Bounds
        , Bounds(..)
        , diameter
        , radius
+
+       , OrderedField
        ) where
 
 import Graphics.Rendering.Diagrams.Transform
@@ -81,6 +84,8 @@ instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
 --  Transforming bounding regions  -------------------------
 ------------------------------------------------------------
 
+-- XXX can we get away with removing this Floating constraint? It's the
+--   call to normalized here which is the culprit.
 instance ( HasLinearMap v, InnerSpace v
          , Scalar v ~ s, Floating s, AdditiveGroup s )
     => Transformable (Bounds v) where
@@ -96,8 +101,16 @@ instance ( HasLinearMap v, InnerSpace v
 --  Boundable class
 ------------------------------------------------------------
 
+-- | We often want scalars to be an ordered field (i.e. support
+--   addition, subtraction, multiplication, and division, and a total
+--   ordering) so we introduce this class as a convenient shorthand.
+class (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
+instance (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
+
 -- | @Boundable@ abstracts over things which can be bounded.
-class Boundable b where
+class ( InnerSpace (BoundSpace b)
+      , OrderedField (Scalar (BoundSpace b))
+      ) => Boundable b where
   -- | The vector space in which this boundable thing lives.
   type BoundSpace b :: *
 
@@ -109,7 +122,7 @@ class Boundable b where
   --   instances should document what it is.
   bounds :: b -> Bounds (BoundSpace b)
 
-instance Boundable (Bounds v) where
+instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
   type BoundSpace (Bounds v) = v
 
   bounds = id
@@ -120,14 +133,13 @@ instance Boundable (Bounds v) where
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.
-diameter :: (Boundable a, v ~ BoundSpace a, AdditiveGroup (Scalar v), AdditiveGroup v)
+diameter :: (Boundable a, v ~ BoundSpace a)
          => v -> a -> Scalar v
 diameter v a = f v ^+^ f (negateV v)
   where f = getBoundFunc (bounds a)
 
 -- | Compute the radius (1\/2 the diameter) of a boundable object
 --   along a particular vector.
-radius :: (Boundable a, v ~ BoundSpace a, AdditiveGroup (Scalar v), Fractional (Scalar v),
-           AdditiveGroup v)
+radius :: (Boundable a, v ~ BoundSpace a)
        => v -> a -> Scalar v
 radius v a = 0.5 * diameter v a

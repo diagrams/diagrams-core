@@ -429,7 +429,9 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 
 ---- Boundable
 
-instance Boundable (AnnDiagram b m) where
+instance ( InnerSpace (BSpace b)
+         , OrderedField (Scalar (BSpace b))
+         ) => Boundable (AnnDiagram b m) where
   type BoundSpace (AnnDiagram b m) = BSpace b
   bounds (Diagram {bounds_ = b}) = b
 
@@ -438,9 +440,9 @@ instance Boundable (AnnDiagram b m) where
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
 instance ( Backend b, v ~ BSpace b, s ~ Scalar v
-          , InnerSpace v, HasLinearMap v
-          , Fractional s, AdditiveGroup s
-          )
+         , InnerSpace v, HasLinearMap v
+         , Fractional s, AdditiveGroup s
+         )
        => HasOrigin (AnnDiagram b m) where
 
   type OriginSpace (AnnDiagram b m) = BSpace b
