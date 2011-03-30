@@ -1,4 +1,6 @@
 {-# LANGUAGE TypeOperators
+           , MultiParamTypeClasses
+           , FunctionalDependencies
            , FlexibleContexts
            , FlexibleInstances
            , UndecidableInstances
@@ -152,40 +154,33 @@ fromLinear l1 l2 = Transformation l1 l2 zeroV
 class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 
--- | Type class for things which can be transformed.  @TSpace t@ is
+-- | Type class for things @t@ which can be transformed.  @v@ is
 --   the associated vector space over which transformations are
 --   constructed.
-class HasLinearMap (TSpace t) => Transformable t where
-  type TSpace t :: *         -- Vector space of transformations
+class HasLinearMap v => Transformable t v | t -> v where
 
   -- | Apply a transformation to an object.
-  transform :: Transformation (TSpace t) -> t -> t
+  transform :: Transformation v -> t -> t
 
-instance Transformable t => Transformable [t] where
-  type TSpace [t] = TSpace t
+instance Transformable t v => Transformable [t] v where
   transform t = map (transform t)
 
-instance (Transformable t, Ord t) => Transformable (S.Set t) where
-  type TSpace (S.Set t) = TSpace t
+instance (Transformable t v, Ord t) => Transformable (S.Set t) v where
   transform t = S.map (transform t)
 
-instance Transformable t => Transformable (M.Map k t) where
-  type TSpace (M.Map k t) = TSpace t
+instance Transformable t v => Transformable (M.Map k t) v where
   transform t = M.map (transform t)
 
-instance HasLinearMap v => Transformable (NameSet v) where
-  type TSpace (NameSet v) = v
+instance HasLinearMap v => Transformable (NameSet v) v where
   transform t (NameSet ns) = NameSet $ M.map (map (papply t)) ns
 
 -- | It's useful to have the contravariant function instance by
 --   default; covariant instances (with @v@ in a positive position) can
 --   be written on a case-by-case basis.
-instance Transformable v => Transformable (v -> a) where
-  type TSpace (v -> a) = TSpace v
+instance Transformable t v => Transformable (t -> a) v where
   transform t f = f . transform (inv t)
 
-instance HasLinearMap v => Transformable (Point v) where
-  type TSpace (Point v) = v
+instance HasLinearMap v => Transformable (Point v) v where
   transform t p = papply t p
 
 -- | Create a translation.
@@ -193,8 +188,7 @@ translation :: HasLinearMap v => v -> Transformation v
 translation = Transformation mempty mempty
 
 -- | Translate by a vector.
-translate :: (Transformable t, HasLinearMap (TSpace t))
-          => TSpace t -> t -> t
+translate :: (Transformable t v, HasLinearMap v) => v -> t -> t
 translate = transform . translation
 
 -- | Create a scale transformation.
@@ -204,7 +198,7 @@ scaling s = fromLinear lin lin      -- scaling is its own transpose
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (Transformable t, Fractional (Scalar (TSpace t)))
-      => Scalar (TSpace t) -> t -> t
+scale :: (Transformable t v, Fractional (Scalar v))
+      => Scalar v -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s

@@ -173,7 +173,7 @@ class Backend b => MultiBackend b where
 
 -- | The Renderable type class connects backends to primitives which
 --   they know how to render.
-class (Backend b, Transformable t) => Renderable t b where
+class (Backend b, Transformable t (BSpace b)) => Renderable t b where
   render :: b -> t -> Render b
   -- ^ Given a token representing the backen and a
   -- transformable object, render it in the appropriate rendering
@@ -209,8 +209,7 @@ data Attribute :: * -> * where
 
 -- | Attributes can be transformed; it is up to the backend to decide
 --   how to treat transformed attributes.
-instance HasLinearMap v => Transformable (Attribute v) where
-  type TSpace (Attribute v) = v
+instance HasLinearMap v => Transformable (Attribute v) v where
   transform t   (Attribute a True x)  = Attribute a True (t <> x)
   transform t a@(Attribute _ False _) = a
 
@@ -255,8 +254,7 @@ inStyle :: (M.Map String (Attribute v) -> M.Map String (Attribute v))
         -> Style v -> Style v
 inStyle f (Style s) = Style (f s)
 
-instance HasLinearMap v => Transformable (Style v) where
-  type TSpace (Style v) = v
+instance HasLinearMap v => Transformable (Style v) v where
   transform = inStyle . M.map . transform
 
 -- | Extract an attribute and the accompanying transformation from a
@@ -323,11 +321,11 @@ thaw d = d { prims = (map . first) thawStyle (prims d) }
 -- | A value of type @Prim b@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render.
 data Prim b where
-  Prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> Prim b
+  Prim :: Renderable t b => t -> Prim b
 
 -- | Convenience function for constructing a singleton list of
 --   primitives with empty style.
-prim :: (BSpace b ~ TSpace t, Renderable t b) => t -> [(Style (BSpace b), Prim b)]
+prim :: Renderable t b => t -> [(Style (BSpace b), Prim b)]
 prim p = [(mempty, Prim p)]
 
 -- Note that we also require the vector spaces for the backend and the
@@ -337,8 +335,7 @@ prim p = [(mempty, Prim p)]
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
-instance Backend b => Transformable (Prim b) where
-  type TSpace (Prim b) = BSpace b
+instance (Backend b, v ~ BSpace b) => Transformable (Prim b) v where
   transform v (Prim p) = Prim (transform v p)
 
 -- | The 'Renderable' instance for 'Prim' just pushes calls to
@@ -451,18 +448,18 @@ instance ( Backend b, v ~ BSpace b, s ~ Scalar v
               }
           -- the scoped type variables are necessary here since GHC no longer
           -- generalizes let-bound functions
-    where tr :: (Transformable t, TSpace t ~ v) => t -> t
+    where tr :: Transformable t v => t -> t
           tr = translate (origin .-. p)
+-- XXX replace tr by moveOriginTo p
 
 ---- Transformable
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
-instance ( Backend b, InnerSpace (BSpace b)
-         , s ~ Scalar (BSpace b), Floating s, AdditiveGroup s
+instance ( Backend b, v ~ BSpace b, InnerSpace v
+         , s ~ Scalar v, Floating s, AdditiveGroup s
          )
-    => Transformable (AnnDiagram b m) where
-  type TSpace (AnnDiagram b m) = BSpace b
+    => Transformable (AnnDiagram b m) v where
   transform t (Diagram ps b ns smp)
     = Diagram (map (transform t *** transform t) ps)
               (transform t b)

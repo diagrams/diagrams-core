@@ -88,8 +88,7 @@ instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
 --   call to normalized here which is the culprit.
 instance ( HasLinearMap v, InnerSpace v
          , Floating (Scalar v), AdditiveGroup (Scalar v) )
-    => Transformable (Bounds v) where
-  type TSpace (Bounds v) = v
+    => Transformable (Bounds v) v where
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
     moveOriginTo (P . negateV . transl $ t) $
     Bounds $ \v ->
