@@ -429,10 +429,8 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 
 ---- Boundable
 
-instance ( InnerSpace (BSpace b)
-         , OrderedField (Scalar (BSpace b))
-         ) => Boundable (AnnDiagram b m) where
-  type BoundSpace (AnnDiagram b m) = BSpace b
+instance ( v ~ BSpace b, InnerSpace v, OrderedField (Scalar v) )
+         => Boundable (AnnDiagram b m) v where
   bounds (Diagram {bounds_ = b}) = b
 
 ---- HasOrigin

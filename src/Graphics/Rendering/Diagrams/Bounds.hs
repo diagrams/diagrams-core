@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies
+           , FunctionalDependencies
            , MultiParamTypeClasses
            , FlexibleInstances
            , FlexibleContexts
@@ -86,7 +87,7 @@ instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
 -- XXX can we get away with removing this Floating constraint? It's the
 --   call to normalized here which is the culprit.
 instance ( HasLinearMap v, InnerSpace v
-         , Scalar v ~ s, Floating s, AdditiveGroup s )
+         , Floating (Scalar v), AdditiveGroup (Scalar v) )
     => Transformable (Bounds v) where
   type TSpace (Bounds v) = v
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
@@ -106,12 +107,9 @@ instance ( HasLinearMap v, InnerSpace v
 class (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
 instance (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
 
--- | @Boundable@ abstracts over things which can be bounded.
-class ( InnerSpace (BoundSpace b)
-      , OrderedField (Scalar (BoundSpace b))
-      ) => Boundable b where
-  -- | The vector space in which this boundable thing lives.
-  type BoundSpace b :: *
+-- | @Boundable@ abstracts over things @b@ which can be bounded in a
+--   vector space @v@.
+class ( InnerSpace v, OrderedField (Scalar v)) => Boundable b v | b -> v where
 
   -- | Given a boundable object, compute a functional bounding region
   --   for it.  For types with an intrinsic notion of \"local
@@ -119,11 +117,9 @@ class ( InnerSpace (BoundSpace b)
   --   types (e.g. 'Trail') may have some other default reference
   --   point at which the bounding function will be based; their
   --   instances should document what it is.
-  bounds :: b -> Bounds (BoundSpace b)
+  bounds :: b -> Bounds v
 
-instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
-  type BoundSpace (Bounds v) = v
-
+instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) v where
   bounds = id
 
 ------------------------------------------------------------
@@ -132,13 +128,11 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.
-diameter :: (Boundable a, v ~ BoundSpace a)
-         => v -> a -> Scalar v
+diameter :: Boundable a v => v -> a -> Scalar v
 diameter v a = f v ^+^ f (negateV v)
   where f = getBoundFunc (bounds a)
 
 -- | Compute the radius (1\/2 the diameter) of a boundable object
 --   along a particular vector.
-radius :: (Boundable a, v ~ BoundSpace a)
-       => v -> a -> Scalar v
+radius :: Boundable a v => v -> a -> Scalar v
 radius v a = 0.5 * diameter v a
