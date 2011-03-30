@@ -105,34 +105,32 @@ import Control.Applicative
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend must be an instance of the 'Backend'
 --   class, and comes with an associated vector space and rendering
---   environment.  A backend must provide the four associated types as
+--   environment.  A backend must provide the three associated types as
 --   well as implementations for 'withStyle' and 'doRender'.
-class ( HasLinearMap (BSpace b), Monoid (Render b) )
-    => Backend b where
-  type BSpace b  :: *           -- The vector space associated with this backend
-  type Render b  :: *           -- The type of rendering operations used by this
+class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
+  type Render  b v :: *         -- The type of rendering operations used by this
                                 --   backend, which must be a monoid
-  type Result b  :: *           -- The result of the rendering operation
-  data Options b :: *           -- The rendering options for this backend
+  type Result  b v :: *         -- The result of the rendering operation
+  data Options b v :: *         -- The rendering options for this backend
   -- See Note [Haddock and associated types]
 
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
-                 -> Style (BSpace b)  -- ^ Style to use
-                 -> Render b   -- ^ Rendering operation to run
-                 -> Render b   -- ^ Rendering operation using the style locally
+                 -> Style v    -- ^ Style to use
+                 -> Render b v -- ^ Rendering operation to run
+                 -> Render b v -- ^ Rendering operation using the style locally
 
   -- | 'doRender' is used to interpret rendering operations.
-  doRender       :: b          -- ^ Backend token (needed only for type inference)
-                 -> Options b  -- ^ Backend-specific collection of rendering options
-                 -> Render b   -- ^ Rendering operation to perform
-                 -> Result b   -- ^ Output of the rendering operation
+  doRender       :: b           -- ^ Backend token (needed only for type inference)
+                 -> Options b v -- ^ Backend-specific collection of rendering options
+                 -> Render b v  -- ^ Rendering operation to perform
+                 -> Result b v  -- ^ Output of the rendering operation
 
   -- | 'adjustDia' allows the backend to make adjustments to the final
   --   diagram (e.g. to adjust the size based on the options) before
   --   rendering it.  A default implementation is provided which makes
   --   no adjustments.
-  adjustDia :: b -> Options b -> AnnDiagram b m -> AnnDiagram b m
+  adjustDia :: b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
   adjustDia _ _ d = d
 
   -- | Render a diagram.  This has a default implementation in terms
@@ -142,7 +140,7 @@ class ( HasLinearMap (BSpace b), Monoid (Render b) )
   --   primitive, the resulting operations are combined with
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
-  renderDia :: b -> Options b -> AnnDiagram b m -> Result b
+  renderDia :: b -> Options b v -> AnnDiagram b v m -> Result b v
   renderDia b opts =
     doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
       where renderOne (s,p) = withStyle b s (render b p)
@@ -154,7 +152,7 @@ class ( HasLinearMap (BSpace b), Monoid (Render b) )
 
 As of version 2.8.1, Haddock doesn't seem to support
 documentation for associated types; hence the comments next to
-BSpace, Render, etc. above are not Haddock comments.  Making them
+Render, etc. above are not Haddock comments.  Making them
 Haddock comments by adding a carat causes Haddock to choke with a
 parse error.  Hopefully at some point in the future Haddock will
 support this, at which time this comment can be deleted and the
@@ -163,21 +161,21 @@ above comments made into proper Haddock comments.
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
-class Backend b => MultiBackend b where
+class Backend b v => MultiBackend b v where
 
   -- | Render multiple diagrams at once.
-  renderDias :: b -> Options b -> [AnnDiagram b m] -> Result b
+  renderDias :: b -> Options b v -> [AnnDiagram b v m] -> Result b v
 
   -- See Note [backend token]
 
 
 -- | The Renderable type class connects backends to primitives which
 --   they know how to render.
-class (Backend b, Transformable t (BSpace b)) => Renderable t b where
-  render :: b -> t -> Render b
-  -- ^ Given a token representing the backen and a
-  -- transformable object, render it in the appropriate rendering
-  -- context.
+class Transformable t v => Renderable t b v where
+  render :: b -> t -> Render b v
+  -- ^ Given a token representing the backend and a
+  --   transformable object, render it in the appropriate rendering
+  --   context.
 
   -- See Note [backend token]
 
@@ -292,12 +290,12 @@ addAttr a s = attrToStyle a <> s
 
 -- | Apply an attribute to a diagram.  Note that child attributes
 --   always have precedence over parent attributes.
-applyAttr :: (v ~ BSpace b, HasLinearMap v, AttributeClass a)
-               => a -> AnnDiagram b m -> AnnDiagram b m
+applyAttr :: (Backend b v, HasLinearMap v, AttributeClass a)
+               => a -> AnnDiagram b v m -> AnnDiagram b v m
 applyAttr = applyStyle . attrToStyle
 
 -- | Apply a style to a diagram.
-applyStyle :: Style (BSpace b) -> AnnDiagram b m -> AnnDiagram b m
+applyStyle :: Backend b v => Style v -> AnnDiagram b v m -> AnnDiagram b v m
 applyStyle s d = d { prims = (map . first) (s<>) (prims d) }
 
 -- TODO: comment these and add to export list
@@ -308,24 +306,24 @@ freezeStyle = (inStyle . fmap) freezeAttr
 thawStyle :: Style v -> Style v
 thawStyle = (inStyle . fmap) thawAttr
 
-freeze :: AnnDiagram b m -> AnnDiagram b m
+freeze :: AnnDiagram b v m -> AnnDiagram b v m
 freeze d = d { prims = (map . first) freezeStyle (prims d) }
 
-thaw :: AnnDiagram b m -> AnnDiagram b m
+thaw :: AnnDiagram b v m -> AnnDiagram b v m
 thaw d = d { prims = (map . first) thawStyle (prims d) }
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
 ------------------------------------------------------------
 
--- | A value of type @Prim b@ is an opaque (existentially quantified)
---   primitive which backend @b@ knows how to render.
-data Prim b where
-  Prim :: Renderable t b => t -> Prim b
+-- | A value of type @Prim b v@ is an opaque (existentially quantified)
+--   primitive which backend @b@ knows how to render in vector space @v@.
+data Prim b v where
+  Prim :: Renderable t b v => t -> Prim b v
 
 -- | Convenience function for constructing a singleton list of
 --   primitives with empty style.
-prim :: Renderable t b => t -> [(Style (BSpace b), Prim b)]
+prim :: (Backend b v, Renderable t b v) => t -> [(Style v, Prim b v)]
 prim p = [(mempty, Prim p)]
 
 -- Note that we also require the vector spaces for the backend and the
@@ -335,12 +333,12 @@ prim p = [(mempty, Prim p)]
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
-instance (Backend b, v ~ BSpace b) => Transformable (Prim b) v where
+instance Backend b v => Transformable (Prim b v) v where
   transform v (Prim p) = Prim (transform v p)
 
 -- | The 'Renderable' instance for 'Prim' just pushes calls to
 --   'render' down through the 'Prim' constructor.
-instance Backend b => Renderable (Prim b) b where
+instance Backend b v => Renderable (Prim b v) b v where
   render b (Prim p) = render b p
 
 ------------------------------------------------------------
@@ -367,11 +365,11 @@ instance Backend b => Renderable (Prim b) b where
 --
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
-data AnnDiagram b m = Diagram { prims   :: [(Style (BSpace b), Prim b)]
-                              , bounds_ :: Bounds (BSpace b)
-                              , names   :: NameSet (BSpace b)
-                              , sample  :: Point (BSpace b) -> m
-                              }
+data AnnDiagram b v m = Diagram { prims   :: [(Style v, Prim b v)]
+                                , bounds_ :: Bounds v
+                                , names   :: NameSet v
+                                , sample  :: Point v -> m
+                                }
   deriving (Functor)
 
 -- | The default sort of diagram is one where sampling at a point
@@ -379,7 +377,7 @@ data AnnDiagram b m = Diagram { prims   :: [(Style (BSpace b), Prim b)]
 --   Transforming a default diagram into one with more interesting
 --   annotations can be done via the 'Functor' and 'Applicative'
 --   instances for @'AnnDiagram' b@.
-type Diagram b = AnnDiagram b Any
+type Diagram b v = AnnDiagram b v Any
 
 ------------------------------------------------------------
 --  Instances
@@ -397,16 +395,16 @@ type Diagram b = AnnDiagram b Any
 --   The first diagram goes on top of the second (when such a notion
 --   makes sense in the digrams' vector space, such as R2; in other
 --   vector spaces, like R3, @mappend@ is commutative).
-instance (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid m)
-           => Monoid (AnnDiagram b m) where
+instance (Backend b v, s ~ Scalar v, Ord s, AdditiveGroup s, Monoid m)
+           => Monoid (AnnDiagram b v m) where
   mempty  = Diagram mempty mempty mempty mempty
   mappend (Diagram ps1 bs1 ns1 smp1) (Diagram ps2 bs2 ns2 smp2) =
     Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
 
 -- | A convenient synonym for 'mappend' on diagrams (to help remember
 --   which diagram goes on top of which when combining them).
-atop :: (s ~ Scalar (BSpace b), Ord s, AdditiveGroup s, Monoid m)
-     => AnnDiagram b m -> AnnDiagram b m -> AnnDiagram b m
+atop :: (Backend b v, s ~ Scalar v, Ord s, AdditiveGroup s, Monoid m)
+     => AnnDiagram b v m -> AnnDiagram b v m -> AnnDiagram b v m
 atop = mappend
 
 ---- Applicative
@@ -417,8 +415,8 @@ atop = mappend
 --   all components of the two diagrams are combined as in the
 --   @Monoid@ instance, except the annotations which are combined via
 --   @(<*>)@.
-instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
-           => Applicative (AnnDiagram b) where
+instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
+           => Applicative (AnnDiagram b v) where
   pure a = Diagram mempty mempty mempty (const a)
 
   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
@@ -426,19 +424,19 @@ instance (s ~ Scalar (BSpace b), AdditiveGroup s, Ord s)
 
 ---- Boundable
 
-instance ( v ~ BSpace b, InnerSpace v, OrderedField (Scalar v) )
-         => Boundable (AnnDiagram b m) v where
+instance (Backend b v, InnerSpace v, OrderedField (Scalar v) )
+         => Boundable (AnnDiagram b v m) v where
   bounds (Diagram {bounds_ = b}) = b
 
 ---- HasOrigin
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance ( Backend b, v ~ BSpace b, s ~ Scalar v
+instance ( Backend b v, s ~ Scalar v
          , InnerSpace v, HasLinearMap v
          , Fractional s, AdditiveGroup s
          )
-       => HasOrigin (AnnDiagram b m) v where
+       => HasOrigin (AnnDiagram b v m) v where
 
   moveOriginTo p (Diagram ps b (NameSet s) smp)
     = Diagram { prims   = map (tr *** tr) ps
@@ -456,10 +454,10 @@ instance ( Backend b, v ~ BSpace b, s ~ Scalar v
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
-instance ( Backend b, v ~ BSpace b, InnerSpace v
+instance ( Backend b v, InnerSpace v
          , s ~ Scalar v, Floating s, AdditiveGroup s
          )
-    => Transformable (AnnDiagram b m) v where
+    => Transformable (AnnDiagram b v m) v where
   transform t (Diagram ps b ns smp)
     = Diagram (map (transform t *** transform t) ps)
               (transform t b)
