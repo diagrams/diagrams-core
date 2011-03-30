@@ -84,6 +84,7 @@ module Graphics.Rendering.Diagrams
 
        , Bounds(..)
        , Boundable(..)
+       , boundary
        , diameter, radius
 
          -- * Things with local origins

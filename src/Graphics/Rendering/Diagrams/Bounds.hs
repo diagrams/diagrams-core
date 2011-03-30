@@ -26,6 +26,7 @@ module Graphics.Rendering.Diagrams.Bounds
        , Bounds(..)
        , diameter
        , radius
+       , boundary
 
        , OrderedField
        ) where
@@ -124,6 +125,10 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) v where
 ------------------------------------------------------------
 --  Computing with bounds
 ------------------------------------------------------------
+
+-- | Compute the point along the boundary in the given direction.
+boundary :: Boundable a v => v -> a -> Point v
+boundary v a = P $ getBoundFunc (bounds a) v *^ v
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.
