@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies
+           , MultiParamTypeClasses
            , FlexibleInstances
            , FlexibleContexts
            , UndecidableInstances
@@ -75,9 +76,7 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
 --   respect to which bounding queries are made, i.e. the point from
 --   which the input vectors are taken to originate.
 instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
-         => HasOrigin (Bounds v) where
-  type OriginSpace (Bounds v) = v
-
+         => HasOrigin (Bounds v) v where
   moveOriginTo (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 ------------------------------------------------------------

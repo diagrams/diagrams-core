@@ -443,9 +443,7 @@ instance ( Backend b, v ~ BSpace b, s ~ Scalar v
          , InnerSpace v, HasLinearMap v
          , Fractional s, AdditiveGroup s
          )
-       => HasOrigin (AnnDiagram b m) where
-
-  type OriginSpace (AnnDiagram b m) = BSpace b
+       => HasOrigin (AnnDiagram b m) v where
 
   moveOriginTo p (Diagram ps b (NameSet s) smp)
     = Diagram { prims   = map (tr *** tr) ps
