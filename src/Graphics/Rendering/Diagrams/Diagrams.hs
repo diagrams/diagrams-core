@@ -449,7 +449,6 @@ instance ( Backend b v, s ~ Scalar v
           -- generalizes let-bound functions
     where tr :: Transformable t v => t -> t
           tr = translate (origin .-. p)
--- XXX replace tr by moveOriginTo p
 
 ---- Transformable
 
