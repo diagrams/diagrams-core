@@ -22,7 +22,7 @@ module Graphics.Rendering.Diagrams.HasOrigin
 
 import Graphics.Rendering.Diagrams.Points
 
-import Data.AffineSpace ((.-^))
+import Data.AffineSpace ((.-^), (.-.))
 import Data.VectorSpace
 
 -- | Class of types which have an intrinsic notion of a \"local

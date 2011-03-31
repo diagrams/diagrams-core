@@ -34,7 +34,7 @@
 module Graphics.Rendering.Diagrams
        ( -- * Points
 
-         Point(..), origin, (.-.), (.+^), (*.)
+         Point(..), origin, (*.)
 
          -- * Transformations
        , Transformation

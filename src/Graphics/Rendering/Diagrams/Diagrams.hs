@@ -89,6 +89,7 @@ import Graphics.Rendering.Diagrams.Util
 import Data.Typeable
 
 import Data.VectorSpace
+import Data.AffineSpace ((.-.))
 
 import qualified Data.Map as M
 import Data.Monoid
