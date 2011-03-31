@@ -399,7 +399,7 @@ instance (Backend b v, s ~ Scalar v, Ord s, AdditiveGroup s, Monoid m)
            => Monoid (AnnDiagram b v m) where
   mempty  = Diagram mempty mempty mempty mempty
   mappend (Diagram ps1 bs1 ns1 smp1) (Diagram ps2 bs2 ns2 smp2) =
-    Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
+    Diagram (ps2 <> ps1) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
 
 -- | A convenient synonym for 'mappend' on diagrams (to help remember
 --   which diagram goes on top of which when combining them).
