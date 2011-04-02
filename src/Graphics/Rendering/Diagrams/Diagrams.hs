@@ -367,7 +367,7 @@ instance Backend b v => Renderable (Prim b v) b v where
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
 data AnnDiagram b v m = Diagram { prims   :: [(Style v, Prim b v)]
-                                , bounds_ :: Bounds v
+                                , bounds  :: Bounds v
                                 , names   :: NameSet v
                                 , sample  :: Point v -> m
                                 }
@@ -427,7 +427,7 @@ instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
 
 instance (Backend b v, InnerSpace v, OrderedField (Scalar v) )
          => Boundable (AnnDiagram b v m) v where
-  bounds (Diagram {bounds_ = b}) = b
+  getBounds (Diagram {bounds = b}) = b
 
 ---- HasOrigin
 
@@ -441,7 +441,7 @@ instance ( Backend b v, s ~ Scalar v
 
   moveOriginTo p (Diagram ps b (NameSet s) smp)
     = Diagram { prims   = map (tr *** tr) ps
-              , bounds_ = moveOriginTo p b
+              , bounds  = moveOriginTo p b
               , names   = NameSet $ M.map (map tr) s
               , sample  = smp . tr
               }

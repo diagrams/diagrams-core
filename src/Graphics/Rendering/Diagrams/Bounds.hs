@@ -62,7 +62,7 @@ import Control.Applicative ((<$>), (<*>))
 --
 --   XXX add some diagrams here to illustrate!  Note that Haddock supports
 --   inline images, using a \<\<url\>\> syntax.
-newtype Bounds v = Bounds { getBoundFunc :: v -> Scalar v }
+newtype Bounds v = Bounds { appBounds :: v -> Scalar v }
 
 -- | Bounding functions form a monoid, with the constantly zero
 --   function (/i.e./ the empty region) as the identity, and pointwise
@@ -117,10 +117,10 @@ class ( InnerSpace v, OrderedField (Scalar v)) => Boundable b v | b -> v where
   --   types (e.g. 'Trail') may have some other default reference
   --   point at which the bounding function will be based; their
   --   instances should document what it is.
-  bounds :: b -> Bounds v
+  getBounds :: b -> Bounds v
 
 instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) v where
-  bounds = id
+  getBounds = id
 
 ------------------------------------------------------------
 --  Computing with bounds
@@ -128,13 +128,13 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) v where
 
 -- | Compute the point along the boundary in the given direction.
 boundary :: Boundable a v => v -> a -> Point v
-boundary v a = P $ getBoundFunc (bounds a) v *^ v
+boundary v a = P $ appBounds (getBounds a) v *^ v
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.
 diameter :: Boundable a v => v -> a -> Scalar v
 diameter v a = f v ^+^ f (negateV v)
-  where f = getBoundFunc (bounds a)
+  where f = appBounds (getBounds a)
 
 -- | Compute the radius (1\/2 the diameter) of a boundable object
 --   along a particular vector.
