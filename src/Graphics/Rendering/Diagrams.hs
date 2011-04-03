@@ -107,6 +107,6 @@ import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
-import Graphics.Rendering.Diagrams.Diagrams
+import Graphics.Rendering.Diagrams.Core
 
 
