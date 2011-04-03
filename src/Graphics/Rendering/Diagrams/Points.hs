@@ -31,6 +31,8 @@ module Graphics.Rendering.Diagrams.Points
 import Data.VectorSpace
 import qualified Data.AffineSpace as AS
 
+import Graphics.Rendering.Diagrams.V
+
 ------------------------------------------------------------
 --  Points  ------------------------------------------------
 ------------------------------------------------------------
@@ -41,6 +43,8 @@ import qualified Data.AffineSpace as AS
 --   'AffineSpace' class from "Data.AffineSpace".
 newtype Point v = P v
   deriving (Eq, Ord, Read, Show, Functor)
+
+type instance V (Point v) = v
 
 -- | The origin of the vector space @v@.
 origin :: AdditiveGroup v => Point v

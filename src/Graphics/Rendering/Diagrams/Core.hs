@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts
            , FlexibleInstances
            , TypeFamilies
-           , MultiParamTypeClasses
+          , MultiParamTypeClasses
            , UndecidableInstances
            , GADTs
            , DeriveFunctor
@@ -12,7 +12,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Diagrams
+-- Module      :  Graphics.Rendering.Diagrams.Core
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -37,8 +37,9 @@
    on other stuff in various cyclic ways.
 -}
 
-module Graphics.Rendering.Diagrams.Diagrams
-       ( -- * Backends
+module Graphics.Rendering.Diagrams.Core
+       (
+         -- * Backends
 
          Backend(..)
        , MultiBackend(..)
@@ -79,6 +80,8 @@ module Graphics.Rendering.Diagrams.Diagrams
 
        ) where
 
+import Graphics.Rendering.Diagrams.V
+import Graphics.Rendering.Diagrams.Annot
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
@@ -104,10 +107,10 @@ import Control.Applicative
 ------------------------------------------------------------
 
 -- | Abstract diagrams are rendered to particular formats by
---   /backends/.  Each backend must be an instance of the 'Backend'
---   class, and comes with an associated vector space and rendering
---   environment.  A backend must provide the three associated types as
---   well as implementations for 'withStyle' and 'doRender'.
+--   /backends/.  Each backend/vector space combination must be an
+--   instance of the 'Backend' class.  A backend must provide the
+--   three associated types as well as implementations for 'withStyle'
+--   and 'doRender'.
 class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   type Render  b v :: *         -- The type of rendering operations used by this
                                 --   backend, which must be a monoid
@@ -172,8 +175,8 @@ class Backend b v => MultiBackend b v where
 
 -- | The Renderable type class connects backends to primitives which
 --   they know how to render.
-class Transformable t v => Renderable t b v where
-  render :: b -> t -> Render b v
+class Transformable t => Renderable t b where
+  render :: b -> t -> Render b (V t)
   -- ^ Given a token representing the backend and a
   --   transformable object, render it in the appropriate rendering
   --   context.
@@ -206,9 +209,11 @@ class Typeable a => AttributeClass a where
 data Attribute :: * -> * where
   Attribute :: AttributeClass a => a -> Bool -> Transformation v -> Attribute v
 
+type instance V (Attribute v) = v
+
 -- | Attributes can be transformed; it is up to the backend to decide
 --   how to treat transformed attributes.
-instance HasLinearMap v => Transformable (Attribute v) v where
+instance HasLinearMap v => Transformable (Attribute v) where
   transform t   (Attribute a True x)  = Attribute a True (t <> x)
   transform t a@(Attribute _ False _) = a
 
@@ -249,11 +254,13 @@ newtype Style v = Style (M.Map String (Attribute v))
   -- The String keys are serialized TypeRep values, corresponding to
   -- the type of the stored attribute.
 
+type instance V (Style v) = v
+
 inStyle :: (M.Map String (Attribute v) -> M.Map String (Attribute v))
         -> Style v -> Style v
 inStyle f (Style s) = Style (f s)
 
-instance HasLinearMap v => Transformable (Style v) v where
+instance HasLinearMap v => Transformable (Style v) where
   transform = inStyle . M.map . transform
 
 -- | Extract an attribute and the accompanying transformation from a
@@ -299,7 +306,7 @@ applyAttr = applyStyle . attrToStyle
 applyStyle :: Backend b v => Style v -> AnnDiagram b v m -> AnnDiagram b v m
 applyStyle s d = d { prims = (map . first) (s<>) (prims d) }
 
--- TODO: comment these and add to export list
+-- XXX TODO: comment these and add to export list
 
 freezeStyle :: Style v -> Style v
 freezeStyle = (inStyle . fmap) freezeAttr
@@ -320,11 +327,13 @@ thaw d = d { prims = (map . first) thawStyle (prims d) }
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: Renderable t b v => t -> Prim b v
+  Prim :: Renderable t b => t -> Prim b (V t)
+
+type instance V (Prim b v) = v
 
 -- | Convenience function for constructing a singleton list of
 --   primitives with empty style.
-prim :: (Backend b v, Renderable t b v) => t -> [(Style v, Prim b v)]
+prim :: (Backend b (V t), Renderable t b) => t -> [(Style (V t), Prim b (V t))]
 prim p = [(mempty, Prim p)]
 
 -- Note that we also require the vector spaces for the backend and the
@@ -334,12 +343,12 @@ prim p = [(mempty, Prim p)]
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
-instance Backend b v => Transformable (Prim b v) v where
+instance Backend b v => Transformable (Prim b v) where
   transform v (Prim p) = Prim (transform v p)
 
 -- | The 'Renderable' instance for 'Prim' just pushes calls to
 --   'render' down through the 'Prim' constructor.
-instance Backend b v => Renderable (Prim b v) b v where
+instance Backend b v => Renderable (Prim b v) b where
   render b (Prim p) = render b p
 
 ------------------------------------------------------------
@@ -369,9 +378,14 @@ instance Backend b v => Renderable (Prim b v) b v where
 data AnnDiagram b v m = Diagram { prims   :: [(Style v, Prim b v)]
                                 , bounds  :: Bounds v
                                 , names   :: NameSet v
-                                , sample  :: Point v -> m
+                                , annot   :: Annot v m
                                 }
   deriving (Functor)
+
+sample :: AnnDiagram b v m -> Point v -> m
+sample = queryAnnot . annot
+
+type instance V (AnnDiagram b v m) = v
 
 -- | The default sort of diagram is one where sampling at a point
 --   simply tells you whether that point is occupied or not.
@@ -418,7 +432,7 @@ atop = mappend
 --   @(<*>)@.
 instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
            => Applicative (AnnDiagram b v) where
-  pure a = Diagram mempty mempty mempty (const a)
+  pure a = Diagram mempty mempty mempty (Annot $ const a)
 
   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
@@ -426,7 +440,7 @@ instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
 ---- Boundable
 
 instance (Backend b v, InnerSpace v, OrderedField (Scalar v) )
-         => Boundable (AnnDiagram b v m) v where
+         => Boundable (AnnDiagram b v m) where
   getBounds (Diagram {bounds = b}) = b
 
 ---- HasOrigin
@@ -437,17 +451,17 @@ instance ( Backend b v, s ~ Scalar v
          , InnerSpace v, HasLinearMap v
          , Fractional s, AdditiveGroup s
          )
-       => HasOrigin (AnnDiagram b v m) v where
+       => HasOrigin (AnnDiagram b v m) where
 
-  moveOriginTo p (Diagram ps b (NameSet s) smp)
+  moveOriginTo p (Diagram ps b (NameSet s) ann)
     = Diagram { prims   = map (tr *** tr) ps
               , bounds  = moveOriginTo p b
               , names   = NameSet $ M.map (map tr) s
-              , sample  = smp . tr
+              , annot   = moveOriginTo p ann
               }
           -- the scoped type variables are necessary here since GHC no longer
           -- generalizes let-bound functions
-    where tr :: Transformable t v => t -> t
+    where tr :: (Transformable t, V t ~ v) => t -> t
           tr = translate (origin .-. p)
 
 ---- Transformable
@@ -457,7 +471,7 @@ instance ( Backend b v, s ~ Scalar v
 instance ( Backend b v, InnerSpace v
          , s ~ Scalar v, Floating s, AdditiveGroup s
          )
-    => Transformable (AnnDiagram b v m) v where
+    => Transformable (AnnDiagram b v m) where
   transform t (Diagram ps b ns smp)
     = Diagram (map (transform t *** transform t) ps)
               (transform t b)

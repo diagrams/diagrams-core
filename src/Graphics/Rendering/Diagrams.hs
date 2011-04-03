@@ -32,9 +32,13 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams
-       ( -- * Points
+       ( -- * Associated vector spaces
 
-         Point(..), origin, (*.)
+         V
+
+         -- * Points
+
+       , Point(..), origin, (*.)
 
          -- * Transformations
        , Transformation
@@ -96,15 +100,21 @@ module Graphics.Rendering.Diagrams
        , AnnDiagram(..), Diagram
        , atop
 
+         -- * Annotations
+
+       , Annot(..)
+
          -- ** Freezing and thawing
 
        , freeze, thaw
 
        ) where
 
+import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
+import Graphics.Rendering.Diagrams.Annot
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Core

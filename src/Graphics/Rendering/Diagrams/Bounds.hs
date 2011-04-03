@@ -1,6 +1,4 @@
 {-# LANGUAGE TypeFamilies
-           , FunctionalDependencies
-           , MultiParamTypeClasses
            , FlexibleInstances
            , FlexibleContexts
            , UndecidableInstances
@@ -31,6 +29,7 @@ module Graphics.Rendering.Diagrams.Bounds
        , OrderedField
        ) where
 
+import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.HasOrigin
@@ -64,6 +63,8 @@ import Control.Applicative ((<$>), (<*>))
 --   inline images, using a \<\<url\>\> syntax.
 newtype Bounds v = Bounds { appBounds :: v -> Scalar v }
 
+type instance V (Bounds v) = v
+
 -- | Bounding functions form a monoid, with the constantly zero
 --   function (/i.e./ the empty region) as the identity, and pointwise
 --   maximum as composition.  Hence, if @b1@ is the bounding function
@@ -78,7 +79,7 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
 --   respect to which bounding queries are made, i.e. the point from
 --   which the input vectors are taken to originate.
 instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
-         => HasOrigin (Bounds v) v where
+         => HasOrigin (Bounds v) where
   moveOriginTo (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 ------------------------------------------------------------
@@ -89,7 +90,7 @@ instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
 --   call to normalized here which is the culprit.
 instance ( HasLinearMap v, InnerSpace v
          , Floating (Scalar v), AdditiveGroup (Scalar v) )
-    => Transformable (Bounds v) v where
+    => Transformable (Bounds v) where
   transform t (Bounds b) =   -- XXX add lots of comments explaining this!
     moveOriginTo (P . negateV . transl $ t) $
     Bounds $ \v ->
@@ -109,7 +110,7 @@ instance (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
 
 -- | @Boundable@ abstracts over things @b@ which can be bounded in a
 --   vector space @v@.
-class ( InnerSpace v, OrderedField (Scalar v)) => Boundable b v | b -> v where
+class (InnerSpace (V b), OrderedField (Scalar (V b))) => Boundable b where
 
   -- | Given a boundable object, compute a functional bounding region
   --   for it.  For types with an intrinsic notion of \"local
@@ -117,9 +118,9 @@ class ( InnerSpace v, OrderedField (Scalar v)) => Boundable b v | b -> v where
   --   types (e.g. 'Trail') may have some other default reference
   --   point at which the bounding function will be based; their
   --   instances should document what it is.
-  getBounds :: b -> Bounds v
+  getBounds :: b -> Bounds (V b)
 
-instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) v where
+instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
   getBounds = id
 
 ------------------------------------------------------------
@@ -127,16 +128,16 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) v where
 ------------------------------------------------------------
 
 -- | Compute the point along the boundary in the given direction.
-boundary :: Boundable a v => v -> a -> Point v
+boundary :: Boundable a => (V a) -> a -> Point (V a)
 boundary v a = P $ appBounds (getBounds a) v *^ v
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.
-diameter :: Boundable a v => v -> a -> Scalar v
+diameter :: Boundable a => (V a) -> a -> Scalar (V a)
 diameter v a = f v ^+^ f (negateV v)
   where f = appBounds (getBounds a)
 
 -- | Compute the radius (1\/2 the diameter) of a boundable object
 --   along a particular vector.
-radius :: Boundable a v => v -> a -> Scalar v
+radius :: Boundable a => (V a) -> a -> Scalar (V a)
 radius v a = 0.5 * diameter v a

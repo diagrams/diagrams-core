@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances
            , FlexibleInstances
+           , TypeFamilies
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -37,6 +38,7 @@ module Graphics.Rendering.Diagrams.Names
        , rememberAs
        ) where
 
+import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
 
 import Data.List (intercalate)
@@ -108,6 +110,8 @@ instance Qualifiable Name where
 -- | A 'NameSet' is a map from names to points, possibly with
 --   multiple points associated with each name.
 newtype NameSet v = NameSet (M.Map Name [Point v])
+
+type instance V (NameSet v) = v
 
 -- | 'NameSet's form a monoid with the empty map as the identity, and
 --   map union as the binary operation.  No information is ever lost:
