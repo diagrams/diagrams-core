@@ -21,3 +21,5 @@ import Data.Monoid
 --   from here.
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
+
+infixl 6 <>
