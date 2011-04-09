@@ -66,6 +66,8 @@ module Graphics.Rendering.Diagrams.Core
          -- * Diagrams
 
        , AnnDiagram(..), mkAD, Diagram
+       , prims
+       , bounds, names, annot, sample
 
          -- XXX export other stuff
 

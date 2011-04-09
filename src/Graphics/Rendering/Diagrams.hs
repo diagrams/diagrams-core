@@ -96,6 +96,9 @@ module Graphics.Rendering.Diagrams
          -- * Diagrams
 
        , AnnDiagram(..), mkAD, Diagram
+       , prims
+       , bounds, names, annot, sample
+
        , atop
 
          -- * Annotations
