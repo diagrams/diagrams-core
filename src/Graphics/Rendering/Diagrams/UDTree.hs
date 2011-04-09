@@ -67,14 +67,14 @@ applyD d (Branch u d' ts) = Branch u (d `mappend` d') ts
 
 -- | Map a function over all the @u@ annotations.  The function must
 --   be a monoid homomorphism.
-mapU :: (u -> u) -> UDTree u d a -> UDTree u d a
+mapU :: (u -> u') -> UDTree u d a -> UDTree u' d a
 mapU f (Leaf u a)      = Leaf (f u) a
 mapU f (Branch u d ts) = Branch (f u) d (map (mapU f) ts)
 
 -- | Map a function over all the @d@ annotations.  The function must
 --   be a monoid homomorphism.
-mapD :: (d -> d) -> UDTree u d a -> UDTree u d a
-mapD f l@(Leaf _ _)  = l
+mapD :: (d -> d') -> UDTree u d a -> UDTree u d' a
+mapD _ (Leaf u a)      = Leaf u a
 mapD f (Branch u d ts) = Branch u (f d) (map (mapD f) ts)
 
 -- | A fold for UDTrees.
