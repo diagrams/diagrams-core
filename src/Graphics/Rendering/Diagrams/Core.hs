@@ -68,6 +68,7 @@ module Graphics.Rendering.Diagrams.Core
        , AnnDiagram(..), mkAD, Diagram
        , prims
        , bounds, names, annot, sample
+       , setBounds
 
          -- XXX export other stuff
 
@@ -368,6 +369,9 @@ alterAD f g h (AD dia) = AD $ mapU (\(b,n,a) -> (f b, g n, h a)) dia
 
 mkAD :: Prim b v -> Bounds v -> NameSet v -> Annot v m -> AnnDiagram b v m
 mkAD p b n a = AD $ leaf (b,n,a) p
+
+setBounds :: Bounds v -> AnnDiagram b v m -> AnnDiagram b v m
+setBounds b = alterAD (const b) id id
 
 ------------------------------------------------------------
 --  Instances

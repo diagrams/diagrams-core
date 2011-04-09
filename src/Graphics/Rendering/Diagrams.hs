@@ -98,6 +98,7 @@ module Graphics.Rendering.Diagrams
        , AnnDiagram, mkAD, Diagram
        , prims
        , bounds, names, annot, sample
+       , setBounds
 
        , atop
 
