@@ -36,9 +36,11 @@ data UDTree u d a
 --   specialized to put all the trees under a single parent.
 instance (Monoid u, Monoid d) => Monoid (UDTree u d a) where
   mempty          = Branch mempty mempty []
+
   (Branch _ _ []) `mappend` t2 = t2
   t1 `mappend` (Branch _ _ []) = t1
   t1 `mappend` t2              = branch [t1,t2]
+
   mconcat         = branch
 
 -- | Construct a leaf node.
@@ -55,14 +57,14 @@ branch = branchD mempty
 
 -- | Get the @u@ value summarizing all leaf @u@ annotations (from left
 --   to right).
-getU :: Monoid u => UDTree u d a -> u
+getU :: UDTree u d a -> u
 getU (Leaf u _)     = u
 getU (Branch u _ _) = u
 
 -- | Add a @d@ annotation to the root, combining it (on the left) with
 --   any pre-existing @d@ annotation.
-applyD :: (Monoid d, Monoid u) => d -> UDTree u d a -> UDTree u d a
-applyD d l@(Leaf {}) = branchD d [l]
+applyD :: Monoid d => d -> UDTree u d a -> UDTree u d a
+applyD d l@(Leaf {})      = Branch (getU l) d [l]
 applyD d (Branch u d' ts) = Branch u (d `mappend` d') ts
 
 -- | Map a function over all the @u@ annotations.  The function must
