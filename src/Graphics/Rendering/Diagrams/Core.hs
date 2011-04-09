@@ -73,7 +73,7 @@ module Graphics.Rendering.Diagrams.Core
          -- $prim
        , atop
 
-       , freeze, thaw
+       , freeze
 
        ) where
 
@@ -277,20 +277,17 @@ addAttr a s = attrToStyle a <> s
 
 -- | Apply an attribute to a diagram.  Note that child attributes
 --   always have precedence over parent attributes.
-applyAttr :: AttributeClass a => a -> AnnDiagram b v m -> AnnDiagram b v m
+applyAttr :: (HasLinearMap v, AttributeClass a)
+          => a -> AnnDiagram b v m -> AnnDiagram b v m
 applyAttr = applyStyle . attrToStyle
 
 -- | Apply a style to a diagram.
-applyStyle :: Style -> AnnDiagram b v m -> AnnDiagram b v m
-applyStyle s d = undefined -- XXX
+applyStyle :: HasLinearMap v => Style -> AnnDiagram b v m -> AnnDiagram b v m
+applyStyle s (AD dia) = AD (applyD (mempty, s) dia)
 
--- XXX TODO: comment these and add to export list
-
-freeze :: AnnDiagram b v m -> AnnDiagram b v m
-freeze d = undefined -- XXX
-
-thaw :: AnnDiagram b v m -> AnnDiagram b v m
-thaw d = undefined -- XXX
+-- XXX comment me
+freeze :: HasLinearMap v => AnnDiagram b v m -> AnnDiagram b v m
+freeze (AD dia) = AD (applyD (split, mempty) dia)
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------

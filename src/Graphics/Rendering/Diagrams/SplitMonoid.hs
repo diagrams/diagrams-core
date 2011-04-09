@@ -20,3 +20,6 @@ instance Monoid m => Monoid (Split m) where
   (M m1)       `mappend` (m1' :| m2)  = m1 <> m1'         :| m2
   (m1  :| m2)  `mappend` (M m2')      = m1                :| m2 <> m2'
   (m11 :| m12) `mappend` (m21 :| m22) = m11 <> m12 <> m21 :| m22
+
+split :: Monoid m => Split m
+split = mempty :| mempty
