@@ -448,10 +448,14 @@ instance (Backend b v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
-instance ( Backend b v
-         , AdditiveGroup (Scalar v), Ord (Scalar v)
+instance ( Backend b v, InnerSpace v
+         , OrderedField (Scalar v)
          , Monoid m
          )
     => Transformable (AnnDiagram b v m) where
 
-  transform t (AD dia) = AD $ applyD (M t, mempty) dia
+  transform t (AD dia) = alterAD (transform t)
+                                 (transform t)
+                                 (transform t)
+                       . AD . applyD (M t, mempty)
+                       $ dia
