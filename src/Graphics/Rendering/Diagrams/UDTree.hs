@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveFunctor #-}
+
+-- XXX add comments/header etc.
 module Graphics.Rendering.Diagrams.UDTree where
 
 import Data.Monoid
@@ -24,17 +27,18 @@ import qualified Data.Set as S
 data UDTree u d a
   = Leaf u a
   | Branch u d [UDTree u d a]
+  deriving (Functor)
 
 -- | Construct a leaf node.
 leaf :: u -> a -> UDTree u d a
 leaf = Leaf
 
 -- | Construct a branch node with an explicit @d@ annotation.
-branchD :: d -> [UDTree u d a] -> UDTree u d a
+branchD :: Monoid u => d -> [UDTree u d a] -> UDTree u d a
 branchD d ts = Branch (mconcat . map getU $ ts) d ts
 
 -- | Construct a branch node with a default (identity) @d@ annotation.
-branch :: Monoid d => [UDTree u d a] -> UDTree u d a
+branch :: (Monoid u, Monoid d) => [UDTree u d a] -> UDTree u d a
 branch = branchD mempty
 
 -- | Get the @u@ value summarizing all leaf @u@ annotations (from left
@@ -45,7 +49,7 @@ getU (Branch u _ _) = u
 
 -- | Add a @d@ annotation to the root, combining it (on the left) with
 --   any pre-existing @d@ annotation.
-applyD :: Monoid d => d -> UDTree u d a -> UDTree u d a
+applyD :: (Monoid d, Monoid u) => d -> UDTree u d a -> UDTree u d a
 applyD d l@(Leaf {}) = branchD d [l]
 applyD d (Branch u d' ts) = Branch u (d `mappend` d') ts
 
@@ -59,7 +63,7 @@ mapU f (Branch u d ts) = Branch (f u) d (map (mapU f) ts)
 --   be a monoid homomorphism.
 mapD :: (d -> d) -> UDTree u d a -> UDTree u d a
 mapD f l@(Leaf _ _)  = l
-mapD f (Branch d ts) = Branch (f d) (map (mapD f) ts)
+mapD f (Branch u d ts) = Branch u (f d) (map (mapD f) ts)
 
 -- | A fold for UDTrees.
 foldUD :: (Monoid r, Monoid u, Monoid d)
@@ -73,10 +77,10 @@ foldUD :: (Monoid r, Monoid u, Monoid d)
                              --   of the recursive results.
       -> UDTree u d a -> r
 foldUD = foldUD' mempty     -- Pass along accumulated d value
-  where foldUD' d _ l (Leaf u a)       = l u d a
-        foldUD' d b l t@(Branch d' ts)
-          = b (getU t) d' (mconcat $ map (foldUD' (d `mappend` d') b l) ts)
+  where foldUD' d l _ (Leaf u a)       = l u d a
+        foldUD' d l b (Branch u d' ts)
+          = b u d' (mconcat $ map (foldUD' (d `mappend` d') l b) ts)
 
 -- | Flatten a tree into a list of leaves along with their @d@ annotations.
 flatten :: (Monoid u, Monoid d) => UDTree u d a -> [(a,d)]
-flatten = foldUD (\_ _ r -> r) (\_ d a -> [(a,d)])
+flatten = foldUD (\_ d a -> [(a,d)]) (\_ _ r -> r)
