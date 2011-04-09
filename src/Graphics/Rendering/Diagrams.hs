@@ -95,7 +95,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Diagrams
 
-       , AnnDiagram(..), Diagram
+       , AnnDiagram(..), mkAD, Diagram
        , atop
 
          -- * Annotations
