@@ -141,7 +141,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   diagram (e.g. to adjust the size based on the options) before
   --   rendering it.  A default implementation is provided which makes
   --   no adjustments.
-  adjustDia :: b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
+  adjustDia :: Monoid m => b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
   adjustDia _ _ d = d
 
   -- XXX expand this comment.  Explain about freeze, split
@@ -153,7 +153,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   primitive, the resulting operations are combined with
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
-  renderDia :: b -> Options b v -> AnnDiagram b v m -> Result b v
+  renderDia :: Monoid m => b -> Options b v -> AnnDiagram b v m -> Result b v
   renderDia b opts =
     doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
       where renderOne :: (Prim b v, (Split (Transformation v), Style))
