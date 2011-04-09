@@ -15,6 +15,8 @@ Cabal-version:       >=1.2
 
 Library
   Exposed-modules:     Graphics.Rendering.Diagrams,
+                       Graphics.Rendering.Diagrams.SplitMonoid,
+                       Graphics.Rendering.Diagrams.UDTree,
                        Graphics.Rendering.Diagrams.V,
                        Graphics.Rendering.Diagrams.Annot,
                        Graphics.Rendering.Diagrams.Transform,
