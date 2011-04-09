@@ -1,13 +1,12 @@
 {-# LANGUAGE FlexibleContexts
            , FlexibleInstances
            , TypeFamilies
-          , MultiParamTypeClasses
-           , UndecidableInstances
+           , MultiParamTypeClasses
            , GADTs
-           , DeriveFunctor
            , ExistentialQuantification
            , ScopedTypeVariables
-           , TupleSections
+           , GeneralizedNewtypeDeriving
+           , StandaloneDeriving
            #-}
 
 -----------------------------------------------------------------------------
@@ -49,9 +48,7 @@ module Graphics.Rendering.Diagrams.Core
 
        , AttributeClass(..)
        , Attribute(..)
-       , mkAttr, unwrapAttr, attrTransformation
-       , freezeAttr, thawAttr
-
+       , mkAttr, unwrapAttr
        , applyAttr
 
          -- * Styles
@@ -62,15 +59,15 @@ module Graphics.Rendering.Diagrams.Core
        , attrToStyle
        , applyStyle
 
-       , freezeStyle, thawStyle
-
          -- * Primtives
 
-       , Prim(..), prim
+       , Prim(..)
 
          -- * Diagrams
 
        , AnnDiagram(..), Diagram
+
+         -- XXX export other stuff
 
          -- ** Primitive operations
          -- $prim
@@ -80,6 +77,8 @@ module Graphics.Rendering.Diagrams.Core
 
        ) where
 
+import Graphics.Rendering.Diagrams.UDTree
+import Graphics.Rendering.Diagrams.SplitMonoid
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Annot
 import Graphics.Rendering.Diagrams.Transform
@@ -108,11 +107,15 @@ import Control.Applicative
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
---   instance of the 'Backend' class.  A backend must provide the
---   three associated types as well as implementations for 'withStyle'
---   and 'doRender'.
+--   instance of the 'Backend' class. A minimal complete definition
+--   consists of the three associated types, along with /either/
+--
+--   * implementations for 'withStyle' and 'doRender', /or/
+--
+--   * an implementation of 'renderDia'.
+--
 class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
-  type Render  b v :: *         -- The type of rendering operations used by this
+  data Render  b v :: *         -- The type of rendering operations used by this
                                 --   backend, which must be a monoid
   type Result  b v :: *         -- The result of the rendering operation
   data Options b v :: *         -- The rendering options for this backend
@@ -120,7 +123,8 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
-                 -> Style v    -- ^ Style to use
+                 -> Style      -- ^ Style to use
+                 -> Transformation v  -- ^ Transformation to be applied to the style
                  -> Render b v -- ^ Rendering operation to run
                  -> Render b v -- ^ Rendering operation using the style locally
 
@@ -137,6 +141,8 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   adjustDia :: b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
   adjustDia _ _ d = d
 
+  -- XXX expand this comment.  Explain about freeze, split
+  -- transformations, etc.
   -- | Render a diagram.  This has a default implementation in terms
   --   of 'adjustDia', 'withStyle', 'doRender', and the 'render'
   --   operation from the 'Renderable' class (first 'adjustDia' is
@@ -147,7 +153,13 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   renderDia :: b -> Options b v -> AnnDiagram b v m -> Result b v
   renderDia b opts =
     doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
-      where renderOne (s,p) = withStyle b s (render b p)
+      where renderOne :: (Prim b v, (Split (Transformation v), Style))
+                      -> Render b v
+            renderOne (p, (M t,      s))
+              = withStyle b s mempty (render b (transform t p))
+
+            renderOne (p, (t1 :| t2, s))
+              = withStyle b s t1 (render b (transform (t1 <> t2) p))
 
   -- See Note [backend token]
 
@@ -206,43 +218,19 @@ necessarily injective.
 class Typeable a => AttributeClass a where
 
 -- | An existential wrapper type to hold attributes.
-data Attribute :: * -> * where
-  Attribute :: AttributeClass a => a -> Bool -> Transformation v -> Attribute v
-
-type instance V (Attribute v) = v
-
--- | Attributes can be transformed; it is up to the backend to decide
---   how to treat transformed attributes.
-instance HasLinearMap v => Transformable (Attribute v) where
-  transform t   (Attribute a True x)  = Attribute a True (t <> x)
-  transform t a@(Attribute _ False _) = a
+data Attribute :: * where
+  Attribute :: AttributeClass a => a -> Attribute
 
 -- TODO: add to export lists etc.
 
--- | Create an (untransformed, unfrozen) attribute.
-mkAttr :: ( HasLinearMap v, AttributeClass a)
-            => a -> Attribute v
-mkAttr a = Attribute a False mempty
-
--- | Freeze an attribute, i.e. it will now be affected by
---   transformations.
-freezeAttr :: Attribute v -> Attribute v
-freezeAttr (Attribute a _ t) = Attribute a True t
-
--- | Thaw an attribute, i.e. it will no longer be affected by
---   transformations.
-thawAttr :: Attribute v -> Attribute v
-thawAttr (Attribute a _ t) = Attribute a False t
+-- | Create an attribute.
+mkAttr :: AttributeClass a => a -> Attribute
+mkAttr = Attribute
 
 -- | Unwrap an unknown 'Attribute' type, performing a (dynamic) type
---   check on the result, returning both the attribute and its
---   accompanying transformation.
-unwrapAttr :: AttributeClass a => Attribute v -> Maybe (a, Transformation v)
-unwrapAttr (Attribute a _ t) = (,t) <$> cast a
-
--- | Get the transformation that has been applied to an attribute.
-attrTransformation :: Attribute v -> Transformation v
-attrTransformation (Attribute _ _ t) = t
+--   check on the result.
+unwrapAttr :: AttributeClass a => Attribute -> Maybe a
+unwrapAttr (Attribute a) = cast a
 
 ------------------------------------------------------------
 --  Styles  ------------------------------------------------
@@ -250,23 +238,17 @@ attrTransformation (Attribute _ _ t) = t
 
 -- | A @Style@ is a collection of attributes, containing at most one
 --   attribute of any given type.
-newtype Style v = Style (M.Map String (Attribute v))
+newtype Style = Style (M.Map String Attribute)
   -- The String keys are serialized TypeRep values, corresponding to
   -- the type of the stored attribute.
 
-type instance V (Style v) = v
-
-inStyle :: (M.Map String (Attribute v) -> M.Map String (Attribute v))
-        -> Style v -> Style v
+inStyle :: (M.Map String Attribute -> M.Map String Attribute)
+        -> Style -> Style
 inStyle f (Style s) = Style (f s)
 
-instance HasLinearMap v => Transformable (Style v) where
-  transform = inStyle . M.map . transform
-
--- | Extract an attribute and the accompanying transformation from a
---   style using the magic of type inference and "Data.Typeable".
-getAttr :: forall a v. (HasLinearMap v, AttributeClass a)
-             => Style v -> Maybe (a, Transformation v)
+-- | Extract an attribute from a style using the magic of type
+--   inference and "Data.Typeable".
+getAttr :: forall a. AttributeClass a => Style -> Maybe a
 getAttr (Style s) = M.lookup ty s >>= unwrapAttr
   where ty = (show . typeOf $ (undefined :: a))
   -- the unwrapAttr should never fail, since we maintain the invariant
@@ -274,51 +256,41 @@ getAttr (Style s) = M.lookup ty s >>= unwrapAttr
 
 -- | Add a new attribute to a style, or replace the old attribute of
 --   the same type if one exists.
-setAttr :: forall a v. (HasLinearMap v, AttributeClass a)
-             => a -> Style v -> Style v
+setAttr :: forall a. AttributeClass a => a -> Style -> Style
 setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (mkAttr a)
 
 -- | The empty style contains no attributes; composition of styles is
 --   right-biased union; i.e. if the two styles contain attributes of
 --   the same type, the one from the right is taken.
-instance Monoid (Style v) where
+instance Monoid Style where
   mempty = Style M.empty
   (Style s1) `mappend` (Style s2) = Style $ s2 `M.union` s1
 
 -- | Create a style from a single attribute.
-attrToStyle :: forall a v. (HasLinearMap v, AttributeClass a)
-                 => a -> Style v
+attrToStyle :: forall a. AttributeClass a => a -> Style
 attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a))
 
 -- | Attempt to add a new attribute to a style, but if an attribute of
 --   the same type already exists, do not replace it.
-addAttr :: (HasLinearMap v, AttributeClass a)
-             => a -> Style v -> Style v
+addAttr :: AttributeClass a => a -> Style -> Style
 addAttr a s = attrToStyle a <> s
 
 -- | Apply an attribute to a diagram.  Note that child attributes
 --   always have precedence over parent attributes.
-applyAttr :: (Backend b v, HasLinearMap v, AttributeClass a)
-               => a -> AnnDiagram b v m -> AnnDiagram b v m
+applyAttr :: AttributeClass a => a -> AnnDiagram b v m -> AnnDiagram b v m
 applyAttr = applyStyle . attrToStyle
 
 -- | Apply a style to a diagram.
-applyStyle :: Backend b v => Style v -> AnnDiagram b v m -> AnnDiagram b v m
-applyStyle s d = d { prims = (map . first) (s<>) (prims d) }
+applyStyle :: Style -> AnnDiagram b v m -> AnnDiagram b v m
+applyStyle s d = undefined -- XXX
 
 -- XXX TODO: comment these and add to export list
 
-freezeStyle :: Style v -> Style v
-freezeStyle = (inStyle . fmap) freezeAttr
-
-thawStyle :: Style v -> Style v
-thawStyle = (inStyle . fmap) thawAttr
-
 freeze :: AnnDiagram b v m -> AnnDiagram b v m
-freeze d = d { prims = (map . first) freezeStyle (prims d) }
+freeze d = undefined -- XXX
 
 thaw :: AnnDiagram b v m -> AnnDiagram b v m
-thaw d = d { prims = (map . first) thawStyle (prims d) }
+thaw d = undefined -- XXX
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
@@ -330,11 +302,6 @@ data Prim b v where
   Prim :: Renderable t b => t -> Prim b (V t)
 
 type instance V (Prim b v) = v
-
--- | Convenience function for constructing a singleton list of
---   primitives with empty style.
-prim :: (Backend b (V t), Renderable t b) => t -> [(Style (V t), Prim b (V t))]
-prim p = [(mempty, Prim p)]
 
 -- Note that we also require the vector spaces for the backend and the
 -- primitive to be the same; this is necessary since the rendering
@@ -358,32 +325,14 @@ instance Backend b v => Renderable (Prim b v) b where
 -- TODO: At some point, we may want to abstract this into a type
 -- class...
 
--- TODO: Change the prims list into a joinlist?  Would it help to
--- remember more structure?
-
--- | The basic 'AnnDiagram' data type representing annotated
---   diagrams.  A diagram consists of
---
---     * a list of primitives paired with styles
---
---     * a convex bounding region (represented functionally),
---
---     * a set of named (local) points, and
---
---     * a sampling function that associates an annotation (taken from
---       some monoid) to each point in the vector space.
 --
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
-data AnnDiagram b v m = Diagram { prims   :: [(Style v, Prim b v)]
-                                , bounds  :: Bounds v
-                                , names   :: NameSet v
-                                , annot   :: Annot v m
-                                }
-  deriving (Functor)
 
-sample :: AnnDiagram b v m -> Point v -> m
-sample = queryAnnot . annot
+newtype AnnDiagram b v m = AD { unAD :: UDTree (Bounds v, NameSet v, Annot v m)
+                                               (Split (Transformation v), Style)
+                                               (Prim b v)
+                              }
 
 type instance V (AnnDiagram b v m) = v
 
@@ -393,6 +342,30 @@ type instance V (AnnDiagram b v m) = v
 --   annotations can be done via the 'Functor' and 'Applicative'
 --   instances for @'AnnDiagram' b@.
 type Diagram b v = AnnDiagram b v Any
+
+-- XXX comment these
+
+prims :: HasLinearMap v
+      => AnnDiagram b v m -> [(Prim b v, (Split (Transformation v), Style))]
+prims = flatten . unAD
+
+bounds :: AnnDiagram b v m -> Bounds v
+bounds = (\(b,_,_) -> b) . getU . unAD
+
+names :: AnnDiagram b v m -> NameSet v
+names = (\(_,n,_) -> n) . getU . unAD
+
+annot :: AnnDiagram b v m -> Annot v m
+annot = (\(_,_,a) -> a) . getU . unAD
+
+sample :: AnnDiagram b v m -> Point v -> m
+sample = queryAnnot . annot
+
+alterAD :: (Bounds v   -> Bounds v)
+        -> (NameSet v  -> NameSet v)
+        -> (Annot v m1 -> Annot v m2)
+        -> AnnDiagram b v m1 -> AnnDiagram b v m2
+alterAD f g h (AD dia) = AD $ mapU (\(b,n,a) -> (f b, g n, h a)) dia
 
 ------------------------------------------------------------
 --  Instances
@@ -410,11 +383,8 @@ type Diagram b v = AnnDiagram b v Any
 --   The first diagram goes on top of the second (when such a notion
 --   makes sense in the digrams' vector space, such as R2; in other
 --   vector spaces, like R3, @mappend@ is commutative).
-instance (Backend b v, s ~ Scalar v, Ord s, AdditiveGroup s, Monoid m)
-           => Monoid (AnnDiagram b v m) where
-  mempty  = Diagram mempty mempty mempty mempty
-  mappend (Diagram ps1 bs1 ns1 smp1) (Diagram ps2 bs2 ns2 smp2) =
-    Diagram (ps2 <> ps1) (bs1 <> bs2) (ns1 <> ns2) (smp1 <> smp2)
+deriving instance (HasLinearMap v, Ord (Scalar v), AdditiveGroup (Scalar v), Monoid m)
+  => Monoid (AnnDiagram b v m)
 
 -- | A convenient synonym for 'mappend' on diagrams (to help remember
 --   which diagram goes on top of which when combining them).
@@ -422,58 +392,60 @@ atop :: (Backend b v, s ~ Scalar v, Ord s, AdditiveGroup s, Monoid m)
      => AnnDiagram b v m -> AnnDiagram b v m -> AnnDiagram b v m
 atop = mappend
 
+---- Functor
+
+instance Functor (AnnDiagram b v) where
+  fmap f = alterAD id id (fmap f)
+
 ---- Applicative
 
+-- XXX what to do with this?
 -- | A diagram with annotations of type @(a -> b)@ can be \"applied\"
 --   to a diagram with annotations of type @a@, resulting in a
 --   combined diagram with annotations of type @b@.  In particular,
 --   all components of the two diagrams are combined as in the
 --   @Monoid@ instance, except the annotations which are combined via
 --   @(<*>)@.
-instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
-           => Applicative (AnnDiagram b v) where
-  pure a = Diagram mempty mempty mempty (Annot $ const a)
 
-  (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
-    = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
+-- instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
+--            => Applicative (AnnDiagram b v) where
+--   pure a = Diagram mempty mempty mempty (Annot $ const a)
+
+--   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
+--     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
 ---- Boundable
 
 instance (Backend b v, InnerSpace v, OrderedField (Scalar v) )
          => Boundable (AnnDiagram b v m) where
-  getBounds (Diagram {bounds = b}) = b
+  getBounds = bounds
 
 ---- HasOrigin
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance ( Backend b v, s ~ Scalar v
-         , InnerSpace v, HasLinearMap v
-         , Fractional s, AdditiveGroup s
-         )
-       => HasOrigin (AnnDiagram b v m) where
+instance (Backend b v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+      => HasOrigin (AnnDiagram b v m) where
 
-  moveOriginTo p (Diagram ps b (NameSet s) ann)
-    = Diagram { prims   = map (tr *** tr) ps
-              , bounds  = moveOriginTo p b
-              , names   = NameSet $ M.map (map tr) s
-              , annot   = moveOriginTo p ann
-              }
-          -- the scoped type variables are necessary here since GHC no longer
-          -- generalizes let-bound functions
-    where tr :: (Transformable t, V t ~ v) => t -> t
-          tr = translate (origin .-. p)
+  moveOriginTo p = translate (origin .-. p)
+                 . alterAD (moveOriginTo p)
+                           (moveOriginTo p)
+                           (moveOriginTo p)
+
+-- ( Backend b v, s ~ Scalar v
+--          , InnerSpace v, HasLinearMap v
+--          , Fractional s, AdditiveGroup s
+--          )
+--        =>
 
 ---- Transformable
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
-instance ( Backend b v, InnerSpace v
-         , s ~ Scalar v, Floating s, AdditiveGroup s
+instance ( Backend b v
+         , AdditiveGroup (Scalar v), Ord (Scalar v)
+         , Monoid m
          )
     => Transformable (AnnDiagram b v m) where
-  transform t (Diagram ps b ns smp)
-    = Diagram (map (transform t *** transform t) ps)
-              (transform t b)
-              (transform t ns)
-              (transform t smp)
+
+  transform t (AD dia) = AD $ applyD (M t, mempty) dia
