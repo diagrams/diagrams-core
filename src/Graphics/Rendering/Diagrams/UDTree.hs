@@ -29,6 +29,18 @@ data UDTree u d a
   | Branch u d [UDTree u d a]
   deriving (Functor)
 
+-- | @UDTree@s form a monoid where @mappend@ corresponds to adjoining
+--   two trees under a common parent root.  Note that this technically
+--   does not satisfy associativity, but it does with respect to
+--   'flatten' which is what we really care about.  @mconcat@ is
+--   specialized to put all the trees under a single parent.
+instance (Monoid u, Monoid d) => Monoid (UDTree u d a) where
+  mempty          = Branch mempty mempty []
+  (Branch _ _ []) `mappend` t2 = t2
+  t1 `mappend` (Branch _ _ []) = t1
+  t1 `mappend` t2              = branch [t1,t2]
+  mconcat         = branch
+
 -- | Construct a leaf node.
 leaf :: u -> a -> UDTree u d a
 leaf = Leaf
