@@ -80,7 +80,7 @@ mapD _ (Leaf u a)      = Leaf u a
 mapD f (Branch u d ts) = Branch u (f d) (map (mapD f) ts)
 
 -- | A fold for UDTrees.
-foldUD :: (Monoid r, Monoid u, Monoid d)
+foldUD :: (Monoid r, Monoid d)
       => (u -> d -> a -> r)  -- ^ Function for processing leaf nodes.
                              --   Given the u annotation at this node, the
                              --   mconcat of all d annotations above, and the
@@ -96,5 +96,5 @@ foldUD = foldUD' mempty     -- Pass along accumulated d value
           = b u d' (mconcat $ map (foldUD' (d `mappend` d') l b) ts)
 
 -- | Flatten a tree into a list of leaves along with their @d@ annotations.
-flatten :: (Monoid u, Monoid d) => UDTree u d a -> [(a,d)]
+flatten :: Monoid d => UDTree u d a -> [(a,d)]
 flatten = foldUD (\_ d a -> [(a,d)]) (\_ _ r -> r)
