@@ -39,7 +39,10 @@ module Graphics.Rendering.Diagrams.Names
        ) where
 
 import Graphics.Rendering.Diagrams.V
+import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Points
+
+import Data.VectorSpace
 
 import Data.List (intercalate)
 import qualified Data.Map as M
@@ -121,6 +124,9 @@ type instance V (NameSet v) = v
 instance Monoid (NameSet v) where
   mempty = NameSet M.empty
   (NameSet s1) `mappend` (NameSet s2) = NameSet $ M.unionWith (++) s1 s2
+
+instance VectorSpace v => HasOrigin (NameSet v) where
+  moveOriginTo p (NameSet m) = NameSet $ M.map (map (moveOriginTo p)) m
 
 -- | 'NameSet's are qualifiable: if @ns@ is a 'NameSet', then @n |>
 --   ns@ is the same 'NameSet' except with every name qualified by
