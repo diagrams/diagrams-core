@@ -439,12 +439,6 @@ instance (Backend b v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 
   moveOriginTo p = translate (origin .-. p)
 
--- ( Backend b v, s ~ Scalar v
---          , InnerSpace v, HasLinearMap v
---          , Fractional s, AdditiveGroup s
---          )
---        =>
-
 ---- Transformable
 
 -- | 'Diagram's can be transformed by transforming each of their
