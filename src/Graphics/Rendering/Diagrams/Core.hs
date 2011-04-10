@@ -389,8 +389,12 @@ setBounds b = alterAD (const b) id id
 --   The first diagram goes on top of the second (when such a notion
 --   makes sense in the digrams' vector space, such as R2; in other
 --   vector spaces, like R3, @mappend@ is commutative).
-deriving instance (HasLinearMap v, Ord (Scalar v), AdditiveGroup (Scalar v), Monoid m)
-  => Monoid (AnnDiagram b v m)
+instance (HasLinearMap v, Ord (Scalar v), AdditiveGroup (Scalar v), Monoid m)
+  => Monoid (AnnDiagram b v m) where
+  mempty = AD mempty
+  (AD d1) `mappend` (AD d2) = AD (d2 `mappend` d1)
+    -- swap order so that primitives of d2 come first, i.e. will be
+    -- rendered first, i.e. will be on the bottom.
 
 -- | A convenient synonym for 'mappend' on diagrams (to help remember
 --   which diagram goes on top of which when combining them).
