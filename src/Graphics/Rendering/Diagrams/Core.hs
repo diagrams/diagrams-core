@@ -434,9 +434,6 @@ instance (Backend b v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => HasOrigin (AnnDiagram b v m) where
 
   moveOriginTo p = translate (origin .-. p)
-                 . alterAD (moveOriginTo p)
-                           (moveOriginTo p)
-                           (moveOriginTo p)
 
 -- ( Backend b v, s ~ Scalar v
 --          , InnerSpace v, HasLinearMap v
