@@ -82,7 +82,7 @@ module Graphics.Rendering.Diagrams.Core
        ) where
 
 import Graphics.Rendering.Diagrams.UDTree
-import Graphics.Rendering.Diagrams.SplitMonoid
+import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Annot
 import Graphics.Rendering.Diagrams.Transform
