@@ -73,10 +73,9 @@ module Graphics.Rendering.Diagrams
        , AttributeClass(..)
        , Attribute, mkAttr, unwrapAttr
 
-       , Style
+       , Style, HasStyle(..)
        , getAttr, setAttr, addAttr
        , applyAttr
-       , applyStyle
 
          -- * Primtives
 

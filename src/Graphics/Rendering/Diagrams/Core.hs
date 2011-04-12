@@ -56,8 +56,9 @@ module Graphics.Rendering.Diagrams.Core
        , Style(..), inStyle
        , getAttr, setAttr, addAttr
 
+       , HasStyle(..)
+
        , attrToStyle
-       , applyStyle
 
          -- * Primtives
 
@@ -278,19 +279,19 @@ attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a)
 addAttr :: AttributeClass a => a -> Style -> Style
 addAttr a s = attrToStyle a <> s
 
+-- | Type class for things which have a style.
+class HasStyle a where
+  applyStyle :: Style -> a -> a  -- ^ /Apply/ a style by combining it
+                                 -- (on the left) with the existing
+                                 -- style.
+
+instance HasStyle Style where
+  applyStyle = mappend
+
 -- | Apply an attribute to a diagram.  Note that child attributes
 --   always have precedence over parent attributes.
-applyAttr :: (HasLinearMap v, AttributeClass a)
-          => a -> AnnDiagram b v m -> AnnDiagram b v m
+applyAttr :: (AttributeClass a, HasStyle d) => a -> d -> d
 applyAttr = applyStyle . attrToStyle
-
--- | Apply a style to a diagram.
-applyStyle :: HasLinearMap v => Style -> AnnDiagram b v m -> AnnDiagram b v m
-applyStyle s (AD dia) = AD (applyD (mempty, s) dia)
-
--- XXX comment me
-freeze :: HasLinearMap v => AnnDiagram b v m -> AnnDiagram b v m
-freeze (AD dia) = AD (applyD (split, mempty) dia)
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
@@ -423,6 +424,15 @@ instance Functor (AnnDiagram b v) where
 
 --   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
+
+---- HasStyle
+
+instance HasLinearMap v => HasStyle (AnnDiagram b v m) where
+  applyStyle s (AD dia) = AD (applyD (mempty, s) dia)
+
+-- XXX comment me
+freeze :: HasLinearMap v => AnnDiagram b v m -> AnnDiagram b v m
+freeze (AD dia) = AD (applyD (split, mempty) dia)
 
 ---- Boundable
 
