@@ -37,8 +37,6 @@ data UDTree u d a
 instance (Monoid u, Monoid d) => Monoid (UDTree u d a) where
   mempty          = Branch mempty mempty []
 
-  (Branch _ _ []) `mappend` t2 = t2
-  t1 `mappend` (Branch _ _ []) = t1
   t1 `mappend` t2              = branch [t1,t2]
 
   mconcat         = branch
