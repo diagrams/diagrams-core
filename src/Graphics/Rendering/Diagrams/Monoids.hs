@@ -1,4 +1,6 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses
+           , FlexibleInstances
+  #-}
 
 -- XXX comment me
 module Graphics.Rendering.Diagrams.Monoids where
@@ -13,16 +15,23 @@ import Data.Monoid
 -- | Type class for monoid actions. Instances are required to satisfy
 --   the laws
 --
---   * @apply mempty = id@
+--   * @act mempty = id@
 --
---   * @apply (m1 `mappend` m2) = apply m1 . apply m2@
+--   * @act (m1 `mappend` m2) = act m1 . act m2@
 --
---   Additionally, if the type @s@ has any algebraic structure, @apply
+--   Additionally, if the type @s@ has any algebraic structure, @act
 --   m@ should be a homomorphism.  For example, if @s@ is also a
---   monoid we should have @apply m mempty = mempty@ and @apply m (s1
---   `mappend` s2) = (apply m s1) `mappend` (apply m s2)@.
-class Monoid m => Action m s where
-  apply :: m -> s -> s
+--   monoid we should have @act m mempty = mempty@ and @act m (s1
+--   `mappend` s2) = (act m s1) `mappend` (act m s2)@.
+--
+--   By default, @act = const id@, so for monoidal types @M@ which
+--   should have no effect on other types, it suffices to write
+--
+--   > instance Action M m
+--
+class Action m s where
+  act :: m -> s -> s
+  act = const id
 
 ------------------------------------------------------------
 --  Split monoids
@@ -48,3 +57,9 @@ instance Monoid m => Monoid (Split m) where
 
 split :: Monoid m => Split m
 split = mempty :| mempty
+
+-- | By default, the action of a split monoid are just the same as for
+--   the underlying monoid.
+instance (Action m n) => Action (Split m) n where
+  act (M m) n      = act m n
+  act (m1 :| m2) n = act m1 (act m2 n)

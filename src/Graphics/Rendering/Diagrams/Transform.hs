@@ -3,6 +3,7 @@
            , FlexibleInstances
            , UndecidableInstances
            , TypeFamilies
+           , MultiParamTypeClasses
   #-}
 
 -----------------------------------------------------------------------------
@@ -62,6 +63,7 @@ import Data.Monoid
 import qualified Data.Map as M
 import qualified Data.Set as S
 
+import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
@@ -129,6 +131,11 @@ instance HasLinearMap v => Monoid (Transformation v) where
   mempty = Transformation mempty mempty zeroV
   mappend (Transformation t1 t1' v1) (Transformation t2 t2' v2)
     = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
+
+-- | Transformations can act on transformable things.
+instance (HasLinearMap v, v ~ (V a), Transformable a)
+         => Action (Transformation v) a where
+  act = transform
 
 -- | Apply a transformation to a vector.  Note that any translational
 --   component of the transformation will not affect the vector, since

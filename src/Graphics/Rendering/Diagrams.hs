@@ -79,7 +79,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Primtives
 
-       , Prim(..)
+       , Prim(..), nullPrim
 
          -- * Bounds
 
@@ -97,7 +97,6 @@ module Graphics.Rendering.Diagrams
        , AnnDiagram, mkAD, Diagram
        , prims
        , bounds, names, annot, sample
-       , setBounds
 
        , atop
 

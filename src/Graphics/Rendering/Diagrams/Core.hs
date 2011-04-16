@@ -7,6 +7,9 @@
            , ScopedTypeVariables
            , GeneralizedNewtypeDeriving
            , StandaloneDeriving
+           , TypeOperators
+           , OverlappingInstances
+           , UndecidableInstances
            #-}
 
 -----------------------------------------------------------------------------
@@ -62,14 +65,13 @@ module Graphics.Rendering.Diagrams.Core
 
          -- * Primtives
 
-       , Prim(..)
+       , Prim(..), nullPrim
 
          -- * Diagrams
 
        , AnnDiagram(..), mkAD, Diagram
        , prims
        , bounds, names, annot, sample
-       , setBounds
 
          -- XXX export other stuff
 
@@ -81,8 +83,10 @@ module Graphics.Rendering.Diagrams.Core
 
        ) where
 
-import Graphics.Rendering.Diagrams.UDTree
 import Graphics.Rendering.Diagrams.Monoids
+import Graphics.Rendering.Diagrams.MList
+import Graphics.Rendering.Diagrams.UDTree
+
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Annot
 import Graphics.Rendering.Diagrams.Transform
@@ -99,7 +103,7 @@ import Data.AffineSpace ((.-.))
 
 import qualified Data.Map as M
 import Data.Monoid
-import Control.Arrow (first, (***))
+import Control.Arrow (first, second, (***))
 import Control.Applicative
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
@@ -154,7 +158,8 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   primitive, the resulting operations are combined with
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
-  renderDia :: Monoid m => b -> Options b v -> AnnDiagram b v m -> Result b v
+  renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid m)
+            => b -> Options b v -> AnnDiagram b v m -> Result b v
   renderDia b opts =
     doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
       where renderOne :: (Prim b v, (Split (Transformation v), Style))
@@ -270,6 +275,9 @@ instance Monoid Style where
   mempty = Style M.empty
   (Style s1) `mappend` (Style s2) = Style $ s2 `M.union` s1
 
+-- | Styles have no action on other monoids.
+instance Action Style m
+
 -- | Create a style from a single attribute.
 attrToStyle :: forall a. AttributeClass a => a -> Style
 attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a))
@@ -319,6 +327,22 @@ instance Backend b v => Transformable (Prim b v) where
 instance Backend b v => Renderable (Prim b v) b where
   render b (Prim p) = render b p
 
+-- | The null primitive.
+data NullPrim v = NullPrim
+
+type instance (V (NullPrim v)) = v
+
+instance HasLinearMap v => Transformable (NullPrim v) where
+  transform _ _ = NullPrim
+
+instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b where
+  render _ _ = mempty
+
+-- | The null primitive, which every backend can render by doing
+--   nothing.
+nullPrim :: (HasLinearMap v, Monoid (Render b v)) => Prim b v
+nullPrim = Prim NullPrim
+
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
@@ -330,10 +354,11 @@ instance Backend b v => Renderable (Prim b v) b where
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
 
-newtype AnnDiagram b v m = AD { unAD :: UDTree (Bounds v, NameSet v, Annot v m)
-                                               (Split (Transformation v), Style)
-                                               (Prim b v)
-                              }
+newtype AnnDiagram b v m =
+  AD { unAD :: UDTree (Bounds v ::: NameSet v ::: Annot v m ::: Nil)
+                      (Split (Transformation v) ::: Style ::: Nil)
+                      (Prim b v)
+     }
 
 type instance V (AnnDiagram b v m) = v
 
@@ -346,33 +371,31 @@ type Diagram b v = AnnDiagram b v Any
 
 -- XXX comment these
 
-prims :: HasLinearMap v
+prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => AnnDiagram b v m -> [(Prim b v, (Split (Transformation v), Style))]
-prims = flatten . unAD
+prims = (map . second) (wibble . toTuple) . flatten . unAD
+  where wibble (t,(s,_)) = (t,s)
 
-bounds :: AnnDiagram b v m -> Bounds v
-bounds = (\(b,_,_) -> b) . getU . unAD
+bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
+       => AnnDiagram b v m -> Bounds v
+bounds = getU' . unAD
 
-names :: AnnDiagram b v m -> NameSet v
-names = (\(_,n,_) -> n) . getU . unAD
+names :: HasLinearMap v => AnnDiagram b v m -> NameSet v
+names = getU' . unAD
 
-annot :: AnnDiagram b v m -> Annot v m
-annot = (\(_,_,a) -> a) . getU . unAD
+annot :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Annot v m
+annot = getU' . unAD
 
-sample :: AnnDiagram b v m -> Point v -> m
+sample :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Point v -> m
 sample = queryAnnot . annot
 
-alterAD :: (Bounds v   -> Bounds v)
-        -> (NameSet v  -> NameSet v)
-        -> (Annot v m1 -> Annot v m2)
-        -> AnnDiagram b v m1 -> AnnDiagram b v m2
-alterAD f g h (AD dia) = AD $ mapU (\(b,n,a) -> (f b, g n, h a)) dia
+-- alterAD :: ((Bounds v ::: NameSet v ::: Annot v m ::: Nil) :>: a)
+--         => (a -> a)
+--         -> AnnDiagram b v m -> AnnDiagram b v m
+-- alterAD f (AD dia) = AD $ mapU (alt f) dia
 
 mkAD :: Prim b v -> Bounds v -> NameSet v -> Annot v m -> AnnDiagram b v m
-mkAD p b n a = AD $ leaf (b,n,a) p
-
-setBounds :: Bounds v -> AnnDiagram b v m -> AnnDiagram b v m
-setBounds b = alterAD (const b) id id
+mkAD p b n a = AD $ leaf (b ::: n ::: a ::: Nil) p
 
 ------------------------------------------------------------
 --  Instances
@@ -390,7 +413,7 @@ setBounds b = alterAD (const b) id id
 --   The first diagram goes on top of the second (when such a notion
 --   makes sense in the digrams' vector space, such as R2; in other
 --   vector spaces, like R3, @mappend@ is commutative).
-instance (HasLinearMap v, Ord (Scalar v), AdditiveGroup (Scalar v), Monoid m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
   => Monoid (AnnDiagram b v m) where
   mempty = AD mempty
   (AD d1) `mappend` (AD d2) = AD (d2 `mappend` d1)
@@ -399,14 +422,17 @@ instance (HasLinearMap v, Ord (Scalar v), AdditiveGroup (Scalar v), Monoid m)
 
 -- | A convenient synonym for 'mappend' on diagrams (to help remember
 --   which diagram goes on top of which when combining them).
-atop :: (Backend b v, s ~ Scalar v, Ord s, AdditiveGroup s, Monoid m)
+atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
      => AnnDiagram b v m -> AnnDiagram b v m -> AnnDiagram b v m
 atop = mappend
 
 ---- Functor
 
+-- This is a bit ugly, but it will have to do for now.  The problem is that
+-- alterAD can't handle changing the type of the annotations.
 instance Functor (AnnDiagram b v) where
-  fmap f = alterAD id id (fmap f)
+  fmap f (AD dia) = AD $ mapU g dia
+    where g (b ::: n ::: a ::: Nil) = (b ::: n ::: fmap f a ::: Nil)
 
 ---- Applicative
 
@@ -427,16 +453,18 @@ instance Functor (AnnDiagram b v) where
 
 ---- HasStyle
 
-instance HasLinearMap v => HasStyle (AnnDiagram b v m) where
-  applyStyle s (AD dia) = AD (applyD (mempty, s) dia)
+instance (HasLinearMap v, InnerSpace v, Floating (Scalar v), AdditiveGroup (Scalar v))
+      => HasStyle (AnnDiagram b v m) where
+  applyStyle s (AD dia) = AD (applyD (inj s) dia)
 
 -- XXX comment me
-freeze :: HasLinearMap v => AnnDiagram b v m -> AnnDiagram b v m
-freeze (AD dia) = AD (applyD (split, mempty) dia)
+freeze :: forall v b m. (HasLinearMap v, Floating (Scalar v), AdditiveGroup (Scalar v), InnerSpace v)
+       => AnnDiagram b v m -> AnnDiagram b v m
+freeze (AD dia) = AD (applyD (inj (split :: Split (Transformation v))) dia)
 
 ---- Boundable
 
-instance (Backend b v, InnerSpace v, OrderedField (Scalar v) )
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
          => Boundable (AnnDiagram b v m) where
   getBounds = bounds
 
@@ -444,7 +472,7 @@ instance (Backend b v, InnerSpace v, OrderedField (Scalar v) )
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance (Backend b v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => HasOrigin (AnnDiagram b v m) where
 
   moveOriginTo p = translate (origin .-. p)
@@ -453,14 +481,6 @@ instance (Backend b v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
-instance ( Backend b v, InnerSpace v
-         , OrderedField (Scalar v)
-         , Monoid m
-         )
-    => Transformable (AnnDiagram b v m) where
-
-  transform t (AD dia) = alterAD (transform t)
-                                 (transform t)
-                                 (transform t)
-                       . AD . applyD (M t, mempty)
-                       $ dia
+instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v)
+      => Transformable (AnnDiagram b v m) where
+  transform t (AD dia) = AD . applyD (inj (M t)) $ dia
