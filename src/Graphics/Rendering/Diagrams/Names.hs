@@ -1,6 +1,8 @@
 {-# LANGUAGE TypeSynonymInstances
            , FlexibleInstances
            , TypeFamilies
+           , GeneralizedNewtypeDeriving
+           , MultiParamTypeClasses
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -39,6 +41,7 @@ module Graphics.Rendering.Diagrams.Names
        ) where
 
 import Graphics.Rendering.Diagrams.V
+import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Points
 
@@ -75,12 +78,12 @@ instance Show AName where
   show (IName i) = show i
   show (SName s) = s
 
--- | A (qualified) name is a nonempty sequence of atomic names.
+-- | A (qualified) name is a (possibly empty) sequence of atomic names.
 --   Atomic names can be either numbers or arbitrary strings.  Numeric
 --   names are provided for convenience in naming lists of things,
 --   such as a row of ten squares, or the vertices of a path.
 newtype Name = Name [AName]
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Monoid)
 
 instance Show Name where
   show (Name ns) = intercalate "." $ map show ns
@@ -94,6 +97,9 @@ instance IsName String where
 
 instance IsName Int where
   toName = Name . (:[]) . IName
+
+instance IsName Name where
+  toName = id
 
 -- | Instances of 'Qualifiable' are things which can be qualified by
 --   prefixing them with a name.
@@ -113,6 +119,9 @@ instance Qualifiable Name where
 -- | A 'NameSet' is a map from names to points, possibly with
 --   multiple points associated with each name.
 newtype NameSet v = NameSet (M.Map Name [Point v])
+-- Note, in some sense it would be nicer to use Sets of points instead
+-- of a list, but then we would have to put Ord constraints on v
+-- everywhere. =P
 
 type instance V (NameSet v) = v
 
@@ -141,3 +150,7 @@ fromNames = NameSet . M.fromList . map (toName *** (:[]))
 -- | Give a name to a point.
 rememberAs :: Name -> Point v -> NameSet v -> NameSet v
 rememberAs n p s@(NameSet names) = NameSet $ M.insertWith (++) n [p] names
+
+-- | A name acts on a name set by qualifying it.
+instance Action Name (NameSet v) where
+  act = (|>)
