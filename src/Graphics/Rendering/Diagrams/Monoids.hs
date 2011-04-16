@@ -6,7 +6,9 @@
 module Graphics.Rendering.Diagrams.Monoids where
 
 import Graphics.Rendering.Diagrams.Util
+
 import Data.Monoid
+import Control.Applicative
 
 ------------------------------------------------------------
 --  Monoid actions
@@ -63,3 +65,99 @@ split = mempty :| mempty
 instance (Action m n) => Action (Split m) n where
   act (M m) n      = act m n
   act (m1 :| m2) n = act m1 (act m2 n)
+
+------------------------------------------------------------
+--  Applicative monoids
+------------------------------------------------------------
+
+-- | A wrapper for an 'Applicative' structure containing a monoid,
+--   which has a monoid structure itself based on application.
+newtype ApplicativeMonoid f m = AM (f m)
+
+-- | @f1 `mappend` f2@ is defined as @fmap mappend f1 <*> f2@.
+instance (Applicative f, Monoid m) => Monoid (ApplicativeMonoid f m) where
+  mempty = AM (pure mempty)
+  (AM f1) `mappend` (AM f2) = AM $ fmap mappend f1 <*> f2
+
+{- See Applicative laws here:
+
+http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Applicative.html#t:Applicative
+-}
+
+{- left identity:
+
+  AM (pure mempty) `mappend` AM f
+=           { definition }
+  AM $ fmap mappend (pure mempty) <*> f
+=           { naturality of pure, fmap f . pure = pure . f }
+  AM $ pure (mappend mempty) <*> f
+=           { monoid law (left identity) }
+  AM $ pure id <*> f
+=           { applicative law (identity) }
+  AM f
+-}
+
+{- right identity:
+
+  AM f `mappend` AM (pure mempty)
+=           { definition }
+  AM $ fmap mappend f <*> pure mempty
+=           { applicative law (interchange) }
+  AM $ pure ($mempty) <*> fmap mappend f
+=           { applicative/functor law }
+  AM $ pure ($mempty) <*> (pure mappend <*> f)
+=           { applicative law (composition) }
+  AM $ pure (.) <*> pure ($mempty) <*> pure mappend <*> f
+=           { applicative law (homomorphism) }
+  AM $ pure ((.) ($mempty)) <*> pure mappend <*> f
+=           { applicative law (homomorphism) }
+  AM $ pure (($mempty) . mappend) <*> f
+=           { monoid law (right identity) }
+  AM $ pure id <*> f
+=           { applicative law (identity) }
+  AM f
+-}
+
+{- associativity:
+
+  (AM f1 `mappend` AM f2) `mappend` AM f3
+=           { definition }
+  AM $ fmap mappend (AM f1 `mappend` AM f2) <*> f3
+=           { definition }
+  AM $ fmap mappend (fmap mappend f1 <*> f2) <*> f3
+=           { applicative/functor law }
+  AM $ pure mappend <*> (pure mappend <*> f1 <*> f2) <*> f3
+=           { applicative law (composition) }
+  AM $ pure (.) <*> pure mappend <*> (pure mappend <*> f1) <*> f2 <*> f3
+=           { applicative law (homomorphism) }
+  AM $ pure (mappend .) <*> (pure mappend <*> f1) <*> f2 <*> f3
+=           { applicative law (composition) }
+  AM $ pure (.) <*> pure (mappend .) <*> pure mappend <*> f1 <*> f2 <*> f3
+=           { applicative law (homomorphism) }
+  AM $ pure ((mappend .) . mappend) <*> f1 <*> f2 <*> f3
+=           { monoid law (associativity) }
+  AM $ pure ((. mappend) . (.) . mappend) <*> f1 <*> f2 <*> f3
+=
+  -- XXX finish this proof, I have no doubt it goes through
+
+
+=
+  AM f1 `mappend` (AM f2 `mappend` AM f3)
+-}
+
+{-
+\x y z -> (x `mappend` y) `mappend` z
+\x y -> mappend (mappend x y)
+\x -> mappend . (mappend x)
+(mappend .) . mappend
+-}
+
+{-
+\x y z -> x `mappend` (y `mappend` z)
+\x y z -> mappend x (mappend y z)
+\x y -> mappend x . mappend y
+\x -> ((.) (mappend x)) . mappend
+\x -> (.) ((.) (mappend x)) mappend
+\x -> (.mappend) ((.) (mappend x))
+(. mappend) . (.) . mappend
+-}
