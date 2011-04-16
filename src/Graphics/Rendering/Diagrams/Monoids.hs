@@ -9,6 +9,7 @@ module Graphics.Rendering.Diagrams.Monoids where
 import Graphics.Rendering.Diagrams.Util
 
 import Data.Monoid
+import Data.Foldable
 import Control.Applicative
 
 ------------------------------------------------------------
@@ -67,10 +68,6 @@ instance (Action m n) => Action (Split m) n where
   act (M m) n      = act m n
   act (m1 :| m2) n = act m1 (act m2 n)
 
--- | Lists can act on monoids elementwise, combining the results.
-instance (Action a m, Monoid m) => Action [a] m where
-  act as m = mconcat $ map (flip act m) as
-
 ------------------------------------------------------------
 --  Applicative monoids
 ------------------------------------------------------------
@@ -87,6 +84,9 @@ inAM2 g (AM f1) (AM f2) = AM (g f1 f2)
 instance (Applicative f, Monoid m) => Monoid (AM f m) where
   mempty  = pure mempty
   mappend = inAM2 (liftA2 mappend)
+
+instance (Action m n, Foldable f, Functor f, Monoid n) => Action (AM f m) n where
+  act (AM f) n = fold $ fmap (flip act n) f
 
 {- See Applicative laws here:
 
