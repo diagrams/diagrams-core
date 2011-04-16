@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses
            , FlexibleInstances
+           , GeneralizedNewtypeDeriving
   #-}
 
 -- XXX comment me
@@ -66,18 +67,26 @@ instance (Action m n) => Action (Split m) n where
   act (M m) n      = act m n
   act (m1 :| m2) n = act m1 (act m2 n)
 
+-- | Lists can act on monoids elementwise, combining the results.
+instance (Action a m, Monoid m) => Action [a] m where
+  act as m = mconcat $ map (flip act m) as
+
 ------------------------------------------------------------
 --  Applicative monoids
 ------------------------------------------------------------
 
 -- | A wrapper for an 'Applicative' structure containing a monoid,
 --   which has a monoid structure itself based on application.
-newtype ApplicativeMonoid f m = AM (f m)
+newtype AM f m = AM (f m)
+  deriving (Functor, Applicative)
 
--- | @f1 `mappend` f2@ is defined as @fmap mappend f1 <*> f2@.
-instance (Applicative f, Monoid m) => Monoid (ApplicativeMonoid f m) where
-  mempty = AM (pure mempty)
-  (AM f1) `mappend` (AM f2) = AM $ fmap mappend f1 <*> f2
+inAM2 :: (f m -> f m -> f m) -> (AM f m -> AM f m -> AM f m)
+inAM2 g (AM f1) (AM f2) = AM (g f1 f2)
+
+-- | @f1 `mappend` f2@ is defined as @mappend <$> f1 <*> f2@.
+instance (Applicative f, Monoid m) => Monoid (AM f m) where
+  mempty  = pure mempty
+  mappend = inAM2 (liftA2 mappend)
 
 {- See Applicative laws here:
 
@@ -138,7 +147,7 @@ http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Applica
 =           { monoid law (associativity) }
   AM $ pure ((. mappend) . (.) . mappend) <*> f1 <*> f2 <*> f3
 =
-  -- XXX finish this proof, I have no doubt it goes through
+  -- XXX finish this proof (although I have no doubt it goes through)
 
 
 =
