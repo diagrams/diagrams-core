@@ -25,6 +25,8 @@ import qualified Data.Set as S
 
 -- XXX write something about action of d annotations on u.
 
+-- XXX cached u values at nodes can have "extra stuff" appended to them.
+
 data UDTree u d a
   = Leaf u a
   | Branch u [d] [UDTree u d a]
@@ -69,6 +71,12 @@ getU' (Branch u ds _) = hd $ foldr act (get u ::: Nil) ds
 applyD :: Action d u => d -> UDTree u d a -> UDTree u d a
 applyD d l@(Leaf {})      = Branch (getU l) [d] [l]
 applyD d (Branch u ds ts) = Branch u (d : ds) ts
+
+-- | Add a @u@ annotation to the root, combining it (on the left) with
+--   the existing @u@ annotation.
+applyU :: (Monoid u, Action d u) => u -> UDTree u d a -> UDTree u d a
+applyU u' (Leaf u a) = Leaf (u' <> u) a
+applyU u' b          = Branch (u' <> getU b) [] [b]
 
 -- | Map a function over all the @u@ annotations.  The function must
 --   be a monoid homomorphism, and must commute with the action of @d@

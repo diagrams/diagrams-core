@@ -10,6 +10,7 @@
            , TypeOperators
            , OverlappingInstances
            , UndecidableInstances
+           , TupleSections
            #-}
 
 -----------------------------------------------------------------------------
@@ -57,6 +58,8 @@ module Graphics.Rendering.Diagrams.Core
        , prims
        , bounds, names, annot, sample
 
+       , named
+
          -- XXX export other stuff
 
          -- ** Primitive operations
@@ -81,12 +84,9 @@ import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Style
 import Graphics.Rendering.Diagrams.Util
 
-import Data.Typeable
-
 import Data.VectorSpace
 import Data.AffineSpace ((.-.))
 
-import qualified Data.Map as M
 import Data.Monoid
 import Control.Arrow (first, second, (***))
 import Control.Applicative
@@ -253,11 +253,35 @@ nullPrim = Prim NullPrim
 --   TODO: write more here.
 --   got idea for annotations from graphics-drawingcombinators.
 
-newtype AnnDiagram b v m =
-  AD { unAD :: UDTree (Bounds v ::: NameSet v ::: Annot v m ::: Nil)
-                      (Split (Transformation v) ::: Style ::: Nil)
-                      (Prim b v)
-     }
+-- | Monoidal annotations which travel up the diagram tree, i.e. which
+--   are aggregated from component diagrams to the whole:
+--
+--   * functional bounding regions (see "Graphics.Rendering.Diagrams.Bounds")
+--
+--   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
+--
+--   * query functions (see "Graphics.Rendering.Diagrams.Annot")
+type UpAnnots v m = Bounds v ::: NameSet v ::: Annot v m ::: Nil
+
+-- | Monoidal annotations which travel down the diagram tree,
+--   i.e. which accumulate along each path to a leaf (and which can
+--   act on the upwards-travelling annotations):
+--
+--   * transformations (split at the innermost freeze): see
+--     "Graphics.Rendering.Diagrams.Transform"
+--
+--   * styles (see "Graphics.Rendering.Diagrams.Style")
+--
+--   * names (see "Graphics.Rendering.Diagrams.Names")
+type DownAnnots v = Split (Transformation v) ::: Style ::: AM [] Name ::: Nil
+
+newtype AnnDiagram b v m
+  = AD { unAD :: UDTree (UpAnnots v m) (DownAnnots v) (Prim b v) }
+
+inAD :: (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)
+         -> UDTree (UpAnnots v' m') (DownAnnots v') (Prim b' v'))
+     -> (AnnDiagram b v m -> AnnDiagram b' v' m')
+inAD f = AD . f . unAD
 
 type instance V (AnnDiagram b v m) = v
 
@@ -281,6 +305,12 @@ bounds = getU' . unAD
 
 names :: HasLinearMap v => AnnDiagram b v m -> NameSet v
 names = getU' . unAD
+
+named :: forall v b n m.
+         ( IsName n
+         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+      => n -> AnnDiagram b v m -> AnnDiagram b v m
+named = inAD . applyU . inj . fromNames . (:[]) . (,origin :: Point v)
 
 annot :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Annot v m
 annot = getU' . unAD
@@ -322,9 +352,9 @@ atop = mappend
 
 ---- Functor
 
--- This is a bit ugly, but it will have to do for now.
+-- This is a bit ugly, but it will have to do for now...
 instance Functor (AnnDiagram b v) where
-  fmap f (AD dia) = AD $ mapU g dia
+  fmap f = inAD (mapU g)
     where g (b ::: n ::: a ::: Nil) = (b ::: n ::: fmap f a ::: Nil)
 
 ---- Applicative
@@ -346,14 +376,14 @@ instance Functor (AnnDiagram b v) where
 
 ---- HasStyle
 
-instance (HasLinearMap v, InnerSpace v, Floating (Scalar v), AdditiveGroup (Scalar v))
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => HasStyle (AnnDiagram b v m) where
-  applyStyle s (AD dia) = AD (applyD (inj s) dia)
+  applyStyle = inAD . applyD . inj
 
 -- XXX comment me
-freeze :: forall v b m. (HasLinearMap v, Floating (Scalar v), AdditiveGroup (Scalar v), InnerSpace v)
+freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
        => AnnDiagram b v m -> AnnDiagram b v m
-freeze (AD dia) = AD (applyD (inj (split :: Split (Transformation v))) dia)
+freeze = inAD . applyD . inj $ (split :: Split (Transformation v))
 
 ---- Boundable
 
@@ -368,12 +398,20 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => HasOrigin (AnnDiagram b v m) where
 
-  moveOriginTo p = translate (origin .-. p)
+  moveOriginTo = translate . (origin .-.)
 
 ---- Transformable
 
 -- | 'Diagram's can be transformed by transforming each of their
 --   components appropriately.
-instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v)
+instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
       => Transformable (AnnDiagram b v m) where
-  transform t (AD dia) = AD . applyD (inj (M t)) $ dia
+  transform = inAD . applyD . inj . M
+
+---- Qualifiable
+
+-- | 'Diagram's can be qualified so that all their named points can
+--   now be referred to using the qualification prefix.
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+      => Qualifiable (AnnDiagram b v m) where
+  (|>) = inAD . applyD . inj . AM . (:[]) . toName

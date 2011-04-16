@@ -3,6 +3,7 @@
            , TypeFamilies
            , GeneralizedNewtypeDeriving
            , MultiParamTypeClasses
+           , OverlappingInstances
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -38,6 +39,9 @@ module Graphics.Rendering.Diagrams.Names
          -- ** Constructing name sets
        , fromNames
        , rememberAs
+
+         -- ** Searching within name sets
+       , lookupN
        ) where
 
 import Graphics.Rendering.Diagrams.V
@@ -154,3 +158,14 @@ rememberAs n p s@(NameSet names) = NameSet $ M.insertWith (++) n [p] names
 -- | A name acts on a name set by qualifying it.
 instance Action Name (NameSet v) where
   act = (|>)
+
+-- | Names don't act on anything else.
+instance Action Name a
+
+
+-- Searching in name sets.
+
+-- | Look for the given name in a name set, returning a list of points
+--   associated with that name.
+lookupN :: IsName n => n -> NameSet v -> Maybe [Point v]
+lookupN n (NameSet m) = M.lookup (toName n) m
