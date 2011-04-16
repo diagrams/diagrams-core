@@ -117,6 +117,7 @@ import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Annot
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
+import Graphics.Rendering.Diagrams.Style
 import Graphics.Rendering.Diagrams.Core
 
 
