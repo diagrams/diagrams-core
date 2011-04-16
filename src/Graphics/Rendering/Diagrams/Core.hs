@@ -389,11 +389,6 @@ annot = getU' . unAD
 sample :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Point v -> m
 sample = queryAnnot . annot
 
--- alterAD :: ((Bounds v ::: NameSet v ::: Annot v m ::: Nil) :>: a)
---         => (a -> a)
---         -> AnnDiagram b v m -> AnnDiagram b v m
--- alterAD f (AD dia) = AD $ mapU (alt f) dia
-
 mkAD :: Prim b v -> Bounds v -> NameSet v -> Annot v m -> AnnDiagram b v m
 mkAD p b n a = AD $ leaf (b ::: n ::: a ::: Nil) p
 
@@ -428,8 +423,7 @@ atop = mappend
 
 ---- Functor
 
--- This is a bit ugly, but it will have to do for now.  The problem is that
--- alterAD can't handle changing the type of the annotations.
+-- This is a bit ugly, but it will have to do for now.
 instance Functor (AnnDiagram b v) where
   fmap f (AD dia) = AD $ mapU g dia
     where g (b ::: n ::: a ::: Nil) = (b ::: n ::: fmap f a ::: Nil)
