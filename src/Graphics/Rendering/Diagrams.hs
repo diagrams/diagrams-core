@@ -62,6 +62,8 @@ module Graphics.Rendering.Diagrams
        , fromNames
        , rememberAs
 
+       , lookupN
+
          -- * Backends
 
        , Backend(..)
@@ -97,6 +99,8 @@ module Graphics.Rendering.Diagrams
        , AnnDiagram, mkAD, Diagram
        , prims
        , bounds, names, annot, sample
+
+       , named
 
        , atop
 
