@@ -9,7 +9,7 @@
 module Graphics.Rendering.Diagrams.Style
        ( -- * Attributes
 
-         AttributeClass(..)
+         AttributeClass
        , Attribute(..)
        , mkAttr, unwrapAttr
        , applyAttr

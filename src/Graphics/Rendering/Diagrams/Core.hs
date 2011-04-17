@@ -88,8 +88,7 @@ import Data.VectorSpace
 import Data.AffineSpace ((.-.))
 
 import Data.Monoid
-import Control.Arrow (first, second, (***))
-import Control.Applicative
+import Control.Arrow (second)
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -356,6 +355,7 @@ atop = mappend
 instance Functor (AnnDiagram b v) where
   fmap f = inAD (mapU g)
     where g (b ::: n ::: a ::: Nil) = (b ::: n ::: fmap f a ::: Nil)
+          g _ = error "impossible case in Functor (AnnDiagram b v) instance (g)"
 
 ---- Applicative
 

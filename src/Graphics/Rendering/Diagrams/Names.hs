@@ -54,7 +54,6 @@ import Data.VectorSpace
 import Data.List (intercalate)
 import qualified Data.Map as M
 import Data.Monoid
-import Data.Maybe (fromMaybe, listToMaybe)
 import Control.Arrow ((***))
 
 ------------------------------------------------------------
@@ -153,7 +152,7 @@ fromNames = NameSet . M.fromList . map (toName *** (:[]))
 
 -- | Give a name to a point.
 rememberAs :: Name -> Point v -> NameSet v -> NameSet v
-rememberAs n p s@(NameSet names) = NameSet $ M.insertWith (++) n [p] names
+rememberAs n p (NameSet names) = NameSet $ M.insertWith (++) n [p] names
 
 -- | A name acts on a name set by qualifying it.
 instance Action Name (NameSet v) where

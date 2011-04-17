@@ -7,13 +7,10 @@
 module Graphics.Rendering.Diagrams.UDTree where
 
 import Data.Monoid
-import Control.Arrow
 
 import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.MList
 import Graphics.Rendering.Diagrams.Util
-
-import qualified Data.Set as S
 
 -- Abstractly, a UDTree is a rose tree with two types of monoidal
 -- annotations.  Each leaf contains a piece of data and an annotation
@@ -65,6 +62,7 @@ getU' :: (Action d (u' ::: Nil), u :>: u') => UDTree u d a -> u'
 getU' (Leaf u _)      = get u
 getU' (Branch u ds _) = hd $ foldr act (get u ::: Nil) ds
   where hd (u' ::: Nil) = u'
+        hd (Missing _)  = error "Impossible case in UDTree.getU' (hd)"
 
 -- | Add a @d@ annotation to the root, combining it (on the left) with
 --   any pre-existing @d@ annotation.

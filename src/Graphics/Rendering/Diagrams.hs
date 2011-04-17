@@ -72,7 +72,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Attributes and styles
 
-       , AttributeClass(..)
+       , AttributeClass
        , Attribute, mkAttr, unwrapAttr
 
        , Style, HasStyle(..)

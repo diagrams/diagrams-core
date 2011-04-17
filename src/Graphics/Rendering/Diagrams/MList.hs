@@ -11,7 +11,6 @@
 module Graphics.Rendering.Diagrams.MList where
 
 import Data.Monoid
-import Graphics.Rendering.Diagrams.Util
 import Graphics.Rendering.Diagrams.Monoids
 
 infixr 5 :::
