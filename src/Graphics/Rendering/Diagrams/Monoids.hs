@@ -3,8 +3,32 @@
            , GeneralizedNewtypeDeriving
   #-}
 
--- XXX comment me
-module Graphics.Rendering.Diagrams.Monoids where
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.Rendering.Diagrams.Monoids
+-- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  diagrams-discuss@googlegroups.com
+--
+-- Various monoid-related definitions (monoid actions, split monoids,
+-- applicative monoids) used in the core diagrams library.
+--
+-----------------------------------------------------------------------------
+
+module Graphics.Rendering.Diagrams.Monoids
+       ( -- * Monoid actions
+
+         Action(..)
+
+         -- * Split monoids
+
+       , Split(..), split
+
+         -- * Applicative monoids
+
+       , AM(..), inAM2
+
+       ) where
 
 import Graphics.Rendering.Diagrams.Util
 
@@ -16,24 +40,28 @@ import Control.Applicative
 --  Monoid actions
 ------------------------------------------------------------
 
--- | Type class for monoid actions. Instances are required to satisfy
---   the laws
+-- | Type class for monoid actions, where monoidal values of type @m@
+--   \"act\" on values of another type @s@.  Instances are required to
+--   satisfy the laws
 --
 --   * @act mempty = id@
 --
---   * @act (m1 `mappend` m2) = act m1 . act m2@
+--   * @act (m1 ``mappend`` m2) = act m1 . act m2@
 --
 --   Additionally, if the type @s@ has any algebraic structure, @act
 --   m@ should be a homomorphism.  For example, if @s@ is also a
 --   monoid we should have @act m mempty = mempty@ and @act m (s1
---   `mappend` s2) = (act m s1) `mappend` (act m s2)@.
+--   ``mappend`` s2) = (act m s1) ``mappend`` (act m s2)@.
 --
---   By default, @act = const id@, so for monoidal types @M@ which
---   should have no effect on other types, it suffices to write
+--   By default, @act = const id@, so for a monoidal type @M@ which
+--   should have no action on anything, it suffices to write
 --
---   > instance Action M m
+--   > instance Action M s
 --
+--   with no method implementations.
 class Action m s where
+
+  -- | Convert a monoidal value of type @m@ to an action on @s@ values.
   act :: m -> s -> s
   act = const id
 
@@ -59,11 +87,12 @@ instance Monoid m => Monoid (Split m) where
   (m1  :| m2)  `mappend` (M m2')      = m1                :| m2 <> m2'
   (m11 :| m12) `mappend` (m21 :| m22) = m11 <> m12 <> m21 :| m22
 
+-- | A convenient name for @mempty :| mempty@.
 split :: Monoid m => Split m
 split = mempty :| mempty
 
--- | By default, the action of a split monoid are just the same as for
---   the underlying monoid.
+-- | By default, the action of a split monoid is the same as for
+--   the underlying monoid, as if the split were removed.
 instance (Action m n) => Action (Split m) n where
   act (M m) n      = act m n
   act (m1 :| m2) n = act m1 (act m2 n)
