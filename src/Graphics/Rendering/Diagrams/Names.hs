@@ -12,16 +12,8 @@
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- An embedded domain-specific language for describing and rendering
--- diagrams.  This module defines a type of names, for referring to
--- locations within diagrams, and related types.
---
--- Note that end users should rarely (if ever) need to import this
--- module directly; instead, import "Graphics.Rendering.Diagrams",
--- which re-exports most of the functionality from this module.
--- Library developers may occasionally wish to import this module
--- directly if they need direct access to something not re-exported by
--- "Graphics.Rendering.Diagrams".
+-- This module defines a type of names which can be used for referring
+-- to locations within diagrams, and related types.
 --
 -----------------------------------------------------------------------------
 
