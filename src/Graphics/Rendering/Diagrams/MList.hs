@@ -90,7 +90,7 @@ instance Monoid Nil where
 --   as long as all their elements are, where 'mappend' is done
 --   elementwise.
 instance (Monoid a, Monoid tl) => Monoid (a ::: tl) where
-  mempty = mempty
+  mempty = Missing mempty
   (Missing t1) `mappend` (Missing t2) = Missing (t1 `mappend` t2)
   (Missing t1) `mappend` (a2 ::: t2)  = a2 ::: (t1 `mappend` t2)
   (a1 ::: t1)  `mappend` (Missing t2) = a1 ::: (t1 `mappend` t2)
