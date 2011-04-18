@@ -101,21 +101,23 @@ instance (Action m n) => Action (Split m) n where
 --  Applicative monoids
 ------------------------------------------------------------
 
--- | A wrapper for an 'Applicative' structure containing a monoid,
---   which has a monoid structure itself based on application.
+-- | A wrapper for an 'Applicative' structure containing a monoid.
+--   Such structures have a @Monoid@ instance based on \"idiomatic\"
+--   application of 'mappend' within the @Applicative@ context.
+--   @instance Monoid m => Monoid (e -> m)@ is one well-known special
+--   case.  (Note the standard @Monoid@ instance for @Maybe@ is /not/
+--   an instance of this pattern.)
 newtype AM f m = AM (f m)
   deriving (Functor, Applicative)
 
+-- | Apply a binary function inside an @AM@ newtype wrapper.
 inAM2 :: (f m -> f m -> f m) -> (AM f m -> AM f m -> AM f m)
 inAM2 g (AM f1) (AM f2) = AM (g f1 f2)
 
--- | @f1 `mappend` f2@ is defined as @mappend <$> f1 <*> f2@.
+-- | @f1 ``mappend`` f2@ is defined as @'mappend' '<$>' f1 '<*>' f2@.
 instance (Applicative f, Monoid m) => Monoid (AM f m) where
   mempty  = pure mempty
   mappend = inAM2 (liftA2 mappend)
-
-instance (Action m n, Foldable f, Functor f, Monoid n) => Action (AM f m) n where
-  act (AM f) n = fold $ fmap (flip act n) f
 
 {- See Applicative laws here:
 
@@ -199,3 +201,13 @@ http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Applica
 \x -> (.mappend) ((.) (mappend x))
 (. mappend) . (.) . mappend
 -}
+
+
+-- | An applicative monoid acts on a value of a monoidal type by
+--   having each element in the structure act on the value
+--   independently, and then folding the resulting structure.
+instance (Action m n, Foldable f, Functor f, Monoid n) => Action (AM f m) n where
+  act (AM f) n = fold $ fmap (flip act n) f
+
+-- XXX need to prove that this satisfies the laws!  There are other
+-- "obvious" instances too.
