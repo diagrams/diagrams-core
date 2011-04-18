@@ -10,22 +10,27 @@
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- Graphics.Rendering.Diagrams defines the core library of primitives
+-- "Graphics.Rendering.Diagrams" defines the core library of primitives
 -- forming the basis of an embedded domain-specific language for
 -- describing and rendering diagrams.
 --
--- The Bounds module defines a type class and data type for functional
+-- The @Bounds@ module defines a data type and type class for functional
 -- bounding regions.
 --
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Bounds
-       ( Boundable(..)
-       , Bounds(..)
+       ( -- * Bounding regions
+         Bounds(..)
+
+       , Boundable(..)
+
+         -- * Utility functions
        , diameter
        , radius
        , boundary
 
+         -- * Miscellaneous
        , OrderedField
        ) where
 
@@ -45,7 +50,7 @@ import Control.Applicative ((<$>), (<*>))
 
 -- | Every diagram comes equipped with a bounding function.
 --   Intuitively, the bounding function for a diagram tells us the
---   minimum distance we have to go in any given direction to get to a
+--   minimum distance we have to go in a given direction to get to a
 --   (hyper)plane entirely containing the diagram on one side of
 --   it. Formally, given a vector @v@, it returns a scalar @s@ such
 --   that
@@ -55,13 +60,17 @@ import Control.Applicative ((<$>), (<*>))
 --
 --     * @s@ is the smallest such scalar.
 --
---   Essentially, bounding functions are a functional representation
---   of convex bounding regions.  The idea for this representation
---   came from Sebastian Setzer: see <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.
+--   This could probably be expressed in terms of a Galois connection;
+--   this is left as an exercise for the reader.
 --
+--   Essentially, bounding functions are a functional representation
+--   of (a conservative approximation to) convex bounding regions.
+--   The idea for this representation came from Sebastian Setzer; see
+--   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.
+newtype Bounds v = Bounds { appBounds :: v -> Scalar v }
+
 --   XXX add some diagrams here to illustrate!  Note that Haddock supports
 --   inline images, using a \<\<url\>\> syntax.
-newtype Bounds v = Bounds { appBounds :: v -> Scalar v }
 
 type instance V (Bounds v) = v
 
@@ -75,7 +84,7 @@ instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
   mempty = Bounds $ const zeroV
   mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
 
--- | The local origin of a bounding function is the points with
+-- | The local origin of a bounding function is the point with
 --   respect to which bounding queries are made, i.e. the point from
 --   which the input vectors are taken to originate.
 instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
@@ -102,14 +111,14 @@ instance ( HasLinearMap v, InnerSpace v
 --  Boundable class
 ------------------------------------------------------------
 
--- | We often want scalars to be an ordered field (i.e. support
---   addition, subtraction, multiplication, and division, and a total
---   ordering) so we introduce this class as a convenient shorthand.
+-- | When dealing with bounding regions we often want scalars to be an
+--   ordered field (i.e. support all four arithmetic operations and be
+--   totally ordered) so we introduce this class as a convenient
+--   shorthand.
 class (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
 instance (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
 
--- | @Boundable@ abstracts over things @b@ which can be bounded in a
---   vector space @v@.
+-- | @Boundable@ abstracts over things which can be bounded.
 class (InnerSpace (V b), OrderedField (Scalar (V b))) => Boundable b where
 
   -- | Given a boundable object, compute a functional bounding region
