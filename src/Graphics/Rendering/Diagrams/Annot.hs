@@ -8,11 +8,11 @@
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- Graphics.Rendering.Diagrams defines the core library of primitives
+-- "Graphics.Rendering.Diagrams" defines the core library of primitives
 -- forming the basis of an embedded domain-specific language for
 -- describing and rendering diagrams.
 --
--- The Annot module defines a type for \"annotations\" on diagrams, which
+-- The @Annot@ module defines a type for \"annotations\" on diagrams, which
 -- are functions from points in a vector space to some monoid.
 --
 -----------------------------------------------------------------------------
@@ -37,17 +37,12 @@ import Control.Applicative
 ------------------------------------------------------------
 
 -- | An annotation is a function that maps points in a vector space to
---   values in some monoid.
+--   values in some monoid. Annotations naturally form a monoid, with
+--   two annotations being combined pointwise.
 newtype Annot v m = Annot { queryAnnot :: Point v -> m }
-  deriving (Functor, Applicative)
+  deriving (Functor, Applicative, Monoid)
 
 type instance V (Annot v m) = v
-
--- | Annotations naturally form a monoid, with two annotations being
---   combined pointwise.
-instance Monoid m => Monoid (Annot v m) where
-  mempty = Annot $ const mempty
-  (Annot f) `mappend` (Annot g) = Annot $ f `mappend` g
 
 instance VectorSpace v => HasOrigin (Annot v m) where
   moveOriginTo (P u) (Annot f) = Annot $ \p -> f (p .+^ u)
