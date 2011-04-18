@@ -49,8 +49,6 @@ module Graphics.Rendering.Diagrams.Transform
        , translation, translate
        , scaling, scale
 
-       , withLength
-
        ) where
 
 import Data.AdditiveGroup
@@ -67,9 +65,7 @@ import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
-
-(<>) :: Monoid m => m -> m -> m
-(<>) = mappend
+import Graphics.Rendering.Diagrams.Util
 
 ------------------------------------------------------------
 --  Transformations  ---------------------------------------
@@ -205,9 +201,3 @@ scale :: (Transformable t, Fractional (Scalar (V t)))
       => Scalar (V t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
-
--- XXX is this the best place for this function?
--- | Produce a vector with the specified length in the same direction
---   as the given vector.
-withLength :: (InnerSpace v, Floating (Scalar v)) => Scalar v -> v -> v
-withLength l v = (l / magnitude v) *^ v

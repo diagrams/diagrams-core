@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Util
@@ -10,11 +12,19 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Util
-       ( (<>)
+       ( -- * Monoids
+
+         (<>)
+
+         -- * Vectors
+
+       , withLength
 
        ) where
 
 import Data.Monoid
+
+import Data.VectorSpace
 
 -- | A useful infix operator synonym for 'mappend'.  Hopefully it will
 --   eventually be added to the standard libraries and can be deleted
@@ -23,3 +33,8 @@ import Data.Monoid
 (<>) = mappend
 
 infixl 6 <>
+
+-- | Produce a vector with the specified length in the same direction
+--   as the given vector.
+withLength :: (InnerSpace v, Floating (Scalar v)) => Scalar v -> v -> v
+withLength l v = (l / magnitude v) *^ v
