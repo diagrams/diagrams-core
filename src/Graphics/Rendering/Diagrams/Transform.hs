@@ -13,11 +13,11 @@
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- Graphics.Rendering.Diagrams defines the core library of primitives
+-- "Graphics.Rendering.Diagrams" defines the core library of primitives
 -- forming the basis of an embedded domain-specific language for
 -- describing and rendering diagrams.
 --
--- The Transform module defines some generic transformations
+-- The @Transform@ module defines generic transformations
 -- parameterized by any vector space.
 --
 -----------------------------------------------------------------------------
@@ -42,7 +42,7 @@ module Graphics.Rendering.Diagrams.Transform
        , Transformable(..)
 
          -- * Vector space independent transformations
-         -- | Some transformations are specific to a particular vector
+         -- | Most transformations are specific to a particular vector
          --   space, but a few can be defined generically over any
          --   vector space.
 
@@ -103,8 +103,8 @@ lapp (f :-: _) = lapply f
 --------------------------------------------------
 
 -- | General (affine) transformations, represented by an invertible
--- linear map, its /transpose/, and a vector representing a
--- translation component.
+--   linear map, its /transpose/, and a vector representing a
+--   translation component.
 data Transformation v = Transformation (v :-: v) (v :-: v) v
 
 -- | Invert a transformation.
@@ -158,9 +158,7 @@ fromLinear l1 l2 = Transformation l1 l2 zeroV
 class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
 
--- | Type class for things @t@ which can be transformed.  @v@ is
---   the associated vector space over which transformations are
---   constructed.
+-- | Type class for things @t@ which can be transformed.
 class HasLinearMap (V t) => Transformable t where
 
   -- | Apply a transformation to an object.
@@ -190,7 +188,7 @@ translation = Transformation mempty mempty
 translate :: (Transformable t, HasLinearMap (V t)) => V t -> t -> t
 translate = transform . translation
 
--- | Create a scale transformation.
+-- | Create a uniform scaling transformation.
 scaling :: (HasLinearMap v, Fractional (Scalar v))
         => Scalar v -> Transformation v
 scaling s = fromLinear lin lin      -- scaling is its own transpose
