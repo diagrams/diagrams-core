@@ -7,21 +7,71 @@
            , GeneralizedNewtypeDeriving
   #-}
 
--- XXX comment me
-module Graphics.Rendering.Diagrams.MList where
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.Rendering.Diagrams.MList
+-- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  diagrams-discuss@googlegroups.com
+--
+-- Heterogeneous lists of monoids.
+--
+-----------------------------------------------------------------------------
+module Graphics.Rendering.Diagrams.MList
+       ( -- * Heterogeneous monoidal lists
+
+         -- $mlist
+
+         Nil(..), (:::)(..)
+
+       , MList(..)
+
+         -- * Converting to tuples
+       , Tuple, ToTuple(..)
+
+         -- * Accessing embedded values
+       , (:>:)(..)
+
+         -- * Monoid actions of heterogeneous lists
+
+         -- $mlist-actions
+
+       , SM(..)
+       ) where
 
 import Data.Monoid
 import Graphics.Rendering.Diagrams.Monoids
 
+-- $mlist
+--
+-- The idea of /heterogeneous lists/ has been around for a long time.
+-- Here, we adopt heterogeneous lists where the element types are all
+-- monoids: this allows us to leave out identity values, so that a
+-- heterogeneous list containing only a single non-identity value can
+-- be created without incurring constraints due to all the other
+-- types, by leaving all the other values out.
+
 infixr 5 :::
 
+-- | The empty heterogeneous list.
 data Nil     = Nil
-data a ::: b = Missing b
-             | a ::: b
+  deriving (Show, Eq, Ord)
+
+-- | Cons for heterogeneous lists.
+data a ::: l = Missing l -- ^ The @a@ value is missing, and should be
+                         --   construed as 'mempty'.
+             | a ::: l   -- ^ An @a@ value followed by a heterogeneous
+                         --   list @l@.
+  deriving (Show, Eq, Ord)
 
 -- MList -----------------------------------
 
+-- | Type class for heterogeneous monoidal lists, with a single method
+--   allowing construction of an empty list.
 class MList l where
+  -- | The /empty/ heterogeneous list of type @l@. Of course, @empty
+  -- == 'mempty'@, but unlike 'mempty', @empty@ does not require
+  -- 'Monoid' constraints on all the elements of @l@.
   empty   :: l
 
 instance MList Nil where
@@ -36,8 +86,11 @@ instance Monoid Nil where
   mempty        = Nil
   _ `mappend` _ = Nil
 
+-- | Heterogeneous monoidal lists are themselves instances of 'Monoid'
+--   as long as all their elements are, where 'mappend' is done
+--   elementwise.
 instance (Monoid a, Monoid tl) => Monoid (a ::: tl) where
-  mempty = Missing mempty
+  mempty = mempty
   (Missing t1) `mappend` (Missing t2) = Missing (t1 `mappend` t2)
   (Missing t1) `mappend` (a2 ::: t2)  = a2 ::: (t1 `mappend` t2)
   (a1 ::: t1)  `mappend` (Missing t2) = a1 ::: (t1 `mappend` t2)
@@ -45,10 +98,14 @@ instance (Monoid a, Monoid tl) => Monoid (a ::: tl) where
 
 -- ToTuple ---------------------------------
 
+-- | A type function to compute the tuple-based representation for
+--   instances of 'MList'.
 type family Tuple l :: *
 type instance Tuple Nil       = ()
 type instance Tuple (a ::: b) = (a, Tuple b)
 
+-- | @toTuple@ can be used to convert a heterogeneous list to its
+--   tuple-based representation.
 class ToTuple l where
   toTuple :: l -> Tuple l
 
@@ -61,9 +118,16 @@ instance (Monoid a, ToTuple l) => ToTuple (a ::: l) where
 
 -- Embedding -------------------------------------------
 
+-- | The relation @l :>: a@ holds when @a@ is the type of an element
+--   in @l@.  For example,  @(Char ::: Int ::: Bool ::: Nil) :>: Int@.
 class l :>: a where
+  -- | Inject a value into an otherwise empty heterogeneous list.
   inj  :: a -> l
+
+  -- | Get the value of type @a@ from a heterogeneous list.
   get  :: l -> a
+
+  -- | Alter the value of type @a@ by applying the given function to it.
   alt  :: (a -> a) -> l -> l
 
 instance (MList t, Monoid a) => (:>:) (a ::: t) a where
@@ -81,8 +145,17 @@ instance (t :>: a) => (:>:) (b ::: t) a where
   alt f (a ::: l)      = a ::: alt f l
 
 -- Monoid actions -----------------------------------------
--- XXX add comments
 
+-- $mlist-actions
+-- Monoidal heterogeneous lists may act on one another as you would
+-- expect, with each element in the first list acting on each in the
+-- second.  Unfortunately, coding this up in type class instances is a
+-- bit fiddly.
+
+-- | @SM@, an abbreviation for \"single monoid\" (as opposed to a
+--   heterogeneous list of monoids), is only used internally to help
+--   guide instance selection when defining the action of
+--   heterogeneous monoidal lists on each other.
 newtype SM m = SM m
   deriving (Monoid)
 
