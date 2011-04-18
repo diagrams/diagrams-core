@@ -1,6 +1,20 @@
 {-# LANGUAGE TypeFamilies #-}
 
-module Graphics.Rendering.Diagrams.V where
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.Rendering.Diagrams.MList
+-- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  diagrams-discuss@googlegroups.com
+--
+-- Type family for identifying associated vector spaces.
+--
+-----------------------------------------------------------------------------
+
+module Graphics.Rendering.Diagrams.V
+       ( V
+
+       ) where
 
 import Data.Set
 import Data.Map
