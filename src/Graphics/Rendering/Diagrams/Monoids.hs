@@ -21,6 +21,7 @@ module Graphics.Rendering.Diagrams.Monoids
          Action(..)
 
          -- * Split monoids
+         -- $split
 
        , Split(..), split
 
@@ -69,6 +70,14 @@ class Action m s where
 --  Split monoids
 ------------------------------------------------------------
 
+-- $split
+-- Sometimes we want to accumulate values from some monoid, but have
+-- the ability to introduce a \"split\" which separates values on
+-- either side.  For example, this is used when accumulating
+-- transformations to be applied to primitive diagrams: the 'freeze'
+-- operation introduces a split, since only transformations occurring
+-- outside the freeze should be applied to attributes.
+
 infix 5 :|
 
 -- | A value of type @Split m@ is either a single @m@, or a pair of
@@ -87,7 +96,7 @@ instance Monoid m => Monoid (Split m) where
   (m1  :| m2)  `mappend` (M m2')      = m1                :| m2 <> m2'
   (m11 :| m12) `mappend` (m21 :| m22) = m11 <> m12 <> m21 :| m22
 
--- | A convenient name for @mempty :| mempty@.
+-- | A convenient name for @mempty :| mempty@, so @a \<\> split \<\> b == a :| b@.
 split :: Monoid m => Split m
 split = mempty :| mempty
 
@@ -105,12 +114,13 @@ instance (Action m n) => Action (Split m) n where
 --   Such structures have a @Monoid@ instance based on \"idiomatic\"
 --   application of 'mappend' within the @Applicative@ context.
 --   @instance Monoid m => Monoid (e -> m)@ is one well-known special
---   case.  (Note the standard @Monoid@ instance for @Maybe@ is /not/
---   an instance of this pattern.)
+--   case.  (However, the standard @Monoid@ instance for @Maybe@ is
+--   /not/ an instance of this pattern; nor is the standard instance
+--   for lists.)
 newtype AM f m = AM (f m)
   deriving (Functor, Applicative)
 
--- | Apply a binary function inside an @AM@ newtype wrapper.
+-- | Apply a binary function inside an 'AM' newtype wrapper.
 inAM2 :: (f m -> f m -> f m) -> (AM f m -> AM f m -> AM f m)
 inAM2 g (AM f1) (AM f2) = AM (g f1 f2)
 
