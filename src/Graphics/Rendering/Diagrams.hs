@@ -58,7 +58,7 @@ module Graphics.Rendering.Diagrams
          -- * Names
 
        , Name, IsName(..), Qualifiable(..)
-       , NameSet
+       , NameMap
        , fromNames
        , rememberAs
 

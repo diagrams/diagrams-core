@@ -260,7 +260,7 @@ nullPrim = Prim NullPrim
 --   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
 --
 --   * query functions (see "Graphics.Rendering.Diagrams.Annot")
-type UpAnnots v m = Bounds v ::: NameSet v ::: Annot v m ::: Nil
+type UpAnnots v m = Bounds v ::: NameMap v ::: Annot v m ::: Nil
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -302,7 +302,7 @@ bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
        => AnnDiagram b v m -> Bounds v
 bounds = getU' . unAD
 
-names :: HasLinearMap v => AnnDiagram b v m -> NameSet v
+names :: HasLinearMap v => AnnDiagram b v m -> NameMap v
 names = getU' . unAD
 
 named :: forall v b n m.
@@ -317,7 +317,7 @@ annot = getU' . unAD
 sample :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Point v -> m
 sample = queryAnnot . annot
 
-mkAD :: Prim b v -> Bounds v -> NameSet v -> Annot v m -> AnnDiagram b v m
+mkAD :: Prim b v -> Bounds v -> NameMap v -> Annot v m -> AnnDiagram b v m
 mkAD p b n a = AD $ leaf (b ::: n ::: a ::: Nil) p
 
 ------------------------------------------------------------

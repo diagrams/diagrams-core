@@ -24,15 +24,15 @@ module Graphics.Rendering.Diagrams.Names
 
        , Qualifiable(..)
 
-         -- * Name sets
+         -- * Name maps
 
-       , NameSet(..)
+       , NameMap(..)
 
-         -- ** Constructing name sets
+         -- ** Constructing name maps
        , fromNames
        , rememberAs
 
-         -- ** Searching within name sets
+         -- ** Searching within name maps
        , lookupN
        ) where
 
@@ -108,55 +108,55 @@ instance Qualifiable Name where
     where (Name ns1) = toName n1
 
 ------------------------------------------------------------
---  Name sets  ---------------------------------------------
+--  Name maps  ---------------------------------------------
 ------------------------------------------------------------
 
--- | A 'NameSet' is a map from names to points, possibly with
+-- | A 'NameMap' is a map from names to points, possibly with
 --   multiple points associated with each name.
-newtype NameSet v = NameSet (M.Map Name [Point v])
+newtype NameMap v = NameMap (M.Map Name [Point v])
 -- Note, in some sense it would be nicer to use Sets of points instead
 -- of a list, but then we would have to put Ord constraints on v
 -- everywhere. =P
 
-type instance V (NameSet v) = v
+type instance V (NameMap v) = v
 
--- | 'NameSet's form a monoid with the empty map as the identity, and
+-- | 'NameMap's form a monoid with the empty map as the identity, and
 --   map union as the binary operation.  No information is ever lost:
 --   if two maps have the same name in their domain, the resulting map
 --   will associate that name to the union of the two sets of vectors
 --   associated with that name.
-instance Monoid (NameSet v) where
-  mempty = NameSet M.empty
-  (NameSet s1) `mappend` (NameSet s2) = NameSet $ M.unionWith (++) s1 s2
+instance Monoid (NameMap v) where
+  mempty = NameMap M.empty
+  (NameMap s1) `mappend` (NameMap s2) = NameMap $ M.unionWith (++) s1 s2
 
-instance VectorSpace v => HasOrigin (NameSet v) where
-  moveOriginTo p (NameSet m) = NameSet $ M.map (map (moveOriginTo p)) m
+instance VectorSpace v => HasOrigin (NameMap v) where
+  moveOriginTo p (NameMap m) = NameMap $ M.map (map (moveOriginTo p)) m
 
--- | 'NameSet's are qualifiable: if @ns@ is a 'NameSet', then @n |>
---   ns@ is the same 'NameSet' except with every name qualified by
+-- | 'NameMap's are qualifiable: if @ns@ is a 'NameMap', then @n |>
+--   ns@ is the same 'NameMap' except with every name qualified by
 --   @n@.
-instance Qualifiable (NameSet v) where
-  n |> (NameSet names) = NameSet $ M.mapKeys (n |>) names
+instance Qualifiable (NameMap v) where
+  n |> (NameMap names) = NameMap $ M.mapKeys (n |>) names
 
--- | Construct a 'NameSet' from a list of (name, point) pairs.
-fromNames :: IsName n => [(n, Point v)] -> NameSet v
-fromNames = NameSet . M.fromList . map (toName *** (:[]))
+-- | Construct a 'NameMap' from a list of (name, point) pairs.
+fromNames :: IsName n => [(n, Point v)] -> NameMap v
+fromNames = NameMap . M.fromList . map (toName *** (:[]))
 
 -- | Give a name to a point.
-rememberAs :: Name -> Point v -> NameSet v -> NameSet v
-rememberAs n p (NameSet names) = NameSet $ M.insertWith (++) n [p] names
+rememberAs :: Name -> Point v -> NameMap v -> NameMap v
+rememberAs n p (NameMap names) = NameMap $ M.insertWith (++) n [p] names
 
--- | A name acts on a name set by qualifying it.
-instance Action Name (NameSet v) where
+-- | A name acts on a name map by qualifying it.
+instance Action Name (NameMap v) where
   act = (|>)
 
 -- | Names don't act on anything else.
 instance Action Name a
 
 
--- Searching in name sets.
+-- Searching in name maps.
 
--- | Look for the given name in a name set, returning a list of points
+-- | Look for the given name in a name map, returning a list of points
 --   associated with that name.
-lookupN :: IsName n => n -> NameSet v -> Maybe [Point v]
-lookupN n (NameSet m) = M.lookup (toName n) m
+lookupN :: IsName n => n -> NameMap v -> Maybe [Point v]
+lookupN n (NameMap m) = M.lookup (toName n) m

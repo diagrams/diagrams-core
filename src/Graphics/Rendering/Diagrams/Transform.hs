@@ -173,8 +173,8 @@ instance (Transformable t, Ord t) => Transformable (S.Set t) where
 instance Transformable t => Transformable (M.Map k t) where
   transform t = M.map (transform t)
 
-instance HasLinearMap v => Transformable (NameSet v) where
-  transform t (NameSet ns) = NameSet $ M.map (map (papply t)) ns
+instance HasLinearMap v => Transformable (NameMap v) where
+  transform t (NameMap ns) = NameMap $ M.map (map (papply t)) ns
 
 
 instance HasLinearMap v => Transformable (Point v) where
