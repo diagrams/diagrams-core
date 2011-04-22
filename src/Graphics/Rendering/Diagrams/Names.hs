@@ -59,10 +59,8 @@ data AName = IName Int
            | SName String
   deriving Ord
 
--- XXX is this really what we want?  Given these Eq and Show
--- instances, is it worth even having the IName/SName distinction at
--- all?  Or do we want the derived Eq instance?
-
+-- | Note that equality on names does not distinguish between integers
+--   and their @String@ representations.
 instance Eq AName where
   IName i1 == IName i2 = i1 == i2
   SName s1 == SName s2 = s1 == s2
@@ -99,13 +97,12 @@ instance IsName Name where
 -- | Instances of 'Qualifiable' are things which can be qualified by
 --   prefixing them with a name.
 class Qualifiable a where
+  -- | Qualify with the given name.
   (|>) :: IsName n => n -> a -> a
-  -- ^ Qualify with the given name.
 
--- | Of course, names themselves are qualifiable.
+-- | Names can be qualified by prefixing them with other names.
 instance Qualifiable Name where
-  n1 |> (Name ns2) = Name $ ns1 ++ ns2
-    where (Name ns1) = toName n1
+  n1 |> n2 = toName n1 `mappend` n2
 
 ------------------------------------------------------------
 --  Name maps  ---------------------------------------------
@@ -123,7 +120,7 @@ type instance V (NameMap v) = v
 -- | 'NameMap's form a monoid with the empty map as the identity, and
 --   map union as the binary operation.  No information is ever lost:
 --   if two maps have the same name in their domain, the resulting map
---   will associate that name to the union of the two sets of vectors
+--   will associate that name to the union of the two sets of points
 --   associated with that name.
 instance Monoid (NameMap v) where
   mempty = NameMap M.empty
@@ -146,7 +143,7 @@ fromNames = NameMap . M.fromList . map (toName *** (:[]))
 rememberAs :: Name -> Point v -> NameMap v -> NameMap v
 rememberAs n p (NameMap names) = NameMap $ M.insertWith (++) n [p] names
 
--- | A name acts on a name map by qualifying it.
+-- | A name acts on a name map by qualifying every name in it.
 instance Action Name (NameMap v) where
   act = (|>)
 
