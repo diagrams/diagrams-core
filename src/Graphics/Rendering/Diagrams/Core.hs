@@ -47,7 +47,7 @@ module Graphics.Rendering.Diagrams.Core
 
          -- * Operations on diagrams
        , prims
-       , bounds, names, annot, sample
+       , bounds, names, query, sample
        , named
        , atop
        , freeze
@@ -73,7 +73,7 @@ import Graphics.Rendering.Diagrams.MList
 import Graphics.Rendering.Diagrams.UDTree
 
 import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Annot
+import Graphics.Rendering.Diagrams.Query
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
@@ -109,8 +109,8 @@ import Control.Arrow (second)
 --
 --   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
 --
---   * query functions (see "Graphics.Rendering.Diagrams.Annot")
-type UpAnnots v m = Bounds v ::: NameMap v ::: Annot v m ::: Nil
+--   * query functions (see "Graphics.Rendering.Diagrams.Query")
+type UpAnnots v m = Bounds v ::: NameMap v ::: Query v m ::: Nil
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -161,13 +161,13 @@ named :: forall v b n m.
       => n -> AnnDiagram b v m -> AnnDiagram b v m
 named = inAD . applyU . inj . fromNames . (:[]) . (,origin :: Point v)
 
-annot :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Annot v m
-annot = getU' . unAD
+query :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Query v m
+query = getU' . unAD
 
 sample :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Point v -> m
-sample = queryAnnot . annot
+sample = runQuery . query
 
-mkAD :: Prim b v -> Bounds v -> NameMap v -> Annot v m -> AnnDiagram b v m
+mkAD :: Prim b v -> Bounds v -> NameMap v -> Query v m -> AnnDiagram b v m
 mkAD p b n a = AD $ leaf (b ::: n ::: a ::: Nil) p
 
 ------------------------------------------------------------
@@ -210,16 +210,16 @@ instance Functor (AnnDiagram b v) where
 ---- Applicative
 
 -- XXX what to do with this?
--- A diagram with annotations of type @(a -> b)@ can be \"applied\"
---   to a diagram with annotations of type @a@, resulting in a
---   combined diagram with annotations of type @b@.  In particular,
+-- A diagram with queries of result type @(a -> b)@ can be \"applied\"
+--   to a diagram with queries of result type @a@, resulting in a
+--   combined diagram with queries of result type @b@.  In particular,
 --   all components of the two diagrams are combined as in the
---   @Monoid@ instance, except the annotations which are combined via
+--   @Monoid@ instance, except the queries which are combined via
 --   @(<*>)@.
 
 -- instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
 --            => Applicative (AnnDiagram b v) where
---   pure a = Diagram mempty mempty mempty (Annot $ const a)
+--   pure a = Diagram mempty mempty mempty (Query $ const a)
 
 --   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)

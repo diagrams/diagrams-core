@@ -19,7 +19,7 @@ Library
                        Graphics.Rendering.Diagrams.MList,
                        Graphics.Rendering.Diagrams.UDTree,
                        Graphics.Rendering.Diagrams.V,
-                       Graphics.Rendering.Diagrams.Annot,
+                       Graphics.Rendering.Diagrams.Query,
                        Graphics.Rendering.Diagrams.Transform,
                        Graphics.Rendering.Diagrams.Bounds,
                        Graphics.Rendering.Diagrams.HasOrigin,
