@@ -23,12 +23,8 @@
 -- The core library of primitives forming the basis of an embedded
 -- domain-specific language for describing and rendering diagrams.
 --
--- Note that end users should rarely (if ever) need to import this
--- module directly; instead, import "Graphics.Rendering.Diagrams",
--- which re-exports most of the functionality from this module.
--- Library developers may occasionally wish to import this module
--- directly if they need access to something not re-exported by
--- "Graphics.Rendering.Diagrams".
+-- "Graphics.Rendering.Diagrams.Core" defines types and classes for
+-- primitives, diagrams, and backends.
 --
 -----------------------------------------------------------------------------
 
@@ -42,31 +38,33 @@
 
 module Graphics.Rendering.Diagrams.Core
        (
-         -- * Backends
+         -- * Diagrams
+         -- $dia
 
-         Backend(..)
-       , MultiBackend(..)
-       , Renderable(..)
+         -- ** Annotations
+         UpAnnots, DownAnnots
+       , AnnDiagram(..), mkAD, Diagram
+
+         -- * Operations on diagrams
+       , prims
+       , bounds, names, annot, sample
+       , named
+       , atop
+       , freeze
 
          -- * Primtives
+         -- $prim
 
        , Prim(..), nullPrim
 
-         -- * Diagrams
+         -- * Backends
 
-       , AnnDiagram(..), mkAD, Diagram
-       , prims
-       , bounds, names, annot, sample
+       , Backend(..)
+       , MultiBackend(..)
 
-       , named
+         -- * Renderable
 
-         -- XXX export other stuff
-
-         -- ** Primitive operations
-         -- $prim
-       , atop
-
-       , freeze
+       , Renderable(..)
 
        ) where
 
@@ -94,159 +92,11 @@ import Control.Arrow (second)
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
 
 ------------------------------------------------------------
--- Backends  -----------------------------------------------
-------------------------------------------------------------
-
--- | Abstract diagrams are rendered to particular formats by
---   /backends/.  Each backend/vector space combination must be an
---   instance of the 'Backend' class. A minimal complete definition
---   consists of the three associated types, along with /either/
---
---   * implementations for 'withStyle' and 'doRender', /or/
---
---   * an implementation of 'renderDia'.
---
-class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
-  data Render  b v :: *         -- The type of rendering operations used by this
-                                --   backend, which must be a monoid
-  type Result  b v :: *         -- The result of the rendering operation
-  data Options b v :: *         -- The rendering options for this backend
-  -- See Note [Haddock and associated types]
-
-  -- | Perform a rendering operation with a local style.
-  withStyle      :: b          -- ^ Backend token (needed only for type inference)
-                 -> Style      -- ^ Style to use
-                 -> Transformation v  -- ^ Transformation to be applied to the style
-                 -> Render b v -- ^ Rendering operation to run
-                 -> Render b v -- ^ Rendering operation using the style locally
-
-  -- | 'doRender' is used to interpret rendering operations.
-  doRender       :: b           -- ^ Backend token (needed only for type inference)
-                 -> Options b v -- ^ Backend-specific collection of rendering options
-                 -> Render b v  -- ^ Rendering operation to perform
-                 -> Result b v  -- ^ Output of the rendering operation
-
-  -- | 'adjustDia' allows the backend to make adjustments to the final
-  --   diagram (e.g. to adjust the size based on the options) before
-  --   rendering it.  A default implementation is provided which makes
-  --   no adjustments.
-  adjustDia :: Monoid m => b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
-  adjustDia _ _ d = d
-
-  -- XXX expand this comment.  Explain about freeze, split
-  -- transformations, etc.
-  -- | Render a diagram.  This has a default implementation in terms
-  --   of 'adjustDia', 'withStyle', 'doRender', and the 'render'
-  --   operation from the 'Renderable' class (first 'adjustDia' is
-  --   used, then 'withStyle' and 'render' are used to render each
-  --   primitive, the resulting operations are combined with
-  --   'mconcat', and the final operation run with 'doRender') but
-  --   backends may override it if desired.
-  renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid m)
-            => b -> Options b v -> AnnDiagram b v m -> Result b v
-  renderDia b opts =
-    doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
-      where renderOne :: (Prim b v, (Split (Transformation v), Style))
-                      -> Render b v
-            renderOne (p, (M t,      s))
-              = withStyle b s mempty (render b (transform t p))
-
-            renderOne (p, (t1 :| t2, s))
-              = withStyle b s t1 (render b (transform (t1 <> t2) p))
-
-  -- See Note [backend token]
-
-{-
-~~~~ Note [Haddock and associated types]
-
-As of version 2.8.1, Haddock doesn't seem to support
-documentation for associated types; hence the comments next to
-Render, etc. above are not Haddock comments.  Making them
-Haddock comments by adding a carat causes Haddock to choke with a
-parse error.  Hopefully at some point in the future Haddock will
-support this, at which time this comment can be deleted and the
-above comments made into proper Haddock comments.
--}
-
--- | A class for backends which support rendering multiple diagrams,
---   e.g. to a multi-page pdf or something similar.
-class Backend b v => MultiBackend b v where
-
-  -- | Render multiple diagrams at once.
-  renderDias :: b -> Options b v -> [AnnDiagram b v m] -> Result b v
-
-  -- See Note [backend token]
-
-
--- | The Renderable type class connects backends to primitives which
---   they know how to render.
-class Transformable t => Renderable t b where
-  render :: b -> t -> Render b (V t)
-  -- ^ Given a token representing the backend and a
-  --   transformable object, render it in the appropriate rendering
-  --   context.
-
-  -- See Note [backend token]
-
-{-
-~~~~ Note [backend token]
-
-A bunch of methods here take a "backend token" as an argument.  The
-backend token is expected to carry no actual information; it is solely
-to help out the type system. The problem is that all these methods
-return some associated type applied to b (e.g. Render b) and unifying
-them with something else will never work, since type families are not
-necessarily injective.
--}
-
-------------------------------------------------------------
---  Primitives  --------------------------------------------
-------------------------------------------------------------
-
--- | A value of type @Prim b v@ is an opaque (existentially quantified)
---   primitive which backend @b@ knows how to render in vector space @v@.
-data Prim b v where
-  Prim :: Renderable t b => t -> Prim b (V t)
-
-type instance V (Prim b v) = v
-
--- Note that we also require the vector spaces for the backend and the
--- primitive to be the same; this is necessary since the rendering
--- backend may need to lapp some transformations to the primitive
--- after unpacking the existential package.
-
--- | The 'Transformable' instance for 'Prim' just pushes calls to
---   'transform' down through the 'Prim' constructor.
-instance Backend b v => Transformable (Prim b v) where
-  transform v (Prim p) = Prim (transform v p)
-
--- | The 'Renderable' instance for 'Prim' just pushes calls to
---   'render' down through the 'Prim' constructor.
-instance Backend b v => Renderable (Prim b v) b where
-  render b (Prim p) = render b p
-
--- | The null primitive.
-data NullPrim v = NullPrim
-
-type instance (V (NullPrim v)) = v
-
-instance HasLinearMap v => Transformable (NullPrim v) where
-  transform _ _ = NullPrim
-
-instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b where
-  render _ _ = mempty
-
--- | The null primitive, which every backend can render by doing
---   nothing.
-nullPrim :: (HasLinearMap v, Monoid (Render b v)) => Prim b v
-nullPrim = Prim NullPrim
-
-------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
 
--- TODO: At some point, we may want to abstract this into a type
--- class...
+-- $dia
+-- XXX write me
 
 --
 --   TODO: write more here.
@@ -415,3 +265,157 @@ instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => Qualifiable (AnnDiagram b v m) where
   (|>) = inAD . applyD . inj . AM . (:[]) . toName
+
+
+------------------------------------------------------------
+--  Primitives  --------------------------------------------
+------------------------------------------------------------
+
+-- $prim
+-- Ultimately, every diagram is essentially a collection of
+-- /primitives/, basic building blocks which can be rendered by
+-- backends.  However, not every backend must be able to render every
+-- type of primitive; the collection of primitives a given backend
+-- knows how to render is determined by instances of 'Renderable'.
+
+-- | A value of type @Prim b v@ is an opaque (existentially quantified)
+--   primitive which backend @b@ knows how to render in vector space @v@.
+data Prim b v where
+  Prim :: Renderable t b => t -> Prim b (V t)
+
+type instance V (Prim b v) = v
+
+-- | The 'Transformable' instance for 'Prim' just pushes calls to
+--   'transform' down through the 'Prim' constructor.
+instance Backend b v => Transformable (Prim b v) where
+  transform v (Prim p) = Prim (transform v p)
+
+-- | The 'Renderable' instance for 'Prim' just pushes calls to
+--   'render' down through the 'Prim' constructor.
+instance Backend b v => Renderable (Prim b v) b where
+  render b (Prim p) = render b p
+
+-- | The null primitive.
+data NullPrim v = NullPrim
+
+type instance (V (NullPrim v)) = v
+
+instance HasLinearMap v => Transformable (NullPrim v) where
+  transform _ _ = NullPrim
+
+instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b where
+  render _ _ = mempty
+
+-- | The null primitive, which every backend can render by doing
+--   nothing.
+nullPrim :: (HasLinearMap v, Monoid (Render b v)) => Prim b v
+nullPrim = Prim NullPrim
+
+
+
+------------------------------------------------------------
+-- Backends  -----------------------------------------------
+------------------------------------------------------------
+
+-- | Abstract diagrams are rendered to particular formats by
+--   /backends/.  Each backend/vector space combination must be an
+--   instance of the 'Backend' class. A minimal complete definition
+--   consists of the three associated types, along with /either/
+--
+--   * implementations for 'withStyle' and 'doRender', /or/
+--
+--   * an implementation of 'renderDia'.
+--
+class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
+  data Render  b v :: *         -- The type of rendering operations used by this
+                                --   backend, which must be a monoid
+  type Result  b v :: *         -- The result of the rendering operation
+  data Options b v :: *         -- The rendering options for this backend
+  -- See Note [Haddock and associated types]
+
+  -- | Perform a rendering operation with a local style.
+  withStyle      :: b          -- ^ Backend token (needed only for type inference)
+                 -> Style      -- ^ Style to use
+                 -> Transformation v  -- ^ Transformation to be applied to the style
+                 -> Render b v -- ^ Rendering operation to run
+                 -> Render b v -- ^ Rendering operation using the style locally
+
+  -- | 'doRender' is used to interpret rendering operations.
+  doRender       :: b           -- ^ Backend token (needed only for type inference)
+                 -> Options b v -- ^ Backend-specific collection of rendering options
+                 -> Render b v  -- ^ Rendering operation to perform
+                 -> Result b v  -- ^ Output of the rendering operation
+
+  -- | 'adjustDia' allows the backend to make adjustments to the final
+  --   diagram (e.g. to adjust the size based on the options) before
+  --   rendering it.  A default implementation is provided which makes
+  --   no adjustments.
+  adjustDia :: Monoid m => b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
+  adjustDia _ _ d = d
+
+  -- XXX expand this comment.  Explain about freeze, split
+  -- transformations, etc.
+  -- | Render a diagram.  This has a default implementation in terms
+  --   of 'adjustDia', 'withStyle', 'doRender', and the 'render'
+  --   operation from the 'Renderable' class (first 'adjustDia' is
+  --   used, then 'withStyle' and 'render' are used to render each
+  --   primitive, the resulting operations are combined with
+  --   'mconcat', and the final operation run with 'doRender') but
+  --   backends may override it if desired.
+  renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid m)
+            => b -> Options b v -> AnnDiagram b v m -> Result b v
+  renderDia b opts =
+    doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
+      where renderOne :: (Prim b v, (Split (Transformation v), Style))
+                      -> Render b v
+            renderOne (p, (M t,      s))
+              = withStyle b s mempty (render b (transform t p))
+
+            renderOne (p, (t1 :| t2, s))
+              = withStyle b s t1 (render b (transform (t1 <> t2) p))
+
+  -- See Note [backend token]
+
+{-
+~~~~ Note [Haddock and associated types]
+
+As of version 2.8.1, Haddock doesn't seem to support
+documentation for associated types; hence the comments next to
+Render, etc. above are not Haddock comments.  Making them
+Haddock comments by adding a carat causes Haddock to choke with a
+parse error.  Hopefully at some point in the future Haddock will
+support this, at which time this comment can be deleted and the
+above comments made into proper Haddock comments.
+-}
+
+-- | A class for backends which support rendering multiple diagrams,
+--   e.g. to a multi-page pdf or something similar.
+class Backend b v => MultiBackend b v where
+
+  -- | Render multiple diagrams at once.
+  renderDias :: b -> Options b v -> [AnnDiagram b v m] -> Result b v
+
+  -- See Note [backend token]
+
+
+-- | The Renderable type class connects backends to primitives which
+--   they know how to render.
+class Transformable t => Renderable t b where
+  render :: b -> t -> Render b (V t)
+  -- ^ Given a token representing the backend and a
+  --   transformable object, render it in the appropriate rendering
+  --   context.
+
+  -- See Note [backend token]
+
+{-
+~~~~ Note [backend token]
+
+A bunch of methods here take a "backend token" as an argument.  The
+backend token is expected to carry no actual information; it is solely
+to help out the type system. The problem is that all these methods
+return some associated type applied to b (e.g. Render b) and unifying
+them with something else will never work, since type families are not
+necessarily injective.
+-}
+
