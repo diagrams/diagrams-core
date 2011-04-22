@@ -360,7 +360,7 @@ instance Functor (AnnDiagram b v) where
 ---- Applicative
 
 -- XXX what to do with this?
--- | A diagram with annotations of type @(a -> b)@ can be \"applied\"
+-- A diagram with annotations of type @(a -> b)@ can be \"applied\"
 --   to a diagram with annotations of type @a@, resulting in a
 --   combined diagram with annotations of type @b@.  In particular,
 --   all components of the two diagrams are combined as in the
