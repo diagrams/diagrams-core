@@ -352,11 +352,8 @@ nullPrim = Prim NullPrim
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
 --   instance of the 'Backend' class. A minimal complete definition
---   consists of the three associated types, along with /either/
---
---   * implementations for 'withStyle' and 'doRender', /or/
---
---   * an implementation of 'renderDia'.
+--   consists of the three associated types and implementations for
+--   'withStyle' and 'doRender'.
 --
 class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   data Render  b v :: *         -- The type of rendering operations used by this
