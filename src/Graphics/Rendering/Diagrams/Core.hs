@@ -46,10 +46,19 @@ module Graphics.Rendering.Diagrams.Core
        , AnnDiagram(..), mkAD, Diagram
 
          -- * Operations on diagrams
+         -- ** Extracting information
        , prims
        , bounds, names, query, sample
-       , named
+
+         -- ** Combining diagrams
+
+         -- | For many more ways of combining diagrams, see
+         -- "Diagrams.Combinators" from the diagrams-lib package.
+
        , atop
+
+         -- ** Modifying diagrams
+       , named
        , freeze
 
          -- * Primtives
@@ -120,9 +129,12 @@ type UpAnnots v m = Bounds v ::: NameMap v ::: Query v m ::: Nil
 --   * names (see "Graphics.Rendering.Diagrams.Names")
 type DownAnnots v = Split (Transformation v) ::: Style ::: AM [] Name ::: Nil
 
+-- | The fundamental diagram type is represented by trees of
+--   primitives with various monoidal annotations.
 newtype AnnDiagram b v m
   = AD { unAD :: UDTree (UpAnnots v m) (DownAnnots v) (Prim b v) }
 
+-- | Lift a function on annotated trees to a function on diagrams.
 inAD :: (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)
          -> UDTree (UpAnnots v' m') (DownAnnots v') (Prim b' v'))
      -> (AnnDiagram b v m -> AnnDiagram b' v' m')
@@ -133,36 +145,43 @@ type instance V (AnnDiagram b v m) = v
 -- | The default sort of diagram is one where sampling at a point
 --   simply tells you whether that point is occupied or not.
 --   Transforming a default diagram into one with more interesting
---   annotations can be done via the 'Functor' and 'Applicative'
---   instances for @'AnnDiagram' b@.
+--   annotations can be done via the 'Functor' instance of
+--   @'AnnDiagram' b@.
 type Diagram b v = AnnDiagram b v Any
 
--- XXX comment these
-
+-- | Extract a list of primitives from a diagram, together with their
+--   associated transformations and styles.
 prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => AnnDiagram b v m -> [(Prim b v, (Split (Transformation v), Style))]
 prims = (map . second) (wibble . toTuple) . flatten . unAD
   where wibble (t,(s,_)) = (t,s)
 
+-- | Get the bounds of a diagram.
 bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
        => AnnDiagram b v m -> Bounds v
 bounds = getU' . unAD
 
+-- | Get the name map of a diagram.
 names :: HasLinearMap v => AnnDiagram b v m -> NameMap v
 names = getU' . unAD
 
+-- | Attach a name to a diagram.
 named :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => n -> AnnDiagram b v m -> AnnDiagram b v m
 named = inAD . applyU . inj . fromNames . (:[]) . (,origin :: Point v)
 
+-- | Get the query function associated with a diagram.
 query :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Query v m
 query = getU' . unAD
 
+-- | Sample a diagram's query function at a given point.
 sample :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Point v -> m
 sample = runQuery . query
 
+-- | Create a diagram from a single primitive, along with a bounding
+--   region, name map, and query function.
 mkAD :: Prim b v -> Bounds v -> NameMap v -> Query v m -> AnnDiagram b v m
 mkAD p b n a = AD $ leaf (b ::: n ::: a ::: Nil) p
 
@@ -174,14 +193,15 @@ mkAD p b n a = AD $ leaf (b ::: n ::: a ::: Nil) p
 
 -- | Diagrams form a monoid since each of their components do:
 --   the empty diagram has no primitives, a constantly zero bounding
---   function, no named points, and a constantly empty sampling function.
+--   function, no named points, and a constantly empty query function.
 --
 --   Diagrams compose by aligning their respective local origins.  The
 --   new diagram has all the primitives and all the names from the two
---   diagrams combined, and sampling functions are combined pointwise.
---   The first diagram goes on top of the second (when such a notion
---   makes sense in the digrams' vector space, such as R2; in other
---   vector spaces, like R3, @mappend@ is commutative).
+--   diagrams combined, and query functions are combined pointwise.
+--   The first diagram goes on top of the second.  \"On top of\"
+--   probably only makes sense in vector spaces of dimension lower
+--   than 3, but in theory it could make sense for, say, 3-dimensional
+--   diagrams when viewed by 4-dimensional beings.
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
   => Monoid (AnnDiagram b v m) where
   mempty = AD mempty
@@ -189,8 +209,9 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
 
--- | A convenient synonym for 'mappend' on diagrams (to help remember
---   which diagram goes on top of which when combining them).
+-- | A convenient synonym for 'mappend' on diagrams, designed to be
+--   used infix (to help remember which diagram goes on top of which
+--   when combining them, namely, the first on top of the second).
 atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
      => AnnDiagram b v m -> AnnDiagram b v m -> AnnDiagram b v m
 atop = mappend
