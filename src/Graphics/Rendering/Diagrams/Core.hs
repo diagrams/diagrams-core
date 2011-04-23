@@ -319,12 +319,12 @@ type instance V (Prim b v) = v
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
-instance Backend b v => Transformable (Prim b v) where
+instance HasLinearMap v => Transformable (Prim b v) where
   transform v (Prim p) = Prim (transform v p)
 
 -- | The 'Renderable' instance for 'Prim' just pushes calls to
 --   'render' down through the 'Prim' constructor.
-instance Backend b v => Renderable (Prim b v) b where
+instance HasLinearMap v => Renderable (Prim b v) b where
   render b (Prim p) = render b p
 
 -- | The null primitive.
