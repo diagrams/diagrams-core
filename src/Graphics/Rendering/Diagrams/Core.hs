@@ -344,7 +344,6 @@ nullPrim :: (HasLinearMap v, Monoid (Render b v)) => Prim b v
 nullPrim = Prim NullPrim
 
 
-
 ------------------------------------------------------------
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
@@ -356,11 +355,17 @@ nullPrim = Prim NullPrim
 --   'withStyle' and 'doRender'.
 --
 class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
-  data Render  b v :: *         -- The type of rendering operations used by this
-                                --   backend, which must be a monoid
-  type Result  b v :: *         -- The result of the rendering operation
-  data Options b v :: *         -- The rendering options for this backend
-  -- See Note [Haddock and associated types]
+  -- | The type of rendering operations used by this backend, which
+  --   must be a monoid. For example, if @Render b v = M ()@ for some
+  --   monad @M@, a monoid instance can be made with @mempty = return
+  --   ()@ and @mappend = (>>)@.
+  data Render  b v :: *
+
+  -- | The result of running/interpreting a rendering operation.
+  type Result  b v :: *
+
+  -- | Backend-specific rendering options.
+  data Options b v :: *
 
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
@@ -404,18 +409,6 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
               = withStyle b s t1 (render b (transform (t1 <> t2) p))
 
   -- See Note [backend token]
-
-{-
-~~~~ Note [Haddock and associated types]
-
-As of version 2.8.1, Haddock doesn't seem to support
-documentation for associated types; hence the comments next to
-Render, etc. above are not Haddock comments.  Making them
-Haddock comments by adding a carat causes Haddock to choke with a
-parse error.  Hopefully at some point in the future Haddock will
-support this, at which time this comment can be deleted and the
-above comments made into proper Haddock comments.
--}
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
