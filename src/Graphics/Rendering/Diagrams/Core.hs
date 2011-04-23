@@ -284,7 +284,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 
 ---- Transformable
 
--- | 'Diagram's can be transformed by transforming each of their
+-- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
       => Transformable (AnnDiagram b v m) where
@@ -292,7 +292,7 @@ instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
 
 ---- Qualifiable
 
--- | 'Diagram's can be qualified so that all their named points can
+-- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => Qualifiable (AnnDiagram b v m) where
