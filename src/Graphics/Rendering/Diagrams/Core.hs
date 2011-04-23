@@ -39,7 +39,6 @@
 module Graphics.Rendering.Diagrams.Core
        (
          -- * Diagrams
-         -- $dia
 
          -- ** Annotations
          UpAnnots, DownAnnots
@@ -103,9 +102,6 @@ import Control.Arrow (second)
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
-
--- $dia
--- XXX write me
 
 -- | Monoidal annotations which travel up the diagram tree, i.e. which
 --   are aggregated from component diagrams to the whole:
