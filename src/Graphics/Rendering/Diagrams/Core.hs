@@ -28,12 +28,12 @@
 --
 -----------------------------------------------------------------------------
 
-{- ~~~~ Note [breaking up basics module]
+{- ~~~~ Note [breaking up Core module]
 
-   This module is getting somewhat monolithic, and breaking it up into
-   a collection of smaller modules would be a good idea in principle.
-   However, it's not as easy as it sounds: most of the stuff here depends
-   on other stuff in various cyclic ways.
+   Although it's not as bad as it used to be, this module has a lot of
+   stuff in it, and it might seem a good idea in principle to break it up
+   into smaller modules.  However, it's not as easy as it sounds: everything
+   in this module cyclically depends on everything else.
 -}
 
 module Graphics.Rendering.Diagrams.Core
