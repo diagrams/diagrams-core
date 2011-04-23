@@ -247,7 +247,22 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => HasStyle (AnnDiagram b v m) where
   applyStyle = inAD . applyD . inj
 
--- XXX comment me
+-- | By default, diagram attributes are not affected by
+--   transformations.  This means, for example, that @lw 0.01 circle@
+--   and @scale 2 (lw 0.01 circle)@ will be drawn with lines of the
+--   /same/ width, and @scaleY 3 circle@ will be an ellipse drawn with
+--   a uniform line.  Once a diagram is frozen, however,
+--   transformations do affect attributes, so, for example, @scale 2
+--   (freeze (lw 0.01 circle))@ will be drawn with a line twice as
+--   thick as @lw 0.01 circle@, and @scaleY 3 (freeze circle)@ will be
+--   drawn with a \"stretched\", variable-width line.
+--
+--   Another way of thinking about it is that pre-@freeze@, we are
+--   transforming the \"abstract idea\" of a diagram, and the
+--   transformed version is then drawn; when doing a @freeze@, we
+--   produce a concrete drawing of the diagram, and it is this visual
+--   representation itself which is acted upon by subsequent
+--   transformations.
 freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
        => AnnDiagram b v m -> AnnDiagram b v m
 freeze = inAD . applyD . inj $ (split :: Split (Transformation v))
