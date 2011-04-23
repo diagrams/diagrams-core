@@ -98,10 +98,6 @@ import Control.Arrow (second)
 -- $dia
 -- XXX write me
 
---
---   TODO: write more here.
---   got idea for annotations from graphics-drawingcombinators.
-
 -- | Monoidal annotations which travel up the diagram tree, i.e. which
 --   are aggregated from component diagrams to the whole:
 --

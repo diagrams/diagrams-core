@@ -35,6 +35,9 @@ import Control.Applicative
 -- | A query is a function that maps points in a vector space to
 --   values in some monoid. Queries naturally form a monoid, with
 --   two queries being combined pointwise.
+--
+--   The idea for annotating diagrams with monoidal queries came from
+--   the graphics-drawingcombinators package, <http://hackage.haskell.org/package/graphics-drawingcombinators>.
 newtype Query v m = Query { runQuery :: Point v -> m }
   deriving (Functor, Applicative, Monoid)
 
