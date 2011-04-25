@@ -3,8 +3,32 @@
            , FlexibleContexts
   #-}
 
--- XXX add comments/header etc.
-module Graphics.Rendering.Diagrams.UDTree where
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Graphics.Rendering.Diagrams.UDTree
+-- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- License     :  BSD-style (see LICENSE)
+-- Maintainer  :  diagrams-discuss@googlegroups.com
+--
+-- Rose (n-way) trees with both upwards- and downwards-traveling
+-- monoidal annotations, used as the basis for representing diagrams.
+--
+-----------------------------------------------------------------------------
+module Graphics.Rendering.Diagrams.UDTree
+       (
+         -- * UD-trees
+         UDTree
+
+         -- * Constructing UD-trees
+       , leaf, branchD, branch
+
+         -- * Modifying UD-trees
+       , applyD, applyU, mapU
+
+         -- * Accessors and destructors
+       , getU, getU', foldUD, flatten
+
+       ) where
 
 import Data.Monoid
 
@@ -12,17 +36,33 @@ import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.MList
 import Graphics.Rendering.Diagrams.Util
 
--- Abstractly, a UDTree is a rose tree with two types of monoidal
--- annotations.  Each leaf contains a piece of data and an annotation
--- of type u.  Each internal node holds an annotation of type d.  At
--- every internal node, we can also access the mconcat (from left to
--- right) of all the u annotations below it.  Likewise, at every leaf
--- node, we can access the mconcat (from top to bottom) of all the d
--- annotations above it along the path from the root.
-
--- XXX write something about action of d annotations on u.
-
--- XXX cached u values at nodes can have "extra stuff" appended to them.
+-- | Abstractly, a UDTree is a rose (n-way) tree with data at the
+--   leaves and two types of monoidal annotations, one (called @u@)
+--   travelling \"up\" the tree and one (called @d@) traveling
+--   \"down\".
+--
+--   Specifically, every node (both leaf nodes and internal nodes)
+--   has two annotations, one of type @d@ and one of type @u@,
+--   subject to the following constraints:
+--
+--   * The @d@ annotation at a leaf node is equal to the 'mconcat' of
+--     all the @d@ annotations along the path from the root to the leaf
+--     node.
+--
+--   * The @u@ annotation at an internal node is equal to @v
+--     ``mappend`` (mconcat us)@ for some value @v@ (possibly
+--     'mempty'), where @us@ is the list (in left-right order) of the
+--     @u@ annotations on the immediate child nodes of the given node.
+--     Intuitively, we are \"caching\" the @mconcat@ of @u@
+--     annotations from the leaves up, except that at any point we may
+--     insert \"extra\" information.
+--
+--   In addition, @d@ may have an /action/ on @u@ (see the 'Action'
+--   type class, defined in "Graphics.Rendering.Diagrams.Monoids"), in
+--   which case applying a @d@ annotation to a tree will transform all
+--   the @u@ annotations by acting on them.  The constraints on @u@
+--   annotations are maintained since the action is required to be a
+--   monoid homomorphism.
 
 data UDTree u d a
   = Leaf u a
@@ -39,7 +79,7 @@ instance (Action d u, Monoid u, Monoid d) => Monoid (UDTree u d a) where
   t1 `mappend` t2 = branch [t1,t2]
   mconcat         = branch
 
--- | Construct a leaf node.
+-- | Construct a leaf node from a @u@ annotation and datum.
 leaf :: u -> a -> UDTree u d a
 leaf = Leaf
 
@@ -51,13 +91,15 @@ branchD d ts = Branch (mconcat . map getU $ ts) [d] ts
 branch :: (Action d u, Monoid u, Monoid d) => [UDTree u d a] -> UDTree u d a
 branch ts = Branch (mconcat . map getU $ ts) [] ts
 
--- | Get the @u@ value summarizing all leaf @u@ annotations (from left
---   to right).
+-- | Get the @u@ annotation at the root.
 getU :: Action d u => UDTree u d a -> u
 getU (Leaf u _)      = u
 getU (Branch u ds _) = foldr act u ds
 
--- | Get a particular value from a @u@ value with several components.
+-- | Get a particular component from a the @u@ annotation at the root.
+--   This method is provided for convenience, since its context only
+--   requires an action of @d@ on @u'@, rather than on @u@ in its
+--   entirety.
 getU' :: (Action d (u' ::: Nil), u :>: u') => UDTree u d a -> u'
 getU' (Leaf u _)      = get u
 getU' (Branch u ds _) = hd $ foldr act (get u ::: Nil) ds
@@ -65,7 +107,8 @@ getU' (Branch u ds _) = hd $ foldr act (get u ::: Nil) ds
         hd (Missing _)  = error "Impossible case in UDTree.getU' (hd)"
 
 -- | Add a @d@ annotation to the root, combining it (on the left) with
---   any pre-existing @d@ annotation.
+--   any pre-existing @d@ annotation, and transforming all @u@
+--   annotations by the action of @d@.
 applyD :: Action d u => d -> UDTree u d a -> UDTree u d a
 applyD d l@(Leaf {})      = Branch (getU l) [d] [l]
 applyD d (Branch u ds ts) = Branch u (d : ds) ts
@@ -88,12 +131,12 @@ mapU f (Branch u ds ts) = Branch (f u) ds (map (mapU f) ts)
 foldUD :: (Monoid r, Monoid d, Action d u)
       => (u -> d -> a -> r)  -- ^ Function for processing leaf nodes.
                              --   Given the u annotation at this node, the
-                             --   mconcat of all d annotations above, and the
+                             --   'mconcat' of all d annotations above, and the
                              --   leaf value.
-      -> (u -> d -> r -> r)  -- ^ Function for processing internal nodes.
-                             --   Given the mconcat of all u annotations below,
-                             --   the d annotation at this node, and the mconcat
-                             --   of the recursive results.
+      -> (u -> d -> r -> r)  -- ^ Function for processing internal
+                             --   nodes.  Given the u and d
+                             --   annotations at this node and the
+                             --   'mconcat' of the recursive results.
       -> UDTree u d a -> r
 foldUD = foldUD' mempty     -- Pass along accumulated d value
   where foldUD' d l _ (Leaf u a)
@@ -102,6 +145,7 @@ foldUD = foldUD' mempty     -- Pass along accumulated d value
           = b (act (d <> d') u) d' (mconcat $ map (foldUD' (d <> d') l b) ts)
          where d' = mconcat ds
 
--- | Flatten a tree into a list of leaves along with their @d@ annotations.
+-- | A specialized fold provided for convenience: flatten a tree into
+--   a list of leaves along with their @d@ annotations.
 flatten :: (Monoid d, Action d u) => UDTree u d a -> [(a,d)]
 flatten = foldUD (\_ d a -> [(a,d)]) (\_ _ r -> r)
