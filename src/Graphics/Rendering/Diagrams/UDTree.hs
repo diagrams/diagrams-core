@@ -17,7 +17,7 @@
 module Graphics.Rendering.Diagrams.UDTree
        (
          -- * UD-trees
-         UDTree
+         UDTree(..)
 
          -- * Constructing UD-trees
        , leaf, branchD, branch
