@@ -100,6 +100,11 @@ module Graphics.Rendering.Diagrams
        , MultiBackend(..)
        , Renderable(..)
 
+         -- * Convenience classes
+
+       , HasLinearMap
+       , OrderedField
+
        ) where
 
 import Graphics.Rendering.Diagrams.V
