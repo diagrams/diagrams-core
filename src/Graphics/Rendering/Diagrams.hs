@@ -30,6 +30,10 @@ module Graphics.Rendering.Diagrams
 
        , Point(..), origin, (*.)
 
+         -- * Vectors
+
+       , withLength
+
          -- * Transformations
        , Transformation
        , inv
@@ -108,6 +112,7 @@ module Graphics.Rendering.Diagrams
        ) where
 
 import Graphics.Rendering.Diagrams.V
+import Graphics.Rendering.Diagrams.Util
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
