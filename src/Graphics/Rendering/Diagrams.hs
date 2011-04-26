@@ -35,8 +35,12 @@ module Graphics.Rendering.Diagrams
        , withLength
 
          -- * Transformations
+         -- ** Invertible linear transformations
+       , (:-:), (<->), linv, lapp
+
+         -- ** General transformations
        , Transformation
-       , inv
+       , inv, transp, transl
        , apply
        , papply
        , fromLinear
