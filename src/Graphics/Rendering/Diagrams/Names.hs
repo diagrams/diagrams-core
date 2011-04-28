@@ -43,10 +43,11 @@ import Graphics.Rendering.Diagrams.Points
 
 import Data.VectorSpace
 
-import Data.List (intercalate)
+import Data.List (intercalate, isSuffixOf)
 import qualified Data.Map as M
 import Data.Monoid
 import Control.Arrow ((***))
+import Control.Monad (mplus)
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
@@ -154,6 +155,14 @@ instance Action Name a
 -- Searching in name maps.
 
 -- | Look for the given name in a name map, returning a list of points
---   associated with that name.
+--   associated with that name.  If no names match the given name
+--   exactly, return all the points associated with names of which the
+--   given name is a suffix.
 lookupN :: IsName n => n -> NameMap v -> Maybe [Point v]
-lookupN n (NameMap m) = M.lookup (toName n) m
+lookupN n (NameMap m)
+  = M.lookup n' m `mplus`
+    (flatten . filter ((n' `nameSuffixOf`) . fst) . M.assocs $ m)
+  where n' = toName n
+        (Name n1) `nameSuffixOf` (Name n2) = n1 `isSuffixOf` n2
+        flatten [] = Nothing
+        flatten xs = Just . concat . map snd $ xs
