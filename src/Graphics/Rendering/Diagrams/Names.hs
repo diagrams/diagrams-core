@@ -56,7 +56,7 @@ import Control.Monad (mplus)
 -- | An atomic name is either a number or a string.  Numeric names are
 --   provided for convenience in naming lists of things, such as a row
 --   of ten squares, or the vertices of a path.
-data AName = IName Int
+data AName = IName Integer
            | SName String
   deriving Ord
 
@@ -90,6 +90,9 @@ instance IsName String where
   toName = Name . (:[]) . SName
 
 instance IsName Int where
+  toName = Name . (:[]) . IName . fromIntegral
+
+instance IsName Integer where
   toName = Name . (:[]) . IName
 
 instance IsName Name where
