@@ -22,7 +22,7 @@ module Graphics.Rendering.Diagrams.Names
 
          AName(..), Name(..), IsName(..)
 
-       , Qualifiable(..)
+       , Qualifiable(..), (||>)
 
          -- * Name maps
 
@@ -107,6 +107,15 @@ class Qualifiable a where
 -- | Names can be qualified by prefixing them with other names.
 instance Qualifiable Name where
   n1 |> n2 = toName n1 `mappend` n2
+
+-- | Convenient operator for writing complete names in the form @a1 |>
+--   a2 |> a3 ||> a4@.  In particular, @n1 ||> n2@ is equivalent to
+--   @n1 |> toName n2@.
+(||>) :: (IsName n, IsName m) => n -> m -> Name
+n1 ||> n2 = n1 |> toName n2
+
+infixr 2 |>
+infixr 2 ||>
 
 ------------------------------------------------------------
 --  Name maps  ---------------------------------------------

@@ -55,7 +55,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Names
 
-       , Name, IsName(..), Qualifiable(..)
+       , Name, IsName(..), Qualifiable(..), (||>)
        , NameMap
        , fromNames
        , rememberAs
