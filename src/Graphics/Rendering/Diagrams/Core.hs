@@ -58,6 +58,7 @@ module Graphics.Rendering.Diagrams.Core
 
          -- ** Modifying diagrams
        , named
+       , withName
        , freeze
 
          -- * Primtives
@@ -93,6 +94,7 @@ import Graphics.Rendering.Diagrams.Util
 import Data.VectorSpace
 import Data.AffineSpace ((.-.))
 
+import Data.Maybe (listToMaybe)
 import Data.Monoid
 import Control.Arrow (second)
 
@@ -167,6 +169,15 @@ named :: forall v b n m.
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => n -> AnnDiagram b v m -> AnnDiagram b v m
 named = inAD . applyU . inj . fromNames . (:[]) . (,origin :: Point v)
+
+-- | Given a name and a diagram transformation indexed by a point,
+--   perform the transformation using the first point associated with
+--   the name, or perform the identity transformation if the name does
+--   not exist.
+withName :: HasLinearMap v
+         => Name -> (Point v -> AnnDiagram b v m -> AnnDiagram b v m)
+         -> AnnDiagram b v m -> AnnDiagram b v m
+withName n f d = maybe id f (lookupN n (names d) >>= listToMaybe) $ d
 
 -- | Get the query function associated with a diagram.
 query :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Query v m
