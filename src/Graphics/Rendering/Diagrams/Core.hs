@@ -223,6 +223,8 @@ atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
      => AnnDiagram b v m -> AnnDiagram b v m -> AnnDiagram b v m
 atop = mappend
 
+infixl 6 `atop`
+
 ---- Functor
 
 -- This is a bit ugly, but it will have to do for now...
