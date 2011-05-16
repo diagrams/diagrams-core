@@ -11,8 +11,11 @@ Author:              Brent Yorgey
 Maintainer:          byorgey@cis.upenn.edu
 Category:            Graphics
 Build-type:          Simple
-Cabal-version:       >=1.2
+Cabal-version:       >=1.6
 Tested-with:         GHC == 6.12.3, GHC >= 7.0.2 && <= 7.0.3
+Source-repository head
+  type:     darcs
+  location: http://patch-tag.com/r/byorgey/diagrams-core
 
 Library
   Exposed-modules:     Graphics.Rendering.Diagrams,
