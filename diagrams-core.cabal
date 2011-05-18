@@ -4,7 +4,7 @@ Synopsis:            Core libraries for diagrams EDSL
 Description:         The core modules underlying diagrams, 
                      an embedded domain-specific language 
                      for compositional, declarative drawing.
-Homepage:            http://code.google.com/p/diagrams/
+Homepage:            http://projects.haskell.org/diagrams
 License:             BSD3
 License-file:        LICENSE
 Author:              Brent Yorgey
