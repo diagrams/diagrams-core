@@ -7,6 +7,7 @@
            , ScopedTypeVariables
            , GeneralizedNewtypeDeriving
            , StandaloneDeriving
+           , DeriveDataTypeable
            , TypeOperators
            , OverlappingInstances
            , UndecidableInstances
@@ -98,6 +99,8 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid
 import Control.Arrow (second)
 
+import Data.Typeable
+
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
 
@@ -131,6 +134,7 @@ type DownAnnots v = Split (Transformation v) ::: Style ::: AM [] Name ::: Nil
 --   primitives with various monoidal annotations.
 newtype AnnDiagram b v m
   = AD { unAD :: UDTree (UpAnnots v m) (DownAnnots v) (Prim b v) }
+  deriving (Typeable)
 
 -- | Lift a function on annotated trees to a function on diagrams.
 inAD :: (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)
