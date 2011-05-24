@@ -98,7 +98,7 @@ module Graphics.Rendering.Diagrams
 
        , named, withName
 
-       , freeze
+       , freeze, setBounds
 
        , atop
 
