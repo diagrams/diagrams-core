@@ -1,6 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses
            , FlexibleInstances
            , GeneralizedNewtypeDeriving
+           , DeriveFunctor
+           , TypeFamilies
   #-}
 
 -----------------------------------------------------------------------------
@@ -25,12 +27,18 @@ module Graphics.Rendering.Diagrams.Monoids
 
        , Split(..), split
 
+         -- * Forgetful monoids
+         -- $forget
+
+       , Forgetful(..), unForget, forget
+
          -- * Applicative monoids
 
        , AM(..), inAM2
 
        ) where
 
+import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Util
 
 import Data.Monoid
@@ -105,6 +113,51 @@ split = mempty :| mempty
 instance (Action m n) => Action (Split m) n where
   act (M m) n      = act m n
   act (m1 :| m2) n = act m1 (act m2 n)
+
+------------------------------------------------------------
+--  Forgetful monoids
+------------------------------------------------------------
+
+-- $forget
+-- Sometimes we want to be able to "forget" some information.  In
+-- particular, we can introduce special @Forgetful@ values which cause
+-- anything to their right to be forgotten.
+
+-- | A value of type @Forgetful m@ is either a \"normal\" value of
+--   type @m@, which combines normally with other normal values, or a
+--   \"forgetful\" value, which combines normally with other values to
+--   its left but discards values combined on the right.  Also, when
+--   combining a forgetful value with a normal one the result is
+--   always forgetful.
+data Forgetful m = Normal m
+                 | Forgetful m
+  deriving Functor
+
+unForget :: Forgetful m -> m
+unForget (Normal m)    = m
+unForget (Forgetful m) = m
+
+-- | If @m@ is a 'Monoid', then @Forgetful m@ is a monoid with two
+--   sorts of values, \"normal\" and \"forgetful\": the normal ones
+--   combine normally and the forgetful ones discard anything to the
+--   right.
+instance Monoid m => Monoid (Forgetful m) where
+  mempty = Normal mempty
+
+  (Normal m1)    `mappend` (Normal m2)    = Normal (m1 <> m2)
+  (Normal m1)    `mappend` (Forgetful m2) = Forgetful (m1 <> m2)
+  (Forgetful m1) `mappend` _              = Forgetful m1
+
+-- | A convenient name for @Forgetful mempty@, so @a \<\> forget \<\>
+--   b == Forgetful a@.
+forget :: Monoid m => Forgetful m
+forget = Forgetful mempty
+
+instance (Action m n) => Action (Forgetful m) n where
+  act (Normal m) n    = act m n
+  act (Forgetful m) n = act m n
+
+type instance V (Forgetful m) = V m
 
 ------------------------------------------------------------
 --  Applicative monoids

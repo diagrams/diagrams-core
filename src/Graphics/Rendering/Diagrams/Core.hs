@@ -61,6 +61,7 @@ module Graphics.Rendering.Diagrams.Core
        , named
        , withName
        , freeze
+       , setBounds
 
          -- * Primtives
          -- $prim
@@ -111,12 +112,16 @@ import Data.Typeable
 -- | Monoidal annotations which travel up the diagram tree, i.e. which
 --   are aggregated from component diagrams to the whole:
 --
---   * functional bounding regions (see "Graphics.Rendering.Diagrams.Bounds")
+--   * functional bounds (see "Graphics.Rendering.Diagrams.Bounds").
+--     The bounds are \"forgetful\" meaning that at any point we can
+--     throw away the existing bounds and replace them with new ones;
+--     sometimes we want to consider a diagram as having different
+--     bounds unrelated to its \"natural\" bounds.
 --
 --   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
 --
 --   * query functions (see "Graphics.Rendering.Diagrams.Query")
-type UpAnnots v m = Bounds v ::: NameMap v ::: Query v m ::: Nil
+type UpAnnots v m = Forgetful (Bounds v) ::: NameMap v ::: Query v m ::: Nil
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -161,7 +166,12 @@ prims = (map . second) (wibble . toTuple) . flatten . unAD
 -- | Get the bounds of a diagram.
 bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
        => AnnDiagram b v m -> Bounds v
-bounds = getU' . unAD
+bounds = unForget . getU' . unAD
+
+-- | Replace the bounds of a diagram.
+setBounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid m)
+          => Bounds v -> AnnDiagram b v m -> AnnDiagram b v m
+setBounds = inAD . applyU . inj . Forgetful
 
 -- | Get the name map of a diagram.
 names :: HasLinearMap v => AnnDiagram b v m -> NameMap v
@@ -194,7 +204,7 @@ sample = runQuery . query
 -- | Create a diagram from a single primitive, along with a bounding
 --   region, name map, and query function.
 mkAD :: Prim b v -> Bounds v -> NameMap v -> Query v m -> AnnDiagram b v m
-mkAD p b n a = AD $ leaf (b ::: n ::: a ::: Nil) p
+mkAD p b n a = AD $ leaf (Normal b ::: n ::: a ::: Nil) p
 
 ------------------------------------------------------------
 --  Instances

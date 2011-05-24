@@ -150,7 +150,7 @@ fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
 fromLinear l1 l2 = Transformation l1 l2 zeroV
 
 ------------------------------------------------------------
---  The Transformable class  -----------------------------
+--  The Transformable class  -------------------------------
 ------------------------------------------------------------
 
 -- | 'HasLinearMap' is a poor man's class constraint synonym, just to
@@ -176,9 +176,15 @@ instance Transformable t => Transformable (M.Map k t) where
 instance HasLinearMap v => Transformable (NameMap v) where
   transform t (NameMap ns) = NameMap $ M.map (map (papply t)) ns
 
-
 instance HasLinearMap v => Transformable (Point v) where
   transform t p = papply t p
+
+instance Transformable m => Transformable (Forgetful m) where
+  transform = fmap . transform
+
+------------------------------------------------------------
+--  Generic transformations  -------------------------------
+------------------------------------------------------------
 
 -- | Create a translation.
 translation :: HasLinearMap v => v -> Transformation v
