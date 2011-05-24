@@ -137,16 +137,16 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
 ------------------------------------------------------------
 
 -- | Compute the point along the boundary in the given direction.
-boundary :: Boundable a => (V a) -> a -> Point (V a)
+boundary :: Boundable a => V a -> a -> Point (V a)
 boundary v a = P $ appBounds (getBounds a) v *^ v
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.
-diameter :: Boundable a => (V a) -> a -> Scalar (V a)
+diameter :: Boundable a => V a -> a -> Scalar (V a)
 diameter v a = f v ^+^ f (negateV v)
   where f = appBounds (getBounds a)
 
 -- | Compute the radius (1\/2 the diameter) of a boundable object
 --   along a particular vector.
-radius :: Boundable a => (V a) -> a -> Scalar (V a)
+radius :: Boundable a => V a -> a -> Scalar (V a)
 radius v a = 0.5 * diameter v a

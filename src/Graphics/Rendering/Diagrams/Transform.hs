@@ -88,11 +88,11 @@ f <-> g = linear f :-: linear g
 --   monoid under composition.
 instance HasLinearMap v => Monoid (v :-: v) where
   mempty = idL :-: idL
-  (f :-: f') `mappend` (g :-: g') = (f *.* g :-: g' *.* f')
+  (f :-: f') `mappend` (g :-: g') = f *.* g :-: g' *.* f'
 
 -- | Invert a linear map.
 linv :: (u :-: v) -> (v :-: u)
-linv (f :-: g) = (g :-: f)
+linv (f :-: g) = g :-: f
 
 -- | Apply a linear map to a vector.
 lapp :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -> v
@@ -165,19 +165,19 @@ class HasLinearMap (V t) => Transformable t where
   transform :: Transformation (V t) -> t -> t
 
 instance Transformable t => Transformable [t] where
-  transform t = map (transform t)
+  transform = map . transform
 
 instance (Transformable t, Ord t) => Transformable (S.Set t) where
-  transform t = S.map (transform t)
+  transform = S.map . transform
 
 instance Transformable t => Transformable (M.Map k t) where
-  transform t = M.map (transform t)
+  transform = M.map . transform
 
 instance HasLinearMap v => Transformable (NameMap v) where
   transform t (NameMap ns) = NameMap $ M.map (map (papply t)) ns
 
 instance HasLinearMap v => Transformable (Point v) where
-  transform t p = papply t p
+  transform = papply
 
 instance Transformable m => Transformable (Forgetful m) where
   transform = fmap . transform

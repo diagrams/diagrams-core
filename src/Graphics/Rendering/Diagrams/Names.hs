@@ -177,4 +177,4 @@ lookupN n (NameMap m)
   where n' = toName n
         (Name n1) `nameSuffixOf` (Name n2) = n1 `isSuffixOf` n2
         flatten [] = Nothing
-        flatten xs = Just . concat . map snd $ xs
+        flatten xs = Just . concatMap snd $ xs

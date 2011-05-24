@@ -6,7 +6,6 @@
            , ExistentialQuantification
            , ScopedTypeVariables
            , GeneralizedNewtypeDeriving
-           , StandaloneDeriving
            , DeriveDataTypeable
            , TypeOperators
            , OverlappingInstances
@@ -144,7 +143,7 @@ newtype AnnDiagram b v m
 -- | Lift a function on annotated trees to a function on diagrams.
 inAD :: (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)
          -> UDTree (UpAnnots v' m') (DownAnnots v') (Prim b' v'))
-     -> (AnnDiagram b v m -> AnnDiagram b' v' m')
+     -> AnnDiagram b v m -> AnnDiagram b' v' m'
 inAD f = AD . f . unAD
 
 type instance V (AnnDiagram b v m) = v
@@ -191,7 +190,7 @@ named = inAD . applyU . inj . fromNames . (:[]) . (,origin :: Point v)
 withName :: HasLinearMap v
          => Name -> (Point v -> AnnDiagram b v m -> AnnDiagram b v m)
          -> AnnDiagram b v m -> AnnDiagram b v m
-withName n f d = maybe id f (lookupN n (names d) >>= listToMaybe) $ d
+withName n f d = maybe id f (lookupN n (names d) >>= listToMaybe) d
 
 -- | Get the query function associated with a diagram.
 query :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Query v m
@@ -244,7 +243,7 @@ infixl 6 `atop`
 -- This is a bit ugly, but it will have to do for now...
 instance Functor (AnnDiagram b v) where
   fmap f = inAD (mapU g)
-    where g (b ::: n ::: a ::: Nil) = (b ::: n ::: fmap f a ::: Nil)
+    where g (b ::: n ::: a ::: Nil) = b ::: n ::: fmap f a ::: Nil
           g _ = error "impossible case in Functor (AnnDiagram b v) instance (g)"
 
 ---- Applicative

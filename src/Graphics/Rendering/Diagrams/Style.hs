@@ -111,7 +111,7 @@ inStyle f (Style s) = Style (f s)
 --   returned wrapped in @Just@; otherwise, @Nothing@ is returned.
 getAttr :: forall a. AttributeClass a => Style -> Maybe a
 getAttr (Style s) = M.lookup ty s >>= unwrapAttr
-  where ty = (show . typeOf $ (undefined :: a))
+  where ty = show . typeOf $ (undefined :: a)
   -- the unwrapAttr should never fail, since we maintain the invariant
   -- that attributes of type T are always stored with the key "T".
 

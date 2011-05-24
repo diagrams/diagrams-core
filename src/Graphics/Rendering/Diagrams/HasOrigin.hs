@@ -48,7 +48,7 @@ class VectorSpace (V t) => HasOrigin t where
   moveOriginTo :: Point (V t) -> t -> t
 
 -- | Move the local origin by a relative vector.
-moveOriginBy :: HasOrigin t => (V t) -> t -> t
+moveOriginBy :: HasOrigin t => V t -> t -> t
 moveOriginBy = moveOriginTo . P
 
 -- | Translate the object by the translation that sends the origin to
