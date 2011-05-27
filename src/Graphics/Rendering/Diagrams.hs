@@ -96,7 +96,7 @@ module Graphics.Rendering.Diagrams
        , prims
        , bounds, names, query, sample
 
-       , named, withName
+       , named, namePoint, withName
 
        , freeze, setBounds
 

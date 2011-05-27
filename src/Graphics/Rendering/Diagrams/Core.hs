@@ -57,8 +57,12 @@ module Graphics.Rendering.Diagrams.Core
        , atop
 
          -- ** Modifying diagrams
+         -- *** Names
        , named
+       , namePoint
        , withName
+
+         -- *** Other
        , freeze
        , setBounds
 
@@ -176,12 +180,19 @@ setBounds = inAD . applyU . inj . Forgetful
 names :: HasLinearMap v => AnnDiagram b v m -> NameMap v
 names = getU' . unAD
 
--- | Attach a name to a diagram.
+-- | Attach a name to (the local origin of) a diagram.
 named :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => n -> AnnDiagram b v m -> AnnDiagram b v m
-named = inAD . applyU . inj . fromNames . (:[]) . (,origin :: Point v)
+named = namePoint (const origin)
+
+-- | Attach a name to the given point in this diagram.
+namePoint :: forall v b n m.
+         ( IsName n
+         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+      => (AnnDiagram b v m -> Point v) -> n -> AnnDiagram b v m -> AnnDiagram b v m
+namePoint p n d = inAD (applyU . inj $ fromNames [(n,p d)]) d
 
 -- | Given a name and a diagram transformation indexed by a point,
 --   perform the transformation using the first point associated with
