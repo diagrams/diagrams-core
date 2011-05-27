@@ -132,6 +132,9 @@ class (InnerSpace (V b), OrderedField (Scalar (V b))) => Boundable b where
 instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
   getBounds = id
 
+instance (Boundable b) => Boundable [b] where
+  getBounds = mconcat . map getBounds
+
 ------------------------------------------------------------
 --  Computing with bounds
 ------------------------------------------------------------

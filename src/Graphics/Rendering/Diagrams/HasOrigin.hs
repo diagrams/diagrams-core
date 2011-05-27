@@ -66,3 +66,6 @@ moveTo = moveOriginBy . (origin .-.)
 
 instance VectorSpace v => HasOrigin (Point v) where
   moveOriginTo (P u) p = p .-^ u
+
+instance HasOrigin a => HasOrigin [a] where
+  moveOriginTo = map . moveOriginTo
