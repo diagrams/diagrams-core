@@ -42,6 +42,7 @@ import Graphics.Rendering.Diagrams.Util
 
 import Data.Typeable
 
+import Control.Arrow ((***))
 import Data.Monoid
 import qualified Data.Map as M
 
@@ -147,6 +148,12 @@ class HasStyle a where
 
 instance HasStyle Style where
   applyStyle = mappend
+
+instance HasStyle a => HasStyle [a] where
+  applyStyle = map . applyStyle
+
+instance (HasStyle a, HasStyle b) => HasStyle (a,b) where
+  applyStyle s = applyStyle s *** applyStyle s
 
 -- | Apply an attribute to an instance of 'HasStyle' (such as a
 --   diagram or a style).  @applyAttr@ has no effect if an attribute of
