@@ -68,7 +68,7 @@ module Graphics.Rendering.Diagrams
        , Attribute, mkAttr, unwrapAttr
 
        , Style, HasStyle(..)
-       , getAttr, setAttr, addAttr
+       , getAttr, setAttr, addAttr, combineAttr
        , applyAttr
 
          -- * Bounding regions

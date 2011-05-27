@@ -31,7 +31,7 @@ module Graphics.Rendering.Diagrams.Style
 
        , Style(..)
        , attrToStyle
-       , getAttr, setAttr, addAttr
+       , getAttr, setAttr, addAttr, combineAttr
 
        , HasStyle(..)
 
@@ -45,6 +45,8 @@ import Data.Typeable
 import Control.Arrow ((***))
 import Data.Monoid
 import qualified Data.Map as M
+import Data.Semigroup hiding ((<>))
+import qualified Data.Semigroup as SG
 
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------
@@ -67,8 +69,10 @@ import qualified Data.Map as M
 -- Haskell. <http://research.microsoft.com/apps/pubs/default.aspx?id=67968>.
 
 -- | Every attribute must be an instance of @AttributeClass@, which
---   simply guarantees a 'Typeable' constraint.
-class Typeable a => AttributeClass a where
+--   simply guarantees 'Typeable' and 'Semigroup' constraints.  The
+--   'Semigroup' instance for an attribute determines how it will combine
+--   with other attributes of the same type.
+class (Typeable a, Semigroup a) => AttributeClass a where
 
 -- | An existential wrapper type to hold attributes.
 data Attribute :: * where
@@ -85,6 +89,16 @@ mkAttr = Attribute
 --   is returned.
 unwrapAttr :: AttributeClass a => Attribute -> Maybe a
 unwrapAttr (Attribute a) = cast a
+
+-- | Attributes form a semigroup, where the semigroup operation simply
+--   returns the right-hand attribute when the types do not match, and
+--   otherwise uses the semigroup operation specific to the (matching)
+--   types.
+instance Semigroup Attribute where
+  (Attribute a1) <> a2 =
+    case unwrapAttr a2 of
+      Nothing  -> a2
+      Just a2' -> Attribute (a1 SG.<> a2')
 
 ------------------------------------------------------------
 --  Styles  ------------------------------------------------
@@ -130,12 +144,22 @@ setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (mkAttr a)
 addAttr :: AttributeClass a => a -> Style -> Style
 addAttr a s = attrToStyle a <> s
 
+-- | Add a new attribute to a style that does not already contain an
+--   attribute of this type, or combine it on the left with an existing
+--   attribute.
+combineAttr :: AttributeClass a => a -> Style -> Style
+combineAttr a s =
+  case getAttr s of
+    Nothing -> setAttr a s
+    Just a' -> setAttr (a SG.<> a') s
+
 -- | The empty style contains no attributes; composition of styles is
---   right-biased union; i.e. if the two styles contain attributes of
---   the same type, the one from the right is taken.
+--   a union of attributes; if the two styles have attributes of the
+--   same type they are combined according to their semigroup
+--   structure.
 instance Monoid Style where
   mempty = Style M.empty
-  (Style s1) `mappend` (Style s2) = Style $ s2 `M.union` s1
+  (Style s1) `mappend` (Style s2) = Style $ M.unionWith (SG.<>) s1 s2
 
 -- | Styles have no action on other monoids.
 instance Action Style m
@@ -156,8 +180,9 @@ instance (HasStyle a, HasStyle b) => HasStyle (a,b) where
   applyStyle s = applyStyle s *** applyStyle s
 
 -- | Apply an attribute to an instance of 'HasStyle' (such as a
---   diagram or a style).  @applyAttr@ has no effect if an attribute of
---   the same type already exists.
+--   diagram or a style).  If the object already has an attribute of
+--   the same type, the new attribute is combined on the left with the
+--   existing attribute, according to their semigroup structure.
 applyAttr :: (AttributeClass a, HasStyle d) => a -> d -> d
 applyAttr = applyStyle . attrToStyle
 
