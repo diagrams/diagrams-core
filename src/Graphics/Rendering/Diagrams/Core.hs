@@ -443,6 +443,21 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- See Note [backend token]
 
+-- | The "trivial backend" which does nothing.  Useful for fixing the
+--   type of diagrams whose rendering behavior we really don't care
+--   about (e.g. diagrams we are just going to use for bounding other
+--   diagrams, etc.)
+instance HasLinearMap v => Backend () v where
+  data Render  () v = UnitRender
+  type Result  () v = ()
+  data Options () v = UnitOptions
+  withStyle _ _ _ _ = UnitRender
+  doRender _ _ _    = ()
+
+instance Monoid (Render () v) where
+  mempty  = UnitRender
+  mappend = const (const UnitRender)
+
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
 class Backend b v => MultiBackend b v where
