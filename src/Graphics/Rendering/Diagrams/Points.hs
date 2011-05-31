@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies
            , DeriveFunctor
+           , DeriveDataTypeable
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -24,6 +25,9 @@ import qualified Data.AffineSpace as AS
 
 import Graphics.Rendering.Diagrams.V
 
+import Data.Data (Data)
+import Data.Typeable (Typeable)
+
 ------------------------------------------------------------
 --  Points  ------------------------------------------------
 ------------------------------------------------------------
@@ -34,7 +38,7 @@ import Graphics.Rendering.Diagrams.V
 --   unchanged.  Points are instances of the 'AffineSpace' class from
 --   "Data.AffineSpace".
 newtype Point v = P v
-  deriving (Eq, Ord, Read, Show, Functor)
+  deriving (Eq, Ord, Read, Show, Data, Typeable, Functor)
 
 type instance V (Point v) = v
 
