@@ -65,11 +65,11 @@ module Graphics.Rendering.Diagrams
          -- * Attributes and styles
 
        , AttributeClass
-       , Attribute, mkAttr, unwrapAttr
+       , Attribute, mkAttr, mkTAttr, unwrapAttr
 
        , Style, HasStyle(..)
-       , getAttr, setAttr, addAttr, combineAttr
-       , applyAttr
+       , getAttr, combineAttr
+       , applyAttr, applyTAttr
 
          -- * Bounding regions
 

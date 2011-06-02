@@ -25,13 +25,13 @@ module Graphics.Rendering.Diagrams.Style
          AttributeClass
        , Attribute(..)
        , mkAttr, mkTAttr, unwrapAttr
-       , applyAttr
+       , applyAttr, applyTAttr
 
          -- * Styles
          -- $style
 
        , Style(..)
-       , attrToStyle
+       , attrToStyle, tAttrToStyle
        , getAttr, setAttr, addAttr, combineAttr
 
        , HasStyle(..)
@@ -77,11 +77,10 @@ import qualified Data.Semigroup as SG
 --   with other attributes of the same type.
 class (Typeable a, Semigroup a) => AttributeClass a where
 
--- | An existential wrapper type to hold attributes.
+-- | An existential wrapper type to hold attributes.  Some attributes
+--   are affected by transformations and some are not.
 data Attribute v :: * where
   Attribute  :: AttributeClass a => a -> Attribute v
-
-  -- | Some attributes are affected by transformations.
   TAttribute :: (AttributeClass a, Transformable a, V a ~ v) => a -> Attribute v
 
 type instance V (Attribute v) = v
@@ -157,6 +156,10 @@ getAttr (Style s) = M.lookup ty s >>= unwrapAttr
 attrToStyle :: forall a v. AttributeClass a => a -> Style v
 attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a))
 
+-- | Create a style from a single transformable attribute.
+tAttrToStyle :: forall a v. (AttributeClass a, Transformable a, V a ~ v) => a -> Style v
+tAttrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkTAttr a))
+
 -- | Add a new attribute to a style, or replace the old attribute of
 --   the same type if one exists.
 setAttr :: forall a v. AttributeClass a => a -> Style v -> Style v
@@ -212,3 +215,10 @@ instance HasStyle a => HasStyle [a] where
 applyAttr :: (AttributeClass a, HasStyle d) => a -> d -> d
 applyAttr = applyStyle . attrToStyle
 
+-- | Apply a transformable attribute to an instance of 'HasStyle'
+--   (such as a diagram or a style).  If the object already has an
+--   attribute of the same type, the new attribute is combined on the
+--   left with the existing attribute, according to their semigroup
+--   structure.
+applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, HasStyle d) => a -> d -> d
+applyTAttr = applyStyle . tAttrToStyle
