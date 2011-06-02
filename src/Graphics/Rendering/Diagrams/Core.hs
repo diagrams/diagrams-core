@@ -136,7 +136,7 @@ type UpAnnots v m = Forgetful (Bounds v) ::: NameMap v ::: Query v m ::: Nil
 --   * styles (see "Graphics.Rendering.Diagrams.Style")
 --
 --   * names (see "Graphics.Rendering.Diagrams.Names")
-type DownAnnots v = Split (Transformation v) ::: Style ::: AM [] Name ::: Nil
+type DownAnnots v = Split (Transformation v) ::: Style v ::: AM [] Name ::: Nil
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.
@@ -162,7 +162,7 @@ type Diagram b v = AnnDiagram b v Any
 -- | Extract a list of primitives from a diagram, together with their
 --   associated transformations and styles.
 prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => AnnDiagram b v m -> [(Prim b v, (Split (Transformation v), Style))]
+      => AnnDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
 prims = (map . second) (wibble . toTuple) . flatten . unAD
   where wibble (t,(s,_)) = (t,s)
 
@@ -402,7 +402,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
-                 -> Style      -- ^ Style to use
+                 -> Style v    -- ^ Style to use
                  -> Transformation v  -- ^ Transformation to be applied to the style
                  -> Render b v -- ^ Rendering operation to run
                  -> Render b v -- ^ Rendering operation using the style locally
@@ -433,7 +433,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
             => b -> Options b v -> AnnDiagram b v m -> Result b v
   renderDia b opts =
     doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
-      where renderOne :: (Prim b v, (Split (Transformation v), Style))
+      where renderOne :: (Prim b v, (Split (Transformation v), Style v))
                       -> Render b v
             renderOne (p, (M t,      s))
               = withStyle b s mempty (render b (transform t p))
