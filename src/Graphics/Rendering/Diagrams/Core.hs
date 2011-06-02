@@ -136,7 +136,7 @@ type UpAnnots v m = Forgetful (Bounds v) ::: NameMap v ::: Query v m ::: Nil
 --   * styles (see "Graphics.Rendering.Diagrams.Style")
 --
 --   * names (see "Graphics.Rendering.Diagrams.Names")
-type DownAnnots v = Split (Transformation v) ::: Style v ::: AM [] Name ::: Nil
+type DownAnnots v = (Split (Transformation v) :+: Style v) ::: AM [] Name ::: Nil
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.
@@ -163,8 +163,7 @@ type Diagram b v = AnnDiagram b v Any
 --   associated transformations and styles.
 prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => AnnDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = (map . second) (wibble . toTuple) . flatten . unAD
-  where wibble (t,(s,_)) = (t,s)
+prims = (map . second) (untangle . fst . toTuple) . flatten . unAD
 
 -- | Get the bounds of a diagram.
 bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
@@ -279,6 +278,7 @@ instance Functor (AnnDiagram b v) where
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => HasStyle (AnnDiagram b v m) where
   applyStyle = inAD . applyD . inj
+             . (inR :: Style v -> Split (Transformation v) :+: Style v)
 
 -- | By default, diagram attributes are not affected by
 --   transformations.  This means, for example, that @lw 0.01 circle@
@@ -298,7 +298,9 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 --   transformations.
 freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
        => AnnDiagram b v m -> AnnDiagram b v m
-freeze = inAD . applyD . inj $ (split :: Split (Transformation v))
+freeze = inAD . applyD . inj
+       . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
+       $ split
 
 ---- Boundable
 
@@ -321,7 +323,9 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
       => Transformable (AnnDiagram b v m) where
-  transform = inAD . applyD . inj . M
+  transform = inAD . applyD . inj
+            . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
+            . M
 
 ---- Qualifiable
 
