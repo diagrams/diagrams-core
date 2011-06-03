@@ -3,3 +3,10 @@
 
 0.1.1: 18 May 2011
   * link to new website
+
+0.2: 3 June 2011
+  * bounding regions can now be overridden
+  * new namePoint function for more flexibly assigning names to arbitrary points
+  * add HasStyle, Boundable, and HasOrigin instances for lists
+  * add a "trivial backend"
+  * transformable attributes
