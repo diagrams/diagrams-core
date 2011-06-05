@@ -420,7 +420,8 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   -- | 'adjustDia' allows the backend to make adjustments to the final
   --   diagram (e.g. to adjust the size based on the options) before
   --   rendering it.  A default implementation is provided which makes
-  --   no adjustments.
+  --   no adjustments.  See the diagrams-lib package for other useful
+  --   implementations.
   adjustDia :: Monoid m => b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
   adjustDia _ _ d = d
 
