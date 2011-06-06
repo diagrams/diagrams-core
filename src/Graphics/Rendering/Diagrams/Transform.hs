@@ -53,6 +53,7 @@ module Graphics.Rendering.Diagrams.Transform
 
 import Data.AdditiveGroup
 import Data.VectorSpace
+import Data.AffineSpace ((.-.))
 import Data.LinearMap
 import Data.Basis
 import Data.MemoTrie
@@ -66,6 +67,7 @@ import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Util
+import Graphics.Rendering.Diagrams.HasOrigin
 
 ------------------------------------------------------------
 --  Transformations  ---------------------------------------
@@ -106,6 +108,8 @@ lapp (f :-: _) = lapply f
 --   linear map, its /transpose/, and a vector representing a
 --   translation component.
 data Transformation v = Transformation (v :-: v) (v :-: v) v
+
+type instance V (Transformation v) = v
 
 -- | Invert a transformation.
 inv :: HasLinearMap v => Transformation v -> Transformation v
@@ -163,6 +167,12 @@ class HasLinearMap (V t) => Transformable t where
 
   -- | Apply a transformation to an object.
   transform :: Transformation (V t) -> t -> t
+
+instance HasLinearMap v => Transformable (Transformation v) where
+  transform t1 t2 = t1 <> t2
+
+instance HasLinearMap v => HasOrigin (Transformation v) where
+  moveOriginTo p = translate (origin .-. p)
 
 instance Transformable t => Transformable [t] where
   transform = map . transform
