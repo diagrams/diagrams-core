@@ -23,7 +23,7 @@ module Graphics.Rendering.Diagrams.UDTree
        , leaf, branchD, branch
 
          -- * Modifying UD-trees
-       , applyD, applyU, mapU
+       , applyD, applyUpre, applyUpost, mapU
 
          -- * Accessors and destructors
        , getU, getU', foldUD, flatten
@@ -49,13 +49,13 @@ import Graphics.Rendering.Diagrams.Util
 --     all the @d@ annotations along the path from the root to the leaf
 --     node.
 --
---   * The @u@ annotation at an internal node is equal to @v
---     ``mappend`` (mconcat us)@ for some value @v@ (possibly
---     'mempty'), where @us@ is the list (in left-right order) of the
---     @u@ annotations on the immediate child nodes of the given node.
---     Intuitively, we are \"caching\" the @mconcat@ of @u@
---     annotations from the leaves up, except that at any point we may
---     insert \"extra\" information.
+--   * The @u@ annotation at an internal node is equal to @v1
+--     ``mappend`` (mconcat us) ``mappend`` v2@ for some values @v1@
+--     and @v2@ (possibly 'mempty'), where @us@ is the list (in
+--     left-right order) of the @u@ annotations on the immediate child
+--     nodes of the given node.  Intuitively, we are \"caching\" the
+--     @mconcat@ of @u@ annotations from the leaves up, except that at
+--     any point we may insert \"extra\" information.
 --
 --   In addition, @d@ may have an /action/ on @u@ (see the 'Action'
 --   type class, defined in "Graphics.Rendering.Diagrams.Monoids"), in
@@ -115,9 +115,15 @@ applyD d (Branch u ds ts) = Branch u (d : ds) ts
 
 -- | Add a @u@ annotation to the root, combining it (on the left) with
 --   the existing @u@ annotation.
-applyU :: (Monoid u, Action d u) => u -> UDTree u d a -> UDTree u d a
-applyU u' (Leaf u a) = Leaf (u' <> u) a
-applyU u' b          = Branch (u' <> getU b) [] [b]
+applyUpre :: (Monoid u, Action d u) => u -> UDTree u d a -> UDTree u d a
+applyUpre u' (Leaf u a) = Leaf (u' <> u) a
+applyUpre u' b          = Branch (u' <> getU b) [] [b]
+
+-- | Add a @u@ annotation to the root, combining it (on the right) with
+--   the existing @u@ annotation.
+applyUpost :: (Monoid u, Action d u) => u -> UDTree u d a -> UDTree u d a
+applyUpost u' (Leaf u a) = Leaf (u <> u') a
+applyUpost u' b          = Branch (getU b <> u') [] [b]
 
 -- | Map a function over all the @u@ annotations.  The function must
 --   be a monoid homomorphism, and must commute with the action of @d@

@@ -124,7 +124,7 @@ import Data.Typeable
 --   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
 --
 --   * query functions (see "Graphics.Rendering.Diagrams.Query")
-type UpAnnots v m = Forgetful (Bounds v) ::: NameMap v ::: Query v m ::: Nil
+type UpAnnots v m = Deletable (Bounds v) ::: NameMap v ::: Query v m ::: Nil
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -168,12 +168,15 @@ prims = (map . second) (untangle . fst . toTuple) . flatten . unAD
 -- | Get the bounds of a diagram.
 bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
        => AnnDiagram b v m -> Bounds v
-bounds = unForget . getU' . unAD
+bounds = unDelete . getU' . unAD
 
 -- | Replace the bounds of a diagram.
-setBounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid m)
+setBounds :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid m)
           => Bounds v -> AnnDiagram b v m -> AnnDiagram b v m
-setBounds = inAD . applyU . inj . Forgetful
+setBounds b = inAD ( applyUpre (inj . toDeletable $ b)
+                   . applyUpre (inj (deleteL :: Deletable (Bounds v)))
+                   . applyUpost (inj (deleteR :: Deletable (Bounds v)))
+                   )
 
 -- | Get the name map of a diagram.
 names :: HasLinearMap v => AnnDiagram b v m -> NameMap v
@@ -191,7 +194,7 @@ namePoint :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => (AnnDiagram b v m -> Point v) -> n -> AnnDiagram b v m -> AnnDiagram b v m
-namePoint p n d = inAD (applyU . inj $ fromNames [(n,p d)]) d
+namePoint p n d = inAD (applyUpre . inj $ fromNames [(n,p d)]) d
 
 -- | Given a name and a diagram transformation indexed by a point,
 --   perform the transformation using the first point associated with
@@ -213,7 +216,7 @@ sample = runQuery . query
 -- | Create a diagram from a single primitive, along with a bounding
 --   region, name map, and query function.
 mkAD :: Prim b v -> Bounds v -> NameMap v -> Query v m -> AnnDiagram b v m
-mkAD p b n a = AD $ leaf (Normal b ::: n ::: a ::: Nil) p
+mkAD p b n a = AD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
 
 ------------------------------------------------------------
 --  Instances
