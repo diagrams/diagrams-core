@@ -209,7 +209,12 @@ withName :: ( AdditiveGroup (Scalar v), Floating (Scalar v)
          -> AnnDiagram b v m -> AnnDiagram b v m
 withName n f d = maybe id (f . fst) (lookupN n (names d) >>= listToMaybe) d
 
-withAName a = withName . toName $ a
+-- | Like 'withName', but taking an atomic name as an argument.
+withAName :: ( Atomic a, AdditiveGroup (Scalar v), Floating (Scalar v)
+             , InnerSpace v, HasLinearMap v)
+          => a -> (Point v -> AnnDiagram b v m -> AnnDiagram b v m)
+          -> AnnDiagram b v m -> AnnDiagram b v m
+withAName = withName . toName
 
 -- | Given a name and a diagram transformation indexed by a point and
 --   a bounding function, perform the transformation using the first
@@ -222,6 +227,11 @@ withNameB :: ( AdditiveGroup (Scalar v), Floating (Scalar v)
           -> AnnDiagram b v m -> AnnDiagram b v m
 withNameB n f d = maybe id (uncurry f) (lookupN n (names d) >>= listToMaybe) d
 
+-- | Like 'withNameB', but taking an atomic name as an argument.
+withANameB :: ( Atomic a, AdditiveGroup (Scalar v), Floating (Scalar v)
+              , InnerSpace v, HasLinearMap v)
+           => a -> (Point v -> Bounds v -> AnnDiagram b v m -> AnnDiagram b v m)
+           -> AnnDiagram b v m -> AnnDiagram b v m
 withANameB a = withNameB . toName $ a
 
 -- | Get the query function associated with a diagram.
