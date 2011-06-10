@@ -53,11 +53,17 @@ module Graphics.Rendering.Diagrams
 
        , Transformable(..)
 
+         -- ** Translational invariance
+
+       , TransInv(..)
+
          -- * Names
 
-       , Name, IsName(..), Qualifiable(..), (||>)
+       , Atomic(..), AName
+       , Name, toName
+       , Qualifiable(..), (.>), (||>)
        , NameMap
-       , fromNames
+       , fromNames, fromNamesB
        , rememberAs
 
        , lookupN
@@ -75,7 +81,7 @@ module Graphics.Rendering.Diagrams
 
        , Bounds(..)
        , Boundable(..)
-       , boundary
+       , boundaryV, boundary, boundaryFrom
        , diameter, radius
 
          -- * Things with local origins
@@ -96,7 +102,9 @@ module Graphics.Rendering.Diagrams
        , prims
        , bounds, names, query, sample
 
-       , named, namePoint, withName
+       , named, namePoint
+       , withName, withAName
+       , withNameB, withANameB
 
        , freeze, setBounds
 
@@ -125,5 +133,3 @@ import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Style
 import Graphics.Rendering.Diagrams.Core
-
-

@@ -4,6 +4,7 @@
            , UndecidableInstances
            , TypeFamilies
            , MultiParamTypeClasses
+           , GeneralizedNewtypeDeriving
   #-}
 
 -----------------------------------------------------------------------------
@@ -41,6 +42,10 @@ module Graphics.Rendering.Diagrams.Transform
        , HasLinearMap
        , Transformable(..)
 
+         -- * Translational invariance
+
+       , TransInv(..)
+
          -- * Vector space independent transformations
          -- | Most transformations are specific to a particular vector
          --   space, but a few can be defined generically over any
@@ -65,7 +70,6 @@ import qualified Data.Set as S
 import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Util
 import Graphics.Rendering.Diagrams.HasOrigin
 
@@ -183,9 +187,6 @@ instance (Transformable t, Ord t) => Transformable (S.Set t) where
 instance Transformable t => Transformable (M.Map k t) where
   transform = M.map . transform
 
-instance HasLinearMap v => Transformable (NameMap v) where
-  transform t (NameMap ns) = NameMap $ M.map (map (papply t)) ns
-
 instance HasLinearMap v => Transformable (Point v) where
   transform = papply
 
@@ -194,6 +195,22 @@ instance Transformable m => Transformable (Forgetful m) where
 
 instance Transformable m => Transformable (Deletable m) where
   transform = fmap . transform
+
+------------------------------------------------------------
+--  Translational invariance  ------------------------------
+------------------------------------------------------------
+
+--- XXX comment me
+newtype TransInv t = TransInv { unTransInv :: t }
+  deriving (Show, Monoid)
+
+type instance V (TransInv t) = V t
+
+instance VectorSpace (V t) => HasOrigin (TransInv t) where
+  moveOriginTo = const id
+
+instance Transformable t => Transformable (TransInv t) where
+  transform tr (TransInv t) = TransInv (translate (negateV (transl tr)) . transform tr $ t)
 
 ------------------------------------------------------------
 --  Generic transformations  -------------------------------

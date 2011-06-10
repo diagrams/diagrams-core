@@ -60,7 +60,8 @@ module Graphics.Rendering.Diagrams.Core
          -- *** Names
        , named
        , namePoint
-       , withName
+       , withName, withAName
+       , withNameB, withANameB
 
          -- *** Other
        , freeze
@@ -101,7 +102,7 @@ import Data.AffineSpace ((.-.))
 
 import Data.Maybe (listToMaybe)
 import Data.Monoid
-import Control.Arrow (second)
+import Control.Arrow (second, (&&&))
 
 import Data.Typeable
 
@@ -179,31 +180,49 @@ setBounds b = inAD ( applyUpre (inj . toDeletable $ b)
                    )
 
 -- | Get the name map of a diagram.
-names :: HasLinearMap v => AnnDiagram b v m -> NameMap v
+names :: (AdditiveGroup (Scalar v), Floating (Scalar v), InnerSpace v, HasLinearMap v)
+       => AnnDiagram b v m -> NameMap v
 names = getU' . unAD
 
--- | Attach a name to (the local origin of) a diagram.
+-- | Attach an atomic name to (the local origin of) a diagram.
 named :: forall v b n m.
-         ( IsName n
+         ( Atomic n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => n -> AnnDiagram b v m -> AnnDiagram b v m
-named = namePoint (const origin)
+named = namePoint (const origin &&& bounds)
 
--- | Attach a name to the given point in this diagram.
+-- | Attach an atomic name to a certain point and bounding function,
+--   computed from the given diagram.
 namePoint :: forall v b n m.
-         ( IsName n
+         ( Atomic n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => (AnnDiagram b v m -> Point v) -> n -> AnnDiagram b v m -> AnnDiagram b v m
-namePoint p n d = inAD (applyUpre . inj $ fromNames [(n,p d)]) d
+      => (AnnDiagram b v m -> (Point v, Bounds v)) -> n -> AnnDiagram b v m -> AnnDiagram b v m
+namePoint p n d = inAD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
 -- | Given a name and a diagram transformation indexed by a point,
 --   perform the transformation using the first point associated with
---   the name, or perform the identity transformation if the name does
---   not exist.
-withName :: HasLinearMap v
+--   (some qualification of) the name, or perform the identity
+--   transformation if the name does not exist.
+withName :: ( AdditiveGroup (Scalar v), Floating (Scalar v)
+            , InnerSpace v, HasLinearMap v)
          => Name -> (Point v -> AnnDiagram b v m -> AnnDiagram b v m)
          -> AnnDiagram b v m -> AnnDiagram b v m
-withName n f d = maybe id f (lookupN n (names d) >>= listToMaybe) d
+withName n f d = maybe id (f . fst) (lookupN n (names d) >>= listToMaybe) d
+
+withAName a = withName . toName $ a
+
+-- | Given a name and a diagram transformation indexed by a point and
+--   a bounding function, perform the transformation using the first
+--   (point, bounding function) pair associated with (some
+--   qualification of) the name, or perform the identity
+--   transformation if the name does not exist.
+withNameB :: ( AdditiveGroup (Scalar v), Floating (Scalar v)
+             , InnerSpace v, HasLinearMap v)
+          => Name -> (Point v -> Bounds v -> AnnDiagram b v m -> AnnDiagram b v m)
+          -> AnnDiagram b v m -> AnnDiagram b v m
+withNameB n f d = maybe id (uncurry f) (lookupN n (names d) >>= listToMaybe) d
+
+withANameB a = withNameB . toName $ a
 
 -- | Get the query function associated with a diagram.
 query :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Query v m

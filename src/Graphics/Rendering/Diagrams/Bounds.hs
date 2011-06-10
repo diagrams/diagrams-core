@@ -28,7 +28,7 @@ module Graphics.Rendering.Diagrams.Bounds
          -- * Utility functions
        , diameter
        , radius
-       , boundary
+       , boundaryV, boundary, boundaryFrom
 
          -- * Miscellaneous
        , OrderedField
@@ -40,6 +40,7 @@ import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.HasOrigin
 
 import Data.VectorSpace
+import Data.AffineSpace ((.+^))
 
 import Data.Monoid
 import Control.Applicative ((<$>), (<*>))
@@ -91,6 +92,9 @@ instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
          => HasOrigin (Bounds v) where
   moveOriginTo (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
+instance Show (Bounds v) where
+  show _ = "<bounds>"
+
 ------------------------------------------------------------
 --  Transforming bounding regions  -------------------------
 ------------------------------------------------------------
@@ -139,9 +143,25 @@ instance (Boundable b) => Boundable [b] where
 --  Computing with bounds
 ------------------------------------------------------------
 
--- | Compute the point along the boundary in the given direction.
+-- | Compute the vector from the local origin to a separating
+-- hyperplan in the given direction.
+boundaryV :: Boundable a => V a -> a -> V a
+boundaryV v a = appBounds (getBounds a) v *^ v
+
+-- | Compute the point on the boundary in the given direction.
+--   Caution: this point is only valid in the local vector space of
+--   the @Boundable@ object.  If you want to compute boundary points
+--   of things which are subparts of a larger diagram (and hence
+--   embedded within a different vector space), you must use
+--   'boundaryFrom' instead.
 boundary :: Boundable a => V a -> a -> Point (V a)
-boundary v a = P $ appBounds (getBounds a) v *^ v
+boundary v a = P $ boundaryV v a
+
+-- | @boundaryFrom o v a@ computes the point along the boundary of @a@
+--   in the direction of @v@, assuming that @a@'s local origin is
+--   located at the point @o@ of the vector space we care about.
+boundaryFrom :: Boundable a => Point (V a) -> V a -> a -> Point (V a)
+boundaryFrom o v a = o .+^ boundaryV v a
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.
