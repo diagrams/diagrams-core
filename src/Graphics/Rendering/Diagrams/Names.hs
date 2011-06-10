@@ -149,10 +149,16 @@ Name as ||> q = foldr (|>) q as
 --   origins) and bounding functions.  There can be multiple (point,
 --   bounding function) pairs associated with each name.
 newtype NameMap v = NameMap (M.Map Name [(Point v, TransInv (Bounds v))])
+  deriving (Show)
+
 -- Note, in some sense it would be nicer to use Sets instead of a
 -- list, but then we would have to put Ord constraints on v
 -- everywhere. =P
-  deriving (Show)
+
+-- Note also that we wrap the bounds with TransInv.  This is because
+-- the base point of each bounding function should be thought of as
+-- the paired Point, *not* as the origin of the current vector space.
+-- In other words, the point gets translated "for both of them".
 
 type instance V (NameMap v) = v
 

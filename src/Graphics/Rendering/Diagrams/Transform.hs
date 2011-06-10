@@ -200,7 +200,10 @@ instance Transformable m => Transformable (Deletable m) where
 --  Translational invariance  ------------------------------
 ------------------------------------------------------------
 
---- XXX comment me
+-- | @TransInv@ is a wrapper which makes a transformable type
+--   translationally invariant; the translational component of
+--   transformations will no longer affect things wrapped in
+--   @TransInv@.
 newtype TransInv t = TransInv { unTransInv :: t }
   deriving (Show, Monoid)
 
