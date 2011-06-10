@@ -33,6 +33,8 @@ module Graphics.Rendering.Diagrams.Monoids
 
        , Forgetful(..), unForget, forget
 
+       , Deletable(..), unDelete, toDeletable, deleteL, deleteR
+
          -- * Applicative monoids
 
        , AM(..), inAM2
@@ -127,9 +129,13 @@ instance Action m n => Action (Split m) n where
 ------------------------------------------------------------
 
 -- $forget
--- Sometimes we want to be able to "forget" some information.  In
--- particular, we can introduce special @Forgetful@ values which cause
--- anything to their right to be forgotten.
+-- Sometimes we want to be able to "forget" some information.  We
+-- define two monoid transformers that allow forgetting information.
+-- @Forgetful@ introduces special values which cause anything to their
+-- right to be forgotten.  @Deletable@ introduces special "left and
+-- right bracket" elements which cause everything inside them to be
+-- forgotten.
+
 
 -- | A value of type @Forgetful m@ is either a \"normal\" value of
 --   type @m@, which combines normally with other normal values, or a
@@ -166,6 +172,57 @@ instance Action m n => Action (Forgetful m) n where
   act (Forgetful m) n = act m n
 
 type instance V (Forgetful m) = V m
+
+-- | If @m@ is a 'Monoid', then @Deletable m@ (intuitively speaking)
+--   adds two distinguished new elements L and R, such that an
+--   occurrence of L \"deletes\" everything from it to the next R. For
+--   example,
+--
+--   > abcLdefRgh == abcgh
+--
+--   This is all you really need to know to /use/ @Deletable m@
+--   values; to understand the actual implementation, read on.
+--
+--   To properly deal with nesting and associativity we need to be
+--   able to assign meanings to things like @LL@, @RL@, and so on. (We
+--   cannot just define, say, @LL == L@, since then @(LL)R == LR ==
+--   id@ but @L(LR) == Lid == L@.)  Formally, elements of @Deletable
+--   m@ are triples of the form (r, m, l) representing words @R^r m
+--   L^l@.  When combining two triples (r1, m1, l1) and (r2, m2, l2)
+--   there are three cases:
+--
+--   * If l1 == r2 then the Ls from the left and Rs from the right
+--     exactly cancel, and we are left with (r1, m1 \<\> m2, l2).
+--
+--   * If l1 < r2 then all of the Ls cancel with some of the Rs, but
+--     m1 is still inside the remaining Rs and is deleted, yielding (r1
+--     + r2 - l1, m2, l2)
+--
+--   * The remaining case is symmetric with the second.
+
+data Deletable m = Deletable Int m Int
+  deriving Functor
+
+type instance V (Deletable m) = V m
+
+unDelete :: Deletable m -> m
+unDelete (Deletable _ m _) = m
+
+instance Monoid m => Monoid (Deletable m) where
+  mempty = Deletable 0 mempty 0
+  (Deletable r1 m1 l1) `mappend` (Deletable r2 m2 l2)
+    | l1 == r2  = Deletable r1 (m1 `mappend` m2) l2
+    | l1 <  r2  = Deletable (r1 + r2 - l1) m2 l2
+    | otherwise = Deletable r1 m1 (l2 + l1 - r2)
+
+toDeletable :: m -> Deletable m
+toDeletable m = Deletable 0 m 0
+
+deleteL :: Monoid m => Deletable m
+deleteL = Deletable 0 mempty 1
+
+deleteR :: Monoid m => Deletable m
+deleteR = Deletable 1 mempty 0
 
 ------------------------------------------------------------
 --  Applicative monoids

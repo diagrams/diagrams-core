@@ -192,6 +192,9 @@ instance HasLinearMap v => Transformable (Point v) where
 instance Transformable m => Transformable (Forgetful m) where
   transform = fmap . transform
 
+instance Transformable m => Transformable (Deletable m) where
+  transform = fmap . transform
+
 ------------------------------------------------------------
 --  Generic transformations  -------------------------------
 ------------------------------------------------------------
