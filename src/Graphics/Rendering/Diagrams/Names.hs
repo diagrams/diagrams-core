@@ -75,7 +75,12 @@ class (Typeable a, Ord a, Show a) => Atomic a where
   toAName :: a -> AName
   toAName = AName
 
+instance Atomic ()
+instance Atomic Bool
+instance Atomic Char
 instance Atomic Int
+instance Atomic Float
+instance Atomic Double
 instance Atomic Integer
 instance Atomic String
 instance Atomic a => Atomic [a]
