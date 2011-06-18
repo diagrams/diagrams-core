@@ -10,3 +10,11 @@
   * add HasStyle, Boundable, and HasOrigin instances for lists
   * add a "trivial backend"
   * transformable attributes
+
+0.3: 18 June 2011
+  * big overhaul of name maps:
+    - allow arbitrary types as atomic names
+    - carry along bounding functions as well as names in NameMaps
+    - additional functions for querying information associated with names
+  * fix for issue #34 (fix behavior of setBounds)
+  * Transformable and HasOrigin instances for Transformations
