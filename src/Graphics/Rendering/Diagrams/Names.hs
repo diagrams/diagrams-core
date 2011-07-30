@@ -133,7 +133,7 @@ instance Qualifiable Name where
   a |> (Name as) = Name (toAName a : as)
 
 -- | Convenient operator for writing complete names in the form @a1 |>
---   a2 |> a3 ||> a4@.  In particular, @a1 .> a2@ is equivalent to
+--   a2 |> a3 .> a4@.  In particular, @a1 .> a2@ is equivalent to
 --   @a1 |> toName a2@.
 (.>) :: (Atomic a1, Atomic a2) => a1 -> a2 -> Name
 a1 .> a2 = a1 |> toName a2
