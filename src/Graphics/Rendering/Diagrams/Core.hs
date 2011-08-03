@@ -60,8 +60,9 @@ module Graphics.Rendering.Diagrams.Core
          -- *** Names
        , named
        , namePoint
-       , withName, withAName
-       , withNameB, withANameB
+       , withName
+       , withNameAll
+       , withNames
 
          -- *** Other
        , freeze
@@ -100,8 +101,9 @@ import Graphics.Rendering.Diagrams.Util
 import Data.VectorSpace
 import Data.AffineSpace ((.-.))
 
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, fromMaybe)
 import Data.Monoid
+import qualified Data.Traversable as T
 import Control.Arrow (second, (&&&))
 
 import Data.Typeable
@@ -186,7 +188,7 @@ names = getU' . unAD
 
 -- | Attach an atomic name to (the local origin of) a diagram.
 named :: forall v b n m.
-         ( Atomic n
+         ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => n -> AnnDiagram b v m -> AnnDiagram b v m
 named = namePoint (const origin &&& bounds)
@@ -194,45 +196,43 @@ named = namePoint (const origin &&& bounds)
 -- | Attach an atomic name to a certain point and bounding function,
 --   computed from the given diagram.
 namePoint :: forall v b n m.
-         ( Atomic n
+         ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => (AnnDiagram b v m -> (Point v, Bounds v)) -> n -> AnnDiagram b v m -> AnnDiagram b v m
 namePoint p n d = inAD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
--- | Given a name and a diagram transformation indexed by a point,
---   perform the transformation using the first point associated with
---   (some qualification of) the name, or perform the identity
---   transformation if the name does not exist.
-withName :: ( AdditiveGroup (Scalar v), Floating (Scalar v)
-            , InnerSpace v, HasLinearMap v)
-         => Name -> (Point v -> AnnDiagram b v m -> AnnDiagram b v m)
-         -> AnnDiagram b v m -> AnnDiagram b v m
-withName n f d = maybe id (f . fst) (lookupN n (names d) >>= listToMaybe) d
-
--- | Like 'withName', but taking an atomic name as an argument.
-withAName :: ( Atomic a, AdditiveGroup (Scalar v), Floating (Scalar v)
-             , InnerSpace v, HasLinearMap v)
-          => a -> (Point v -> AnnDiagram b v m -> AnnDiagram b v m)
-          -> AnnDiagram b v m -> AnnDiagram b v m
-withAName = withName . toName
-
 -- | Given a name and a diagram transformation indexed by a point and
---   a bounding function, perform the transformation using the first
---   (point, bounding function) pair associated with (some
+--   a bounding function, perform the transformation using the most
+--   recent (point, bounding function) pair associated with (some
 --   qualification of) the name, or perform the identity
 --   transformation if the name does not exist.
-withNameB :: ( AdditiveGroup (Scalar v), Floating (Scalar v)
-             , InnerSpace v, HasLinearMap v)
-          => Name -> (Point v -> Bounds v -> AnnDiagram b v m -> AnnDiagram b v m)
-          -> AnnDiagram b v m -> AnnDiagram b v m
-withNameB n f d = maybe id (uncurry f) (lookupN n (names d) >>= listToMaybe) d
+withName :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
+            , InnerSpace v, HasLinearMap v)
+         => n -> ((Point v, Bounds v) -> AnnDiagram b v m -> AnnDiagram b v m)
+         -> AnnDiagram b v m -> AnnDiagram b v m
+withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
 
--- | Like 'withNameB', but taking an atomic name as an argument.
-withANameB :: ( Atomic a, AdditiveGroup (Scalar v), Floating (Scalar v)
-              , InnerSpace v, HasLinearMap v)
-           => a -> (Point v -> Bounds v -> AnnDiagram b v m -> AnnDiagram b v m)
-           -> AnnDiagram b v m -> AnnDiagram b v m
-withANameB a = withNameB . toName $ a
+-- | Given a name and a diagram transformation indexed by a list of
+-- (point, bounding function) pairs, perform the transformation using
+-- the collection of all pairs associated with (some qualification of)
+-- the given name.
+withNameAll :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
+               , InnerSpace v, HasLinearMap v)
+            => n -> ([(Point v, Bounds v)] -> AnnDiagram b v m -> AnnDiagram b v m)
+            -> AnnDiagram b v m -> AnnDiagram b v m
+withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
+
+-- | Given a list of names and a diagram transformation indexed by a
+--   list of (point,bounding function) pairs, perform the
+--   transformation using the list of most recent pairs associated
+--   with (some qualification of) each name.  Do nothing (the identity
+--   transformation) if any of the names do not exist.
+withNames :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
+             , InnerSpace v, HasLinearMap v)
+          => [n] -> ([(Point v, Bounds v)] -> AnnDiagram b v m -> AnnDiagram b v m)
+          -> AnnDiagram b v m -> AnnDiagram b v m
+withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupN . toName) ns)) d
+  where nd = names d
 
 -- | Get the query function associated with a diagram.
 query :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Query v m

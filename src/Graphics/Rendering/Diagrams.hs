@@ -59,9 +59,9 @@ module Graphics.Rendering.Diagrams
 
          -- * Names
 
-       , Atomic(..), AName
-       , Name, toName
-       , Qualifiable(..), (.>), (||>)
+       , AName
+       , Name, IsName(..)
+       , Qualifiable(..), (.>)
        , NameMap
        , fromNames, fromNamesB
        , rememberAs
@@ -103,8 +103,9 @@ module Graphics.Rendering.Diagrams
        , bounds, names, query, sample
 
        , named, namePoint
-       , withName, withAName
-       , withNameB, withANameB
+       , withName
+       , withNameAll
+       , withNames
 
        , freeze, setBounds
 

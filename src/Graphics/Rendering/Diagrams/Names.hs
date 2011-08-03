@@ -128,7 +128,7 @@ class Qualifiable q where
   -- | Qualify with the given name.
   (|>) :: Atomic a => a -> q -> q
 
--- | Of course, names can be qualified.
+-- | Of course, names can be qualified using @(.>)@.
 instance Qualifiable Name where
   a |> (Name as) = Name (toAName a : as)
 
@@ -141,10 +141,8 @@ a1 .> a2 = a1 |> toName a2
 infixr 2 |>
 infixr 2 .>
 
--- | Qualify by an entire qualified name.  @(a1 |> a2 .> a3) ||> q@ is
---   equivalent to @a1 |> a2 |> a3 |> q@.
-(||>) :: Qualifiable q => Name -> q -> q
-Name as ||> q = foldr (|>) q as
+infixr 5 |>
+infixr 5 .>
 
 ------------------------------------------------------------
 --  Name maps  ---------------------------------------------
