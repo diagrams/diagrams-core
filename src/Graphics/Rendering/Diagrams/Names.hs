@@ -25,14 +25,13 @@
 module Graphics.Rendering.Diagrams.Names
        (-- * Names
         -- ** Atomic names
-         Atomic(..)
-       , AName(..)
+         AName(..)
 
         -- ** Names
-       , Name(..), toName
+       , Name(..), IsName(..), (.>)
 
         -- ** Qualifiable
-       , Qualifiable(..), (.>), (||>)
+       , Qualifiable(..)
 
          -- * Name maps
 
@@ -52,6 +51,7 @@ import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.Transform
+import Graphics.Rendering.Diagrams.Util
 
 import Data.VectorSpace
 
@@ -67,34 +67,34 @@ import Data.Typeable
 --  Names  -------------------------------------------------
 ------------------------------------------------------------
 
--- | @Atomic@ types are those which can be used as names.  They must
+-- | Class for those types which can be used as names.  They must
 --   support 'Typeable' (to facilitate extracting them from
 --   existential wrappers), 'Ord' (for comparison and efficient
 --   storage) and 'Show'.
-class (Typeable a, Ord a, Show a) => Atomic a where
-  toAName :: a -> AName
-  toAName = AName
+class (Typeable a, Ord a, Show a) => IsName a where
+  toName :: a -> Name
+  toName = Name . (:[]) . AName
 
-instance Atomic ()
-instance Atomic Bool
-instance Atomic Char
-instance Atomic Int
-instance Atomic Float
-instance Atomic Double
-instance Atomic Integer
-instance Atomic String
-instance Atomic a => Atomic [a]
-instance (Atomic a, Atomic b) => Atomic (a,b)
-instance (Atomic a, Atomic b, Atomic c) => Atomic (a,b,c)
+instance IsName ()
+instance IsName Bool
+instance IsName Char
+instance IsName Int
+instance IsName Float
+instance IsName Double
+instance IsName Integer
+instance IsName String
+instance IsName a => IsName [a]
+instance (IsName a, IsName b) => IsName (a,b)
+instance (IsName a, IsName b, IsName c) => IsName (a,b,c)
 
 -- | Atomic names.  @AName@ is just an existential wrapper around
---   'Atomic' values.
+--   things which are 'Typeable', 'Ord' and 'Show'.
 data AName where
-  AName :: Atomic a => a -> AName
+  AName :: (Typeable a, Ord a, Show a) => a -> AName
   deriving (Typeable)
 
-instance Atomic AName where
-  toAName = id
+instance IsName AName where
+  toName = Name . (:[])
 
 instance Eq AName where
   (AName a1) == (AName a2) =
@@ -113,33 +113,29 @@ instance Show AName where
 
 -- | A (qualified) name is a (possibly empty) sequence of atomic names.
 newtype Name = Name [AName]
-  deriving (Eq, Ord, Monoid)
+  deriving (Eq, Ord, Monoid, Typeable)
 
 instance Show Name where
-  show (Name ns) = intercalate " |> " $ map show ns
+  show (Name ns) = intercalate " .> " $ map show ns
 
--- | Convert an atomic name to a name.
-toName :: Atomic a => a -> Name
-toName = Name . (:[]) . toAName
+instance IsName Name where
+  toName = id
+
+-- | Convenient operator for writing qualified names with atomic
+--   components of different types.  Instead of writing @toName a1 <>
+--   toName a2 <> toName a3@ you can just write @a1 .> a2 .> a3@.
+(.>) :: (IsName a1, IsName a2) => a1 -> a2 -> Name
+a1 .> a2 = toName a1 <> toName a2
 
 -- | Instances of 'Qualifiable' are things which can be qualified by
---   prefixing them with an atomic name.
+--   prefixing them with a name.
 class Qualifiable q where
   -- | Qualify with the given name.
-  (|>) :: Atomic a => a -> q -> q
+  (|>) :: IsName a => a -> q -> q
 
 -- | Of course, names can be qualified using @(.>)@.
 instance Qualifiable Name where
-  a |> (Name as) = Name (toAName a : as)
-
--- | Convenient operator for writing complete names in the form @a1 |>
---   a2 |> a3 .> a4@.  In particular, @a1 .> a2@ is equivalent to
---   @a1 |> toName a2@.
-(.>) :: (Atomic a1, Atomic a2) => a1 -> a2 -> Name
-a1 .> a2 = a1 |> toName a2
-
-infixr 2 |>
-infixr 2 .>
+  (|>) = (.>)
 
 infixr 5 |>
 infixr 5 .>
@@ -190,22 +186,22 @@ instance Qualifiable (NameMap v) where
 
 -- | Construct a 'NameMap' from a list of (name, point) pairs.  The
 --   bounding functions will be empty.
-fromNames :: (AdditiveGroup (Scalar v), Ord (Scalar v), Atomic a)
+fromNames :: (AdditiveGroup (Scalar v), Ord (Scalar v), IsName a)
           => [(a, Point v)] -> NameMap v
 fromNames = NameMap . M.fromList . map (toName *** ((:[]) . (,mempty)))
 
 -- | Construct a 'NameMap' from a list of associations between names
 --   and (point, bounds) pairs.
-fromNamesB :: Atomic a => [(a, (Point v, Bounds v))] -> NameMap v
+fromNamesB :: IsName a => [(a, (Point v, Bounds v))] -> NameMap v
 fromNamesB = NameMap . M.fromList . map (toName *** (return . second TransInv))
 
 -- | Give a name to a point and bounding function.
-rememberAs :: Name -> Point v -> Bounds v -> NameMap v -> NameMap v
-rememberAs n p b (NameMap names) = NameMap $ M.insertWith (++) n [(p,TransInv b)] names
+rememberAs :: IsName a => a -> Point v -> Bounds v -> NameMap v -> NameMap v
+rememberAs n p b (NameMap names) = NameMap $ M.insertWith (++) (toName n) [(p,TransInv b)] names
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (NameMap v) where
-  act = (||>)
+  act = (|>)
 
 -- | Names don't act on anything else.
 instance Action Name a
@@ -217,11 +213,12 @@ instance Action Name a
 --   and bounding regions associated with that name.  If no names
 --   match the given name exactly, return all the points associated
 --   with names of which the given name is a suffix.
-lookupN :: Name -> NameMap v -> Maybe [(Point v, Bounds v)]
-lookupN n (NameMap m)
+lookupN :: IsName n => n -> NameMap v -> Maybe [(Point v, Bounds v)]
+lookupN a (NameMap m)
   = (fmap . map . second) unTransInv
     (M.lookup n m `mplus`
     (flatten . filter ((n `nameSuffixOf`) . fst) . M.assocs $ m))
   where (Name n1) `nameSuffixOf` (Name n2) = n1 `isSuffixOf` n2
         flatten [] = Nothing
         flatten xs = Just . concatMap snd $ xs
+        n = toName a
