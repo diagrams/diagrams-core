@@ -1,4 +1,6 @@
 {-# LANGUAGE TypeFamilies
+           , MultiParamTypeClasses
+           , FlexibleInstances
            , DeriveFunctor
            , DeriveDataTypeable
   #-}
@@ -25,6 +27,7 @@ import qualified Data.AffineSpace as AS
 
 import Graphics.Rendering.Diagrams.V
 
+import Control.Newtype
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 
@@ -41,6 +44,10 @@ newtype Point v = P v
   deriving (Eq, Ord, Read, Show, Data, Typeable, Functor)
 
 type instance V (Point v) = v
+
+instance Newtype (Point v) v where
+  pack = P
+  unpack (P v) = v
 
 -- | The origin of the vector space @v@.
 origin :: AdditiveGroup v => Point v
