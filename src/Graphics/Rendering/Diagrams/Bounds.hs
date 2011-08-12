@@ -144,7 +144,7 @@ instance (Boundable b) => Boundable [b] where
 ------------------------------------------------------------
 
 -- | Compute the vector from the local origin to a separating
--- hyperplan in the given direction.
+--   hyperplane in the given direction.
 boundaryV :: Boundable a => V a -> a -> V a
 boundaryV v a = appBounds (getBounds a) v *^ v
 
