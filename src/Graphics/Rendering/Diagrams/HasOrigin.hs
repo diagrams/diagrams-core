@@ -15,7 +15,7 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.HasOrigin
-       ( HasOrigin(..), moveOriginBy, moveTo
+       ( HasOrigin(..), moveOriginBy, moveTo, place
        ) where
 
 import Graphics.Rendering.Diagrams.V
@@ -63,6 +63,12 @@ moveOriginBy = moveOriginTo . P
 --   > moveTo (origin .^+ v) === translate v
 moveTo :: HasOrigin t => Point (V t) -> t -> t
 moveTo = moveOriginBy . (origin .-.)
+
+-- | A flipped variant of 'moveTo', provided for convenience.  Useful
+--   when writing a function which takes a point as an argument, such
+--   as when using 'withName' and friends.
+place :: HasOrigin t => t -> Point (V t) -> t
+place = flip moveTo
 
 instance VectorSpace v => HasOrigin (Point v) where
   moveOriginTo (P u) p = p .-^ u
