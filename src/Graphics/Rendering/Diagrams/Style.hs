@@ -203,7 +203,10 @@ instance HasStyle (Style v) where
   applyStyle = mappend
 
 instance HasStyle a => HasStyle [a] where
-  applyStyle = map . applyStyle
+  applyStyle = fmap . applyStyle
+
+instance HasStyle b => HasStyle (a -> b) where
+  applyStyle = fmap . applyStyle
 
 -- instance (HasStyle a, HasStyle b) => HasStyle (a,b) where
 --   applyStyle s = applyStyle s *** applyStyle s

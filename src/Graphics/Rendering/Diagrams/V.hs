@@ -28,6 +28,7 @@ import Data.Map
 --   associated vector space.
 type family V a :: *
 
+type instance V (a -> b)  = V b
 type instance V [a]       = V a
 type instance V (Set a)   = V a
 type instance V (Map k a) = V a
