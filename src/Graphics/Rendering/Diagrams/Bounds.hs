@@ -139,6 +139,9 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
 instance (Boundable b) => Boundable [b] where
   getBounds = mconcat . map getBounds
 
+instance (OrderedField (Scalar v), InnerSpace v) => Boundable (Point v) where
+  getBounds p = moveTo p mempty
+
 ------------------------------------------------------------
 --  Computing with bounds
 ------------------------------------------------------------
