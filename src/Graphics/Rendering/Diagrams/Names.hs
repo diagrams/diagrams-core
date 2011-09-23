@@ -122,8 +122,8 @@ instance IsName Name where
   toName = id
 
 -- | Convenient operator for writing qualified names with atomic
---   components of different types.  Instead of writing @toName a1 <>
---   toName a2 <> toName a3@ you can just write @a1 .> a2 .> a3@.
+--   components of different types.  Instead of writing @toName a1 \<\>
+--   toName a2 \<\> toName a3@ you can just write @a1 .> a2 .> a3@.
 (.>) :: (IsName a1, IsName a2) => a1 -> a2 -> Name
 a1 .> a2 = toName a1 <> toName a2
 
