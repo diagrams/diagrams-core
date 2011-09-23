@@ -129,11 +129,11 @@ instance Action m n => Action (Split m) n where
 ------------------------------------------------------------
 
 -- $forget
--- Sometimes we want to be able to "forget" some information.  We
+-- Sometimes we want to be able to \"forget\" some information.  We
 -- define two monoid transformers that allow forgetting information.
 -- @Forgetful@ introduces special values which cause anything to their
--- right to be forgotten.  @Deletable@ introduces special "left and
--- right bracket" elements which cause everything inside them to be
+-- right to be forgotten.  @Deletable@ introduces special \"left and
+-- right bracket\" elements which cause everything inside them to be
 -- forgotten.
 
 
@@ -147,6 +147,7 @@ data Forgetful m = Normal m
                  | Forgetful m
   deriving Functor
 
+-- | Project the wrapped value out of a `Forgetful` value.
 unForget :: Forgetful m -> m
 unForget (Normal m)    = m
 unForget (Forgetful m) = m
@@ -174,28 +175,28 @@ instance Action m n => Action (Forgetful m) n where
 type instance V (Forgetful m) = V m
 
 -- | If @m@ is a 'Monoid', then @Deletable m@ (intuitively speaking)
---   adds two distinguished new elements L and R, such that an
---   occurrence of L \"deletes\" everything from it to the next R. For
+--   adds two distinguished new elements @[@ and @]@, such that an
+--   occurrence of [ \"deletes\" everything from it to the next ]. For
 --   example,
 --
---   > abcLdefRgh == abcgh
+--   > abc[def]gh == abcgh
 --
 --   This is all you really need to know to /use/ @Deletable m@
 --   values; to understand the actual implementation, read on.
 --
 --   To properly deal with nesting and associativity we need to be
---   able to assign meanings to things like @LL@, @RL@, and so on. (We
---   cannot just define, say, @LL == L@, since then @(LL)R == LR ==
---   id@ but @L(LR) == Lid == L@.)  Formally, elements of @Deletable
---   m@ are triples of the form (r, m, l) representing words @R^r m
---   L^l@.  When combining two triples (r1, m1, l1) and (r2, m2, l2)
+--   able to assign meanings to things like @[[@, @][@, and so on. (We
+--   cannot just define, say, @[[ == [@, since then @([[)] == [] ==
+--   id@ but @[([]) == [id == [@.)  Formally, elements of @Deletable
+--   m@ are triples of the form (r, m, l) representing words @]^r m
+--   [^l@.  When combining two triples (r1, m1, l1) and (r2, m2, l2)
 --   there are three cases:
 --
---   * If l1 == r2 then the Ls from the left and Rs from the right
+--   * If l1 == r2 then the [s from the left and ]s from the right
 --     exactly cancel, and we are left with (r1, m1 \<\> m2, l2).
 --
---   * If l1 < r2 then all of the Ls cancel with some of the Rs, but
---     m1 is still inside the remaining Rs and is deleted, yielding (r1
+--   * If l1 < r2 then all of the [s cancel with some of the ]s, but
+--     m1 is still inside the remaining ]s and is deleted, yielding (r1
 --     + r2 - l1, m2, l2)
 --
 --   * The remaining case is symmetric with the second.
@@ -205,8 +206,17 @@ data Deletable m = Deletable Int m Int
 
 type instance V (Deletable m) = V m
 
+-- | Project the wrapped value out of a `Deletable` value.
 unDelete :: Deletable m -> m
 unDelete (Deletable _ m _) = m
+
+-- | Inject a value into a `Deletable` wrapper.  Satisfies the
+--   property
+--
+-- > unDelete . toDeletable === id
+--
+toDeletable :: m -> Deletable m
+toDeletable m = Deletable 0 m 0
 
 instance Monoid m => Monoid (Deletable m) where
   mempty = Deletable 0 mempty 0
@@ -215,12 +225,13 @@ instance Monoid m => Monoid (Deletable m) where
     | l1 <  r2  = Deletable (r1 + r2 - l1) m2 l2
     | otherwise = Deletable r1 m1 (l2 + l1 - r2)
 
-toDeletable :: m -> Deletable m
-toDeletable m = Deletable 0 m 0
-
+-- | A \"left bracket\", which causes everything between it and the
+--   next right bracket to be deleted.
 deleteL :: Monoid m => Deletable m
 deleteL = Deletable 0 mempty 1
 
+-- | A \"right bracket\", denoting the end of the section that should
+--   be deleted.
 deleteR :: Monoid m => Deletable m
 deleteR = Deletable 1 mempty 0
 
