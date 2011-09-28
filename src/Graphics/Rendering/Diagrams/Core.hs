@@ -48,6 +48,7 @@ module Graphics.Rendering.Diagrams.Core
          -- ** Extracting information
        , prims
        , bounds, names, query, sample
+       , value, resetValue, clearValue
 
          -- ** Combining diagrams
 
@@ -241,6 +242,25 @@ query = getU' . unAD
 -- | Sample a diagram's query function at a given point.
 sample :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Point v -> m
 sample = runQuery . query
+
+-- | Set the query value for 'True' points in a diagram (/i.e./ points
+--   "inside" the diagram); 'False' points will be set to 'mempty'.
+value :: Monoid m => m -> AnnDiagram b v Any -> AnnDiagram b v m
+value m = fmap fromAny
+  where fromAny (Any True)  = m
+        fromAny (Any False) = mempty
+
+-- | Reset the query values of a diagram to True/False: any values
+--   equal to 'mempty' are set to 'False'; any other values are set to
+--   'True'.
+resetValue :: (Eq m, Monoid m) => AnnDiagram b v m -> AnnDiagram b v Any
+resetValue = fmap toAny
+  where toAny m | m == mempty = Any False
+                | otherwise   = Any True
+
+-- | Set all the query values of a diagram to 'False'.
+clearValue :: AnnDiagram b v m -> AnnDiagram b v Any
+clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with a bounding
 --   region, name map, and query function.

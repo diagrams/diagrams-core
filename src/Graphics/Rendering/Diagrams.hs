@@ -101,6 +101,7 @@ module Graphics.Rendering.Diagrams
        , AnnDiagram, mkAD, Diagram
        , prims
        , bounds, names, query, sample
+       , value, resetValue, clearValue
 
        , named, namePoint
        , withName
