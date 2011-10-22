@@ -18,3 +18,9 @@
     - additional functions for querying information associated with names
   * fix for issue #34 (fix behavior of setBounds)
   * Transformable and HasOrigin instances for Transformations
+
+0.4: 23 October 2011
+  * improved documentation
+  * a few new instances (Newtype Point, Boundable Point)
+  * new functions (value, clearValue, resetValue) for working with
+    alternate query monoids
