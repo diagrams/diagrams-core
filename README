@@ -1,1 +1,4 @@
-Test commit
+The core modules underlying diagrams, a Haskell embedded
+domain-specific language for compositional, declarative drawing.
+
+http://projects.haskell.org/diagrams/
