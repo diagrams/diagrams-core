@@ -471,11 +471,14 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- | 'adjustDia' allows the backend to make adjustments to the final
   --   diagram (e.g. to adjust the size based on the options) before
-  --   rendering it.  A default implementation is provided which makes
+  --   rendering it.  It can also make adjustments to the options
+  --   record, usually to fill in incompletely specified size
+  --   information.  A default implementation is provided which makes
   --   no adjustments.  See the diagrams-lib package for other useful
   --   implementations.
-  adjustDia :: Monoid m => b -> Options b v -> AnnDiagram b v m -> AnnDiagram b v m
-  adjustDia _ _ d = d
+  adjustDia :: Monoid m => b -> Options b v
+            -> AnnDiagram b v m -> (Options b v, AnnDiagram b v m)
+  adjustDia _ o d = (o,d)
 
   -- XXX expand this comment.  Explain about freeze, split
   -- transformations, etc.
@@ -488,9 +491,10 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   backends may override it if desired.
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid m)
             => b -> Options b v -> AnnDiagram b v m -> Result b v
-  renderDia b opts =
-    doRender b opts . mconcat . map renderOne . prims . adjustDia b opts
-      where renderOne :: (Prim b v, (Split (Transformation v), Style v))
+  renderDia b opts d =
+    doRender b opts' . mconcat . map renderOne . prims $ d'
+      where (opts', d') = adjustDia b opts d
+            renderOne :: (Prim b v, (Split (Transformation v), Style v))
                       -> Render b v
             renderOne (p, (M t,      s))
               = withStyle b s mempty (render b (transform t p))
