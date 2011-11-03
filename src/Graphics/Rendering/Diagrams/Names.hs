@@ -58,8 +58,10 @@ import Data.VectorSpace
 import Data.List (intercalate, isSuffixOf)
 import qualified Data.Map as M
 import Data.Monoid
-import Control.Arrow ((***), second)
+import Control.Arrow ((***))
 import Control.Monad (mplus)
+
+import Control.Newtype
 
 import Data.Typeable
 
@@ -144,11 +146,16 @@ infixr 5 .>
 --  Name maps  ---------------------------------------------
 ------------------------------------------------------------
 
--- | A 'NameMap' is a map associating names to pairs of points (local
---   origins) and bounding functions.  There can be multiple (point,
---   bounding function) pairs associated with each name.
-newtype NameMap v = NameMap (M.Map Name [(Point v, TransInv (Bounds v))])
+-- | A 'NameMap' is a map associating names to located bounding
+--   functions, i.e. bounding functions with concrete locations for
+--   their base points.  There can be multiple associations for
+--   any given name.
+newtype NameMap v = NameMap (M.Map Name [LocatedBounds v])
   deriving (Show)
+
+instance Newtype (NameMap v) (M.Map Name [LocatedBounds v]) where
+  pack = NameMap
+  unpack (NameMap m) = m
 
 -- Note, in some sense it would be nicer to use Sets instead of a
 -- list, but then we would have to put Ord constraints on v
@@ -172,11 +179,11 @@ instance Monoid (NameMap v) where
 
 instance (AdditiveGroup (Scalar v), Fractional (Scalar v), InnerSpace v)
       => HasOrigin (NameMap v) where
-  moveOriginTo p (NameMap m) = NameMap $ M.map (map (moveOriginTo p *** moveOriginTo p)) m
+  moveOriginTo = over NameMap . moveOriginTo
 
 instance (AdditiveGroup (Scalar v), InnerSpace v, Floating (Scalar v), HasLinearMap v)
   => Transformable (NameMap v) where
-  transform t (NameMap ns) = NameMap $ M.map (map (papply t *** transform t)) ns
+  transform = over NameMap . transform
 
 -- | 'NameMap's are qualifiable: if @ns@ is a 'NameMap', then @a |>
 --   ns@ is the same 'NameMap' except with every name qualified by
@@ -188,16 +195,17 @@ instance Qualifiable (NameMap v) where
 --   bounding functions will be empty.
 fromNames :: (AdditiveGroup (Scalar v), Ord (Scalar v), IsName a)
           => [(a, Point v)] -> NameMap v
-fromNames = NameMap . M.fromList . map (toName *** ((:[]) . (,mempty)))
+fromNames = NameMap . M.fromListWith (++) 
+          . map (toName *** ((:[]) . flip locateBounds mempty))
 
 -- | Construct a 'NameMap' from a list of associations between names
---   and (point, bounds) pairs.
-fromNamesB :: IsName a => [(a, (Point v, Bounds v))] -> NameMap v
-fromNamesB = NameMap . M.fromList . map (toName *** (return . second TransInv))
+--   and located bounding functions.
+fromNamesB :: IsName a => [(a, LocatedBounds v)] -> NameMap v
+fromNamesB = NameMap . M.fromListWith (++) . map (toName *** (:[]))
 
--- | Give a name to a point and bounding function.
-rememberAs :: IsName a => a -> Point v -> Bounds v -> NameMap v -> NameMap v
-rememberAs n p b (NameMap names) = NameMap $ M.insertWith (++) (toName n) [(p,TransInv b)] names
+-- | Give a name to a located bounding function.
+rememberAs :: IsName a => a -> LocatedBounds v -> NameMap v -> NameMap v
+rememberAs n b = over NameMap $ M.insertWith (++) (toName n) [b]
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (NameMap v) where
@@ -209,14 +217,13 @@ instance Action Name a
 
 -- Searching in name maps.
 
--- | Look for the given name in a name map, returning a list of points
---   and bounding regions associated with that name.  If no names
+-- | Look for the given name in a name map, returning a list of located
+--   bounding functions associated with that name.  If no names
 --   match the given name exactly, return all the points associated
 --   with names of which the given name is a suffix.
-lookupN :: IsName n => n -> NameMap v -> Maybe [(Point v, Bounds v)]
+lookupN :: IsName n => n -> NameMap v -> Maybe [LocatedBounds v]
 lookupN a (NameMap m)
-  = (fmap . map . second) unTransInv
-    (M.lookup n m `mplus`
+  = (M.lookup n m `mplus`
     (flatten . filter ((n `nameSuffixOf`) . fst) . M.assocs $ m))
   where (Name n1) `nameSuffixOf` (Name n2) = n1 `isSuffixOf` n2
         flatten [] = Nothing

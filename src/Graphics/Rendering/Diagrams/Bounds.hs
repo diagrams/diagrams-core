@@ -25,6 +25,10 @@ module Graphics.Rendering.Diagrams.Bounds
 
        , Boundable(..)
 
+       , LocatedBounds(..)
+       , location
+       , locateBounds
+
          -- * Utility functions
        , diameter
        , radius
@@ -40,7 +44,7 @@ import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.HasOrigin
 
 import Data.VectorSpace
-import Data.AffineSpace ((.+^))
+import Data.AffineSpace ((.+^), (.-^))
 
 import Data.Monoid
 import Control.Applicative ((<$>), (<*>))
@@ -143,6 +147,46 @@ instance (OrderedField (Scalar v), InnerSpace v) => Boundable (Point v) where
   getBounds p = moveTo p mempty
 
 ------------------------------------------------------------
+--  Located bounding regions
+------------------------------------------------------------
+
+-- | A @LocatedBounds@ value represents a bounding function with its
+--   base point at a particular location.
+data LocatedBounds v = LocatedBounds (Point v) (TransInv (Bounds v))
+  deriving (Show)
+
+type instance V (LocatedBounds v) = v
+
+instance (OrderedField (Scalar v), InnerSpace v) => Boundable (LocatedBounds v) where
+  getBounds (LocatedBounds _ (TransInv b)) = b
+
+instance VectorSpace v => HasOrigin (LocatedBounds v) where
+  moveOriginTo (P u) (LocatedBounds p b) = LocatedBounds (p .-^ u) b
+
+instance ( HasLinearMap v, InnerSpace v
+         , Floating (Scalar v), AdditiveGroup (Scalar v) )
+    => Transformable (LocatedBounds v) where
+  transform t (LocatedBounds p b) = LocatedBounds (papply t p)
+                                                  (transform t b)
+
+-- | Get the location of a located bounding function.
+location :: LocatedBounds v -> Point v
+location (LocatedBounds p _) = p
+
+-- | @boundaryFrom v b@ computes the point on the boundary of the
+--   located bounding region @b@ in the direction of @v@ from the
+--   bounding region's base point.  This is most often used to compute
+--   a point on the boundary of a named subdiagram.
+boundaryFrom :: (OrderedField (Scalar v), InnerSpace v)
+             => LocatedBounds v -> v -> Point v
+boundaryFrom b v = location b .+^ boundaryV v b
+
+-- | Create a 'LocatedBounds' value by specifying a location and a
+--   bounding function.
+locateBounds :: Point v -> Bounds v -> LocatedBounds v
+locateBounds p b = LocatedBounds p (TransInv b)
+
+------------------------------------------------------------
 --  Computing with bounds
 ------------------------------------------------------------
 
@@ -152,19 +196,8 @@ boundaryV :: Boundable a => V a -> a -> V a
 boundaryV v a = appBounds (getBounds a) v *^ v
 
 -- | Compute the point on the boundary in the given direction.
---   Caution: this point is only valid in the local vector space of
---   the @Boundable@ object.  If you want to compute boundary points
---   of things which are subparts of a larger diagram (and hence
---   embedded within a different vector space), you must use
---   'boundaryFrom' instead.
 boundary :: Boundable a => V a -> a -> Point (V a)
 boundary v a = P $ boundaryV v a
-
--- | @boundaryFrom o v a@ computes the point along the boundary of @a@
---   in the direction of @v@, assuming that @a@'s local origin is
---   located at the point @o@ of the vector space we care about.
-boundaryFrom :: Boundable a => Point (V a) -> V a -> a -> Point (V a)
-boundaryFrom o v a = o .+^ boundaryV v a
 
 -- | Compute the diameter of a boundable object along a particular
 --   vector.

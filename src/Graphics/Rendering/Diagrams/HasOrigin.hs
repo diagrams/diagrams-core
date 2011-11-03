@@ -21,6 +21,8 @@ module Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
 
+import qualified Data.Map as M
+
 import Data.AffineSpace ((.-^), (.-.))
 import Data.VectorSpace
 
@@ -75,3 +77,6 @@ instance VectorSpace v => HasOrigin (Point v) where
 
 instance HasOrigin a => HasOrigin [a] where
   moveOriginTo = map . moveOriginTo
+
+instance HasOrigin a => HasOrigin (M.Map k a) where
+  moveOriginTo = M.map . moveOriginTo

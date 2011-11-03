@@ -84,6 +84,9 @@ module Graphics.Rendering.Diagrams
        , boundaryV, boundary, boundaryFrom
        , diameter, radius
 
+       , LocatedBounds(..)
+       , location, locateBounds
+
          -- * Things with local origins
 
        , HasOrigin(..), moveOriginBy

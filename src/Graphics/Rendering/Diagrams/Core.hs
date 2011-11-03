@@ -105,7 +105,8 @@ import Data.AffineSpace ((.-.))
 import Data.Maybe (listToMaybe, fromMaybe)
 import Data.Monoid
 import qualified Data.Traversable as T
-import Control.Arrow (second, (&&&))
+import Control.Arrow (second)
+import Control.Applicative ((<$>), (<*>))
 
 import Data.Typeable
 
@@ -192,14 +193,14 @@ named :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => n -> AnnDiagram b v m -> AnnDiagram b v m
-named = namePoint (const origin &&& bounds)
+named = namePoint (locateBounds <$> const origin <*> bounds)
 
 -- | Attach an atomic name to a certain point and bounding function,
 --   computed from the given diagram.
 namePoint :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => (AnnDiagram b v m -> (Point v, Bounds v)) -> n -> AnnDiagram b v m -> AnnDiagram b v m
+      => (AnnDiagram b v m -> LocatedBounds v) -> n -> AnnDiagram b v m -> AnnDiagram b v m
 namePoint p n d = inAD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
 -- | Given a name and a diagram transformation indexed by a point and
@@ -209,7 +210,7 @@ namePoint p n d = inAD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 --   transformation if the name does not exist.
 withName :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
             , InnerSpace v, HasLinearMap v)
-         => n -> ((Point v, Bounds v) -> AnnDiagram b v m -> AnnDiagram b v m)
+         => n -> (LocatedBounds v -> AnnDiagram b v m -> AnnDiagram b v m)
          -> AnnDiagram b v m -> AnnDiagram b v m
 withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
 
@@ -219,7 +220,7 @@ withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
 -- the given name.
 withNameAll :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
                , InnerSpace v, HasLinearMap v)
-            => n -> ([(Point v, Bounds v)] -> AnnDiagram b v m -> AnnDiagram b v m)
+            => n -> ([LocatedBounds v] -> AnnDiagram b v m -> AnnDiagram b v m)
             -> AnnDiagram b v m -> AnnDiagram b v m
 withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
 
@@ -230,7 +231,7 @@ withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
 --   transformation) if any of the names do not exist.
 withNames :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
              , InnerSpace v, HasLinearMap v)
-          => [n] -> ([(Point v, Bounds v)] -> AnnDiagram b v m -> AnnDiagram b v m)
+          => [n] -> ([LocatedBounds v] -> AnnDiagram b v m -> AnnDiagram b v m)
           -> AnnDiagram b v m -> AnnDiagram b v m
 withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupN . toName) ns)) d
   where nd = names d
