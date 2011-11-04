@@ -11,6 +11,7 @@
            , OverlappingInstances
            , UndecidableInstances
            , TupleSections
+           , EmptyDataDecls
            #-}
 
 -----------------------------------------------------------------------------
@@ -78,6 +79,10 @@ module Graphics.Rendering.Diagrams.Core
 
        , Backend(..)
        , MultiBackend(..)
+
+         -- ** Null backend
+
+       , NullBackend, D
 
          -- * Renderable
 
@@ -504,6 +509,82 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
               = withStyle b s t1 (render b (transform (t1 <> t2) p))
 
   -- See Note [backend token]
+
+-- | The @D@ type is provided for convenience in situations where you
+--   must give a diagram a concrete, monomorphic type, but don't care
+--   which one.  Such situations arise when you pass a diagram to a
+--   function which is polymorphic in its input but monomorphic in its
+--   output, such as 'width', 'height', 'phantom', or 'names'.  Such
+--   functions compute some property of the diagram, or use it to
+--   accomplish some other purpose, but do not result in the diagram
+--   being rendered.  If the diagram does not have a monomorphic type,
+--   GHC complains that it cannot determine the diagram's type.
+--
+--   For example, here is the error we get if we try to compute the
+--   width of a radius-1 circle (this example requires
+--   @diagrams-lib@):
+--
+--   > ghci> width (circle 1)
+--   >
+--   > <interactive>:1:8:
+--   >     No instances for (Backend b0 R2,
+--   >                       Renderable Diagrams.TwoD.Ellipse.Ellipse b0)
+--   >       arising from a use of `circle'
+--   >     Possible fix:
+--   >       add instance declarations for
+--   >       (Backend b0 R2, Renderable Diagrams.TwoD.Ellipse.Ellipse b0)
+--   >     In the first argument of `width', namely `(circle 1)'
+--   >     In the expression: width (circle 1)
+--   >     In an equation for `it': it = width (circle 1)
+--
+--   GHC complains that it cannot find an instance for \"@Backend b0
+--   R2@\"; what is really going on is that it does not have enough
+--   information to decide which backend to use for the circle (hence
+--   the type variable @b0@).  This is annoying because /we/ know that
+--   the choice of backend cannot possibly affect the width of the
+--   circle; but there is no way for GHC to know that.
+--
+--   The solution is to annotate @circle 1@ with the type @'D' 'R2'@,
+--   like so:
+--
+--   > ghci> width (circle 1 :: D R2)
+--   > 2.0
+
+type D v = Diagram NullBackend v
+
+
+-- | A null backend which does no actual rendering.  It is provided
+--   mainly for convenience in situations where you must give a
+--   diagram a concrete, monomorphic type, but don't actually care
+--   which one.  See 'D' for more explanation and examples.
+--
+--   It is courteous, when defining a new primitive @P@, to make an instance
+--
+--   > instance Renderable P NullBackend where
+--   >   render _ _ = mempty
+--
+--   This ensures that the trick with 'D' annotations can be used for
+--   diagrams containing your primitive.
+data NullBackend
+
+-- Note: we can't make a once-and-for-all instance
+--
+-- > instance Renderable a NullBackend where
+-- >   render _ _ = mempty
+--
+-- because it overlaps with the Renderable instance for NullPrim.
+
+instance Monoid (Render NullBackend v) where
+  mempty      = NullBackendRender
+  mappend _ _ = NullBackendRender
+
+instance HasLinearMap v => Backend NullBackend v where
+  data Render NullBackend v = NullBackendRender
+  type Result NullBackend v = ()
+  data Options NullBackend v
+
+  withStyle _ _ _ _ = NullBackendRender
+  doRender _ _ _    = ()
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.

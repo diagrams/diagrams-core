@@ -121,6 +121,10 @@ module Graphics.Rendering.Diagrams
        , MultiBackend(..)
        , Renderable(..)
 
+         -- ** The null backend
+
+       , NullBackend, D
+
          -- * Convenience classes
 
        , HasLinearMap
