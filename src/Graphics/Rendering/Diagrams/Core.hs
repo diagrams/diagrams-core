@@ -113,6 +113,8 @@ import qualified Data.Traversable as T
 import Control.Arrow (second)
 import Control.Applicative ((<$>), (<*>))
 
+import Control.Newtype
+
 import Data.Typeable
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
@@ -154,11 +156,10 @@ newtype AnnDiagram b v m
   = AD { unAD :: UDTree (UpAnnots v m) (DownAnnots v) (Prim b v) }
   deriving (Typeable)
 
--- | Lift a function on annotated trees to a function on diagrams.
-inAD :: (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)
-         -> UDTree (UpAnnots v' m') (DownAnnots v') (Prim b' v'))
-     -> AnnDiagram b v m -> AnnDiagram b' v' m'
-inAD f = AD . f . unAD
+instance Newtype (AnnDiagram b v m)
+                 (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)) where
+  pack   = AD
+  unpack = unAD
 
 type instance V (AnnDiagram b v m) = v
 
@@ -183,10 +184,10 @@ bounds = unDelete . getU' . unAD
 -- | Replace the bounds of a diagram.
 setBounds :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid m)
           => Bounds v -> AnnDiagram b v m -> AnnDiagram b v m
-setBounds b = inAD ( applyUpre (inj . toDeletable $ b)
-                   . applyUpre (inj (deleteL :: Deletable (Bounds v)))
-                   . applyUpost (inj (deleteR :: Deletable (Bounds v)))
-                   )
+setBounds b = over AD ( applyUpre (inj . toDeletable $ b)
+                      . applyUpre (inj (deleteL :: Deletable (Bounds v)))
+                      . applyUpost (inj (deleteR :: Deletable (Bounds v)))
+                      )
 
 -- | Get the name map of a diagram.
 names :: (AdditiveGroup (Scalar v), Floating (Scalar v), InnerSpace v, HasLinearMap v)
@@ -206,7 +207,7 @@ namePoint :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => (AnnDiagram b v m -> LocatedBounds v) -> n -> AnnDiagram b v m -> AnnDiagram b v m
-namePoint p n d = inAD (applyUpre . inj $ fromNamesB [(n,p d)]) d
+namePoint p n d = over AD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
 -- | Given a name and a diagram transformation indexed by a point and
 --   a bounding function, perform the transformation using the most
@@ -310,7 +311,7 @@ infixl 6 `atop`
 
 -- This is a bit ugly, but it will have to do for now...
 instance Functor (AnnDiagram b v) where
-  fmap f = inAD (mapU g)
+  fmap f = over AD (mapU g)
     where g (b ::: n ::: a ::: Nil) = b ::: n ::: fmap f a ::: Nil
           g _ = error "impossible case in Functor (AnnDiagram b v) instance (g)"
 
@@ -335,7 +336,7 @@ instance Functor (AnnDiagram b v) where
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => HasStyle (AnnDiagram b v m) where
-  applyStyle = inAD . applyD . inj
+  applyStyle = over AD . applyD . inj
              . (inR :: Style v -> Split (Transformation v) :+: Style v)
 
 -- | By default, diagram attributes are not affected by
@@ -356,7 +357,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 --   transformations.
 freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
        => AnnDiagram b v m -> AnnDiagram b v m
-freeze = inAD . applyD . inj
+freeze = over AD . applyD . inj
        . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
        $ split
 
@@ -381,7 +382,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
       => Transformable (AnnDiagram b v m) where
-  transform = inAD . applyD . inj
+  transform = over AD . applyD . inj
             . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
             . M
 
@@ -391,7 +392,7 @@ instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
 --   now be referred to using the qualification prefix.
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => Qualifiable (AnnDiagram b v m) where
-  (|>) = inAD . applyD . inj . AM . (:[]) . toName
+  (|>) = over AD . applyD . inj . AM . (:[]) . toName
 
 
 ------------------------------------------------------------
