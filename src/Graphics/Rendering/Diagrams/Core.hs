@@ -99,6 +99,7 @@ import Graphics.Rendering.Diagrams.Query
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
+import Graphics.Rendering.Diagrams.Juxtapose
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Style
@@ -360,6 +361,12 @@ freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), 
 freeze = over AD . applyD . inj
        . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
        $ split
+
+---- Juxtaposable
+
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+      => Juxtaposable (AnnDiagram b v m) where
+  juxtapose = juxtaposeDefault
 
 ---- Boundable
 

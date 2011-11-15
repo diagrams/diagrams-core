@@ -28,6 +28,7 @@ Library
                        Graphics.Rendering.Diagrams.Transform,
                        Graphics.Rendering.Diagrams.Bounds,
                        Graphics.Rendering.Diagrams.HasOrigin,
+                       Graphics.Rendering.Diagrams.Juxtapose,
                        Graphics.Rendering.Diagrams.Points,
                        Graphics.Rendering.Diagrams.Names,
                        Graphics.Rendering.Diagrams.Style,

@@ -91,6 +91,10 @@ module Graphics.Rendering.Diagrams
 
        , HasOrigin(..), moveOriginBy
 
+         -- * Juxtaposable things
+
+       , Juxtaposable(..), juxtaposeDefault
+
          -- * Queries
 
        , Query(..)
@@ -137,6 +141,7 @@ import Graphics.Rendering.Diagrams.Util
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
+import Graphics.Rendering.Diagrams.Juxtapose
 import Graphics.Rendering.Diagrams.Query
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
