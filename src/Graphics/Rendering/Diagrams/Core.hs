@@ -129,7 +129,7 @@ import Data.Typeable
 --   are aggregated from component diagrams to the whole:
 --
 --   * functional bounds (see "Graphics.Rendering.Diagrams.Bounds").
---     The bounds are \"forgetful\" meaning that at any point we can
+--     The bounds are \"deletable\" meaning that at any point we can
 --     throw away the existing bounds and replace them with new ones;
 --     sometimes we want to consider a diagram as having different
 --     bounds unrelated to its \"natural\" bounds.
