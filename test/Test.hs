@@ -16,7 +16,8 @@ import Data.LinearMap
 import Data.AdditiveGroup
 import Data.VectorSpace
 
-import Graphics.Rendering.Diagrams.Diagrams
+import Graphics.Rendering.Diagrams.Core
+import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Util
@@ -37,8 +38,9 @@ type I2 = Q2 :-: Q2
 data M2 = M2 Q2 Q2
   deriving (Eq, Show)
 
+type instance V Q2 = Q2
+
 instance Transformable Q2 where
-  type TSpace Q2 = Q2
   transform = apply
 
 -- | Kludgy way to generate random nonsingular matrices.
