@@ -105,7 +105,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Diagrams
 
-       , AnnDiagram, mkAD, Diagram
+       , QDiagram, mkQD, Diagram
        , prims
        , bounds, names, query, sample
        , value, resetValue, clearValue

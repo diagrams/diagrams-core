@@ -43,7 +43,7 @@ module Graphics.Rendering.Diagrams.Core
 
          -- ** Annotations
          UpAnnots, DownAnnots
-       , AnnDiagram(..), mkAD, Diagram
+       , QDiagram(..), mkQD, Diagram
 
          -- * Operations on diagrams
          -- ** Extracting information
@@ -152,54 +152,56 @@ type UpAnnots v m = Deletable (Bounds v) ::: NameMap v ::: Query v m ::: Nil
 type DownAnnots v = (Split (Transformation v) :+: Style v) ::: AM [] Name ::: Nil
 
 -- | The fundamental diagram type is represented by trees of
---   primitives with various monoidal annotations.
-newtype AnnDiagram b v m
-  = AD { unAD :: UDTree (UpAnnots v m) (DownAnnots v) (Prim b v) }
+--   primitives with various monoidal annotations.  The @Q@ in
+--   @QDiagram@ stands for "Queriable", as distinguished from
+--   'Diagram', a synonym for @QDiagram@ with the query type
+--   specialized to 'Any'.
+newtype QDiagram b v m
+  = QD { unQD :: UDTree (UpAnnots v m) (DownAnnots v) (Prim b v) }
   deriving (Typeable)
 
-instance Newtype (AnnDiagram b v m)
+instance Newtype (QDiagram b v m)
                  (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)) where
-  pack   = AD
-  unpack = unAD
+  pack   = QD
+  unpack = unQD
 
-type instance V (AnnDiagram b v m) = v
+type instance V (QDiagram b v m) = v
 
--- | The default sort of diagram is one where sampling at a point
+-- | The default sort of diagram is one where querying at a point
 --   simply tells you whether that point is occupied or not.
---   Transforming a default diagram into one with more interesting
---   annotations can be done via the 'Functor' instance of
---   @'AnnDiagram' b@.
-type Diagram b v = AnnDiagram b v Any
+--   Transforming a default diagram into one with a more interesting
+--   query can be done via the 'Functor' instance of @'QDiagram' b@.
+type Diagram b v = QDiagram b v Any
 
 -- | Extract a list of primitives from a diagram, together with their
 --   associated transformations and styles.
 prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => AnnDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = (map . second) (untangle . fst . toTuple) . flatten . unAD
+      => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
+prims = (map . second) (untangle . fst . toTuple) . flatten . unQD
 
 -- | Get the bounds of a diagram.
 bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
-       => AnnDiagram b v m -> Bounds v
-bounds = unDelete . getU' . unAD
+       => QDiagram b v m -> Bounds v
+bounds = unDelete . getU' . unQD
 
 -- | Replace the bounds of a diagram.
 setBounds :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid m)
-          => Bounds v -> AnnDiagram b v m -> AnnDiagram b v m
-setBounds b = over AD ( applyUpre (inj . toDeletable $ b)
+          => Bounds v -> QDiagram b v m -> QDiagram b v m
+setBounds b = over QD ( applyUpre (inj . toDeletable $ b)
                       . applyUpre (inj (deleteL :: Deletable (Bounds v)))
                       . applyUpost (inj (deleteR :: Deletable (Bounds v)))
                       )
 
 -- | Get the name map of a diagram.
 names :: (AdditiveGroup (Scalar v), Floating (Scalar v), InnerSpace v, HasLinearMap v)
-       => AnnDiagram b v m -> NameMap v
-names = getU' . unAD
+       => QDiagram b v m -> NameMap v
+names = getU' . unQD
 
 -- | Attach an atomic name to (the local origin of) a diagram.
 named :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => n -> AnnDiagram b v m -> AnnDiagram b v m
+      => n -> QDiagram b v m -> QDiagram b v m
 named = namePoint (locateBounds <$> const origin <*> bounds)
 
 -- | Attach an atomic name to a certain point and bounding function,
@@ -207,8 +209,8 @@ named = namePoint (locateBounds <$> const origin <*> bounds)
 namePoint :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => (AnnDiagram b v m -> LocatedBounds v) -> n -> AnnDiagram b v m -> AnnDiagram b v m
-namePoint p n d = over AD (applyUpre . inj $ fromNamesB [(n,p d)]) d
+      => (QDiagram b v m -> LocatedBounds v) -> n -> QDiagram b v m -> QDiagram b v m
+namePoint p n d = over QD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
 -- | Given a name and a diagram transformation indexed by a point and
 --   a bounding function, perform the transformation using the most
@@ -217,8 +219,8 @@ namePoint p n d = over AD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 --   transformation if the name does not exist.
 withName :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
             , InnerSpace v, HasLinearMap v)
-         => n -> (LocatedBounds v -> AnnDiagram b v m -> AnnDiagram b v m)
-         -> AnnDiagram b v m -> AnnDiagram b v m
+         => n -> (LocatedBounds v -> QDiagram b v m -> QDiagram b v m)
+         -> QDiagram b v m -> QDiagram b v m
 withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
 
 -- | Given a name and a diagram transformation indexed by a list of
@@ -227,8 +229,8 @@ withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
 -- the given name.
 withNameAll :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
                , InnerSpace v, HasLinearMap v)
-            => n -> ([LocatedBounds v] -> AnnDiagram b v m -> AnnDiagram b v m)
-            -> AnnDiagram b v m -> AnnDiagram b v m
+            => n -> ([LocatedBounds v] -> QDiagram b v m -> QDiagram b v m)
+            -> QDiagram b v m -> QDiagram b v m
 withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
 
 -- | Given a list of names and a diagram transformation indexed by a
@@ -238,22 +240,22 @@ withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
 --   transformation) if any of the names do not exist.
 withNames :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
              , InnerSpace v, HasLinearMap v)
-          => [n] -> ([LocatedBounds v] -> AnnDiagram b v m -> AnnDiagram b v m)
-          -> AnnDiagram b v m -> AnnDiagram b v m
+          => [n] -> ([LocatedBounds v] -> QDiagram b v m -> QDiagram b v m)
+          -> QDiagram b v m -> QDiagram b v m
 withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupN . toName) ns)) d
   where nd = names d
 
 -- | Get the query function associated with a diagram.
-query :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Query v m
-query = getU' . unAD
+query :: (HasLinearMap v, Monoid m) => QDiagram b v m -> Query v m
+query = getU' . unQD
 
 -- | Sample a diagram's query function at a given point.
-sample :: (HasLinearMap v, Monoid m) => AnnDiagram b v m -> Point v -> m
+sample :: (HasLinearMap v, Monoid m) => QDiagram b v m -> Point v -> m
 sample = runQuery . query
 
 -- | Set the query value for 'True' points in a diagram (/i.e./ points
 --   "inside" the diagram); 'False' points will be set to 'mempty'.
-value :: Monoid m => m -> AnnDiagram b v Any -> AnnDiagram b v m
+value :: Monoid m => m -> QDiagram b v Any -> QDiagram b v m
 value m = fmap fromAny
   where fromAny (Any True)  = m
         fromAny (Any False) = mempty
@@ -261,19 +263,19 @@ value m = fmap fromAny
 -- | Reset the query values of a diagram to True/False: any values
 --   equal to 'mempty' are set to 'False'; any other values are set to
 --   'True'.
-resetValue :: (Eq m, Monoid m) => AnnDiagram b v m -> AnnDiagram b v Any
+resetValue :: (Eq m, Monoid m) => QDiagram b v m -> QDiagram b v Any
 resetValue = fmap toAny
   where toAny m | m == mempty = Any False
                 | otherwise   = Any True
 
 -- | Set all the query values of a diagram to 'False'.
-clearValue :: AnnDiagram b v m -> AnnDiagram b v Any
+clearValue :: QDiagram b v m -> QDiagram b v Any
 clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with a bounding
 --   region, name map, and query function.
-mkAD :: Prim b v -> Bounds v -> NameMap v -> Query v m -> AnnDiagram b v m
-mkAD p b n a = AD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
+mkQD :: Prim b v -> Bounds v -> NameMap v -> Query v m -> QDiagram b v m
+mkQD p b n a = QD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
 
 ------------------------------------------------------------
 --  Instances
@@ -293,9 +295,9 @@ mkAD p b n a = AD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
 --   than 3, but in theory it could make sense for, say, 3-dimensional
 --   diagrams when viewed by 4-dimensional beings.
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-  => Monoid (AnnDiagram b v m) where
-  mempty = AD mempty
-  (AD d1) `mappend` (AD d2) = AD (d2 `mappend` d1)
+  => Monoid (QDiagram b v m) where
+  mempty = QD mempty
+  (QD d1) `mappend` (QD d2) = QD (d2 `mappend` d1)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
 
@@ -303,7 +305,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 --   used infix (to help remember which diagram goes on top of which
 --   when combining them, namely, the first on top of the second).
 atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
-     => AnnDiagram b v m -> AnnDiagram b v m -> AnnDiagram b v m
+     => QDiagram b v m -> QDiagram b v m -> QDiagram b v m
 atop = mappend
 
 infixl 6 `atop`
@@ -311,10 +313,10 @@ infixl 6 `atop`
 ---- Functor
 
 -- This is a bit ugly, but it will have to do for now...
-instance Functor (AnnDiagram b v) where
-  fmap f = over AD (mapU g)
+instance Functor (QDiagram b v) where
+  fmap f = over QD (mapU g)
     where g (b ::: n ::: a ::: Nil) = b ::: n ::: fmap f a ::: Nil
-          g _ = error "impossible case in Functor (AnnDiagram b v) instance (g)"
+          g _ = error "impossible case in Functor (QDiagram b v) instance (g)"
 
 ---- Applicative
 
@@ -327,7 +329,7 @@ instance Functor (AnnDiagram b v) where
 --   @(<*>)@.
 
 -- instance (Backend b v, s ~ Scalar v, AdditiveGroup s, Ord s)
---            => Applicative (AnnDiagram b v) where
+--            => Applicative (QDiagram b v) where
 --   pure a = Diagram mempty mempty mempty (Query $ const a)
 
 --   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
@@ -336,8 +338,8 @@ instance Functor (AnnDiagram b v) where
 ---- HasStyle
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => HasStyle (AnnDiagram b v m) where
-  applyStyle = over AD . applyD . inj
+      => HasStyle (QDiagram b v m) where
+  applyStyle = over QD . applyD . inj
              . (inR :: Style v -> Split (Transformation v) :+: Style v)
 
 -- | By default, diagram attributes are not affected by
@@ -357,21 +359,21 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 --   representation itself which is acted upon by subsequent
 --   transformations.
 freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-       => AnnDiagram b v m -> AnnDiagram b v m
-freeze = over AD . applyD . inj
+       => QDiagram b v m -> QDiagram b v m
+freeze = over QD . applyD . inj
        . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
        $ split
 
 ---- Juxtaposable
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => Juxtaposable (AnnDiagram b v m) where
+      => Juxtaposable (QDiagram b v m) where
   juxtapose = juxtaposeDefault
 
 ---- Boundable
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
-         => Boundable (AnnDiagram b v m) where
+         => Boundable (QDiagram b v m) where
   getBounds = bounds
 
 ---- HasOrigin
@@ -379,7 +381,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => HasOrigin (AnnDiagram b v m) where
+      => HasOrigin (QDiagram b v m) where
 
   moveOriginTo = translate . (origin .-.)
 
@@ -388,8 +390,8 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
-      => Transformable (AnnDiagram b v m) where
-  transform = over AD . applyD . inj
+      => Transformable (QDiagram b v m) where
+  transform = over QD . applyD . inj
             . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
             . M
 
@@ -398,8 +400,8 @@ instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
 -- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
-      => Qualifiable (AnnDiagram b v m) where
-  (|>) = over AD . applyD . inj . AM . (:[]) . toName
+      => Qualifiable (QDiagram b v m) where
+  (|>) = over QD . applyD . inj . AM . (:[]) . toName
 
 
 ------------------------------------------------------------
@@ -491,7 +493,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   no adjustments.  See the diagrams-lib package for other useful
   --   implementations.
   adjustDia :: Monoid m => b -> Options b v
-            -> AnnDiagram b v m -> (Options b v, AnnDiagram b v m)
+            -> QDiagram b v m -> (Options b v, QDiagram b v m)
   adjustDia _ o d = (o,d)
 
   -- XXX expand this comment.  Explain about freeze, split
@@ -504,7 +506,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid m)
-            => b -> Options b v -> AnnDiagram b v m -> Result b v
+            => b -> Options b v -> QDiagram b v m -> Result b v
   renderDia b opts d =
     doRender b opts' . mconcat . map renderOne . prims $ d'
       where (opts', d') = adjustDia b opts d
@@ -599,7 +601,7 @@ instance HasLinearMap v => Backend NullBackend v where
 class Backend b v => MultiBackend b v where
 
   -- | Render multiple diagrams at once.
-  renderDias :: b -> Options b v -> [AnnDiagram b v m] -> Result b v
+  renderDias :: b -> Options b v -> [QDiagram b v m] -> Result b v
 
   -- See Note [backend token]
 
