@@ -60,8 +60,8 @@ import Control.Applicative ((<$>), (<*>))
 --   it. Formally, given a vector @v@, it returns a scalar @s@ such
 --   that
 --
---     * for every vector @u@ with its endpoint inside the diagram,
---       if the projection of @u@ onto @v@ is @s' *^ v@, then @s' <= s@.
+--     * for every point @u@ inside the diagram,
+--       if the projection of @(u - origin)@ onto @v@ is @s' *^ v@, then @s' <= s@.
 --
 --     * @s@ is the smallest such scalar.
 --
