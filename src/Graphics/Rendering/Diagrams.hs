@@ -35,7 +35,6 @@ module Graphics.Rendering.Diagrams
        , withLength
 
          -- * Transformations
-
          -- ** Invertible linear transformations
        , (:-:), (<->), linv, lapp
 
