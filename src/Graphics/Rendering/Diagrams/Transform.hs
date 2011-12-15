@@ -234,7 +234,7 @@ scaling s = fromLinear lin lin      -- scaling is its own transpose
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (Transformable t, Fractional (Scalar (V t)))
+scale :: (Transformable t, Fractional (Scalar (V t)), Eq (Scalar (V t)))
       => Scalar (V t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
