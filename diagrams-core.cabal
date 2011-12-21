@@ -13,7 +13,7 @@ Category:            Graphics
 Build-type:          Simple
 Cabal-version:       >=1.6
 Extra-source-files:  CHANGES, README
-Tested-with:         GHC == 6.12.3, GHC >= 7.0.2 && <= 7.0.3, GHC == 7.2.1
+Tested-with:         GHC == 6.12.3, GHC >= 7.0.2 && <= 7.0.3, GHC == 7.2.1, GHC == 7.4.1
 Source-repository head
   type:     darcs
   location: http://patch-tag.com/r/byorgey/diagrams-core
@@ -35,7 +35,7 @@ Library
                        Graphics.Rendering.Diagrams.Util,
                        Graphics.Rendering.Diagrams.Core
 
-  Build-depends:       base >= 4.2 && < 4.5,
+  Build-depends:       base >= 4.2 && < 4.6,
                        containers >= 0.3 && < 0.5,
                        semigroups >= 0.3.4 && < 0.9,
                        vector-space >= 0.7.7 && < 0.9,
