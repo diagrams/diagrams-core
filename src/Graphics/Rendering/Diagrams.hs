@@ -80,7 +80,8 @@ module Graphics.Rendering.Diagrams
 
          -- * Bounding regions
 
-       , Bounds(..)
+       , Bounds
+       , inBounds, appBounds, onBounds, mkBounds
        , Boundable(..)
        , boundaryV, boundary, boundaryFrom
        , diameter, radius
@@ -134,6 +135,7 @@ module Graphics.Rendering.Diagrams
 
        , HasLinearMap
        , OrderedField
+       , Monoid'
 
        ) where
 
@@ -148,3 +150,4 @@ import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Style
 import Graphics.Rendering.Diagrams.Core
+import Graphics.Rendering.Diagrams.Monoids (Monoid')

@@ -51,13 +51,12 @@ import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Util
 
 import Data.VectorSpace
 
 import Data.List (intercalate, isSuffixOf)
 import qualified Data.Map as M
-import Data.Monoid
+import Data.Semigroup
 import Control.Arrow ((***))
 import Control.Monad (mplus)
 
@@ -115,7 +114,7 @@ instance Show AName where
 
 -- | A (qualified) name is a (possibly empty) sequence of atomic names.
 newtype Name = Name [AName]
-  deriving (Eq, Ord, Monoid, Typeable)
+  deriving (Eq, Ord, Semigroup, Monoid, Typeable)
 
 instance Show Name where
   show (Name ns) = intercalate " .> " $ map show ns
@@ -168,6 +167,9 @@ instance Newtype (NameMap v) (M.Map Name [LocatedBounds v]) where
 
 type instance V (NameMap v) = v
 
+instance Semigroup (NameMap v) where
+  NameMap s1 <> NameMap s2 = NameMap $ M.unionWith (++) s1 s2
+
 -- | 'NameMap's form a monoid with the empty map as the identity, and
 --   map union as the binary operation.  No information is ever lost:
 --   if two maps have the same name in their domain, the resulting map
@@ -175,7 +177,7 @@ type instance V (NameMap v) = v
 --   associated with that name.
 instance Monoid (NameMap v) where
   mempty = NameMap M.empty
-  (NameMap s1) `mappend` (NameMap s2) = NameMap $ M.unionWith (++) s1 s2
+  mappend = (<>)
 
 instance (AdditiveGroup (Scalar v), Fractional (Scalar v), InnerSpace v)
       => HasOrigin (NameMap v) where
@@ -191,12 +193,11 @@ instance (AdditiveGroup (Scalar v), InnerSpace v, Floating (Scalar v), HasLinear
 instance Qualifiable (NameMap v) where
   a |> (NameMap names) = NameMap $ M.mapKeys (a |>) names
 
--- | Construct a 'NameMap' from a list of (name, point) pairs.  The
---   bounding functions will be empty.
-fromNames :: (AdditiveGroup (Scalar v), Ord (Scalar v), IsName a)
+-- | Construct a 'NameMap' from a list of (name, point) pairs.
+fromNames :: (InnerSpace v, AdditiveGroup (Scalar v), Ord (Scalar v), Floating (Scalar v), IsName a)
           => [(a, Point v)] -> NameMap v
 fromNames = NameMap . M.fromListWith (++) 
-          . map (toName *** ((:[]) . flip locateBounds mempty))
+          . map (toName *** ((:[]) . (\p -> locateBounds p (getBounds p))))
 
 -- | Construct a 'NameMap' from a list of associations between names
 --   and located bounding functions.

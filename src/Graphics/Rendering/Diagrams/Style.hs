@@ -41,15 +41,12 @@ module Graphics.Rendering.Diagrams.Style
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.Monoids
-import Graphics.Rendering.Diagrams.Util
 
 import Data.Typeable
 
 -- import Control.Arrow ((***))  XXX
-import Data.Monoid
+import Data.Semigroup
 import qualified Data.Map as M
-import Data.Semigroup hiding ((<>))
-import qualified Data.Semigroup as SG
 
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------
@@ -110,11 +107,11 @@ instance Semigroup (Attribute v) where
   (Attribute a1) <> a2 =
     case unwrapAttr a2 of
       Nothing  -> a2
-      Just a2' -> Attribute (a1 SG.<> a2')
+      Just a2' -> Attribute (a1 <> a2')
   (TAttribute a1) <> a2 =
     case unwrapAttr a2 of
       Nothing  -> a2
-      Just a2' -> TAttribute (a1 SG.<> a2')
+      Just a2' -> TAttribute (a1 <> a2')
 
 instance HasLinearMap v => Transformable (Attribute v) where
   transform _ (Attribute  a) = Attribute a
@@ -177,7 +174,10 @@ combineAttr :: AttributeClass a => a -> Style v -> Style v
 combineAttr a s =
   case getAttr s of
     Nothing -> setAttr a s
-    Just a' -> setAttr (a SG.<> a') s
+    Just a' -> setAttr (a <> a') s
+
+instance Semigroup (Style v) where
+  Style s1 <> Style s2 = Style $ M.unionWith (<>) s1 s2
 
 -- | The empty style contains no attributes; composition of styles is
 --   a union of attributes; if the two styles have attributes of the
@@ -185,7 +185,8 @@ combineAttr a s =
 --   structure.
 instance Monoid (Style v) where
   mempty = Style M.empty
-  (Style s1) `mappend` (Style s2) = Style $ M.unionWith (SG.<>) s1 s2
+  mappend = (<>)
+
 
 instance HasLinearMap v => Transformable (Style v) where
   transform t = inStyle $ M.map (transform t)

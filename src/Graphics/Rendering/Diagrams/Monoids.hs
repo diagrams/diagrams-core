@@ -4,6 +4,7 @@
            , DeriveFunctor
            , TypeFamilies
            , TypeOperators
+           , UndecidableInstances
   #-}
 
 -----------------------------------------------------------------------------
@@ -19,9 +20,13 @@
 -----------------------------------------------------------------------------
 
 module Graphics.Rendering.Diagrams.Monoids
-       ( -- * Monoid actions
+       ( -- * Monoids and semigroups
 
-         Action(..)
+         Monoid'
+
+         -- * Monoid actions
+
+       , Action(..)
 
          -- * Split monoids
          -- $split
@@ -48,12 +53,27 @@ module Graphics.Rendering.Diagrams.Monoids
        ) where
 
 import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Util
 
-import Data.Monoid
+import Data.Semigroup
 import Data.Foldable
 import Control.Applicative
 import Data.Either (lefts, rights)
+
+------------------------------------------------------------
+--  Monoids and semigroups
+------------------------------------------------------------
+
+-- Poor man's constraint synonym.  Eventually, once it becomes
+-- standard, we can make this a real constraint synonym and get rid of
+-- the UndecidableInstances flag.  Better yet, hopefully the Monoid
+-- class will eventually have a Semigroup superclass.
+
+-- | The @Monoid'@ class is a synonym for things which are instances
+--   of both 'Semigroup' and 'Monoid'.  Ideally, the 'Monoid' class
+--   itself will eventually include a 'Semigroup' superclass and we
+--   can get rid of this.
+class (Semigroup m, Monoid m) => Monoid' m
+instance (Semigroup m, Monoid m) => Monoid' m
 
 ------------------------------------------------------------
 --  Monoid actions
@@ -103,16 +123,18 @@ infix 5 :|
 data Split m = M m
              | m :| m
 
--- | If @m@ is a @Monoid@, then @Split m@ is a monoid which combines
---   values on either side of a split, keeping only the rightmost
---   split.
-instance Monoid m => Monoid (Split m) where
-  mempty = M mempty
+-- | If @m@ is a @Semigroup@, then @Split m@ is a semigroup which
+--   combines values on either side of a split, keeping only the
+--   rightmost split.
+instance Semigroup m => Semigroup (Split m) where
+  (M m1)       <> (M m2)       = M (m1 <> m2)
+  (M m1)       <> (m1' :| m2)  = m1 <> m1'         :| m2
+  (m1  :| m2)  <> (M m2')      = m1                :| m2 <> m2'
+  (m11 :| m12) <> (m21 :| m22) = m11 <> m12 <> m21 :| m22
 
-  (M m1)       `mappend` (M m2)       = M (m1 <> m2)
-  (M m1)       `mappend` (m1' :| m2)  = m1 <> m1'         :| m2
-  (m1  :| m2)  `mappend` (M m2')      = m1                :| m2 <> m2'
-  (m11 :| m12) `mappend` (m21 :| m22) = m11 <> m12 <> m21 :| m22
+instance (Semigroup m, Monoid m) => Monoid (Split m) where
+  mempty  = M mempty
+  mappend = (<>)
 
 -- | A convenient name for @mempty :| mempty@, so @a \<\> split \<\> b == a :| b@.
 split :: Monoid m => Split m
@@ -152,16 +174,19 @@ unForget :: Forgetful m -> m
 unForget (Normal m)    = m
 unForget (Forgetful m) = m
 
--- | If @m@ is a 'Monoid', then @Forgetful m@ is a monoid with two
+-- | If @m@ is a 'Semigroup', then @Forgetful m@ is a semigroup with two
 --   sorts of values, \"normal\" and \"forgetful\": the normal ones
 --   combine normally and the forgetful ones discard anything to the
 --   right.
-instance Monoid m => Monoid (Forgetful m) where
-  mempty = Normal mempty
+instance Semigroup m => Semigroup (Forgetful m) where
+  (Normal m1)    <> (Normal m2)    = Normal (m1 <> m2)
+  (Normal m1)    <> (Forgetful m2) = Forgetful (m1 <> m2)
+  (Forgetful m1) <> _              = Forgetful m1
 
-  (Normal m1)    `mappend` (Normal m2)    = Normal (m1 <> m2)
-  (Normal m1)    `mappend` (Forgetful m2) = Forgetful (m1 <> m2)
-  (Forgetful m1) `mappend` _              = Forgetful m1
+instance (Semigroup m, Monoid m) => Monoid (Forgetful m) where
+  mempty  = Normal mempty
+  mappend = (<>)
+
 
 -- | A convenient name for @Forgetful mempty@, so @a \<\> forget \<\>
 --   b == Forgetful a@.
@@ -218,12 +243,15 @@ unDelete (Deletable _ m _) = m
 toDeletable :: m -> Deletable m
 toDeletable m = Deletable 0 m 0
 
-instance Monoid m => Monoid (Deletable m) where
-  mempty = Deletable 0 mempty 0
-  (Deletable r1 m1 l1) `mappend` (Deletable r2 m2 l2)
-    | l1 == r2  = Deletable r1 (m1 `mappend` m2) l2
+instance Semigroup m => Semigroup (Deletable m) where
+  (Deletable r1 m1 l1) <> (Deletable r2 m2 l2)
+    | l1 == r2  = Deletable r1 (m1 <> m2) l2
     | l1 <  r2  = Deletable (r1 + r2 - l1) m2 l2
     | otherwise = Deletable r1 m1 (l2 + l1 - r2)
+
+instance (Semigroup m, Monoid m) => Monoid (Deletable m) where
+  mempty = Deletable 0 mempty 0
+  mappend = (<>)
 
 -- | A \"left bracket\", which causes everything between it and the
 --   next right bracket to be deleted.
@@ -252,6 +280,9 @@ newtype AM f m = AM (f m)
 -- | Apply a binary function inside an 'AM' newtype wrapper.
 inAM2 :: (f m -> f m -> f m) -> AM f m -> AM f m -> AM f m
 inAM2 g (AM f1) (AM f2) = AM (g f1 f2)
+
+instance (Applicative f, Semigroup m) => Semigroup (AM f m) where
+  (<>) = inAM2 (liftA2 (<>))
 
 -- | @f1 ``mappend`` f2@ is defined as @'mappend' '<$>' f1 '<*>' f2@.
 instance (Applicative f, Monoid m) => Monoid (AM f m) where
@@ -394,10 +425,13 @@ normalize (MCo es) = MCo (normalize' es)
         normalize' (Right e1:es) = Right e1 : normalize' es
 -}
 
+instance Semigroup (m :+: n) where
+  (MCo es1) <> (MCo es2) = MCo (es1 ++ es2)
+
 -- | The coproduct of two monoids is itself a monoid.
 instance Monoid (m :+: n) where
   mempty = MCo []
-  (MCo es1) `mappend` (MCo es2) = MCo (es1 ++ es2)
+  mappend = (<>)
 
 -- | @killR@ takes a value in a coproduct monoid and sends all the
 --   values from the right monoid to the identity.
@@ -424,8 +458,8 @@ killL = mconcat . rights . unMCo
 untangle :: (Action m n, Monoid m, Monoid n) => m :+: n -> (m,n)
 untangle (MCo elts) = untangle' mempty elts
   where untangle' cur [] = cur
-        untangle' (curM, curN) (Left m : elts')  = untangle' (curM <> m, curN) elts'
-        untangle' (curM, curN) (Right n : elts') = untangle' (curM, curN <> act curM n) elts'
+        untangle' (curM, curN) (Left m : elts')  = untangle' (curM `mappend` m, curN) elts'
+        untangle' (curM, curN) (Right n : elts') = untangle' (curM, curN `mappend` act curM n) elts'
 
 -- | Coproducts act on other things by having each of the components
 --   act individually.

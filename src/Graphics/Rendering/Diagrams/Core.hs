@@ -103,13 +103,12 @@ import Graphics.Rendering.Diagrams.Juxtapose
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Style
-import Graphics.Rendering.Diagrams.Util
 
 import Data.VectorSpace
 import Data.AffineSpace ((.-.))
 
 import Data.Maybe (listToMaybe, fromMaybe)
-import Data.Monoid
+import Data.Semigroup
 import qualified Data.Traversable as T
 import Control.Arrow (second)
 import Control.Applicative ((<$>), (<*>))
@@ -185,7 +184,7 @@ bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
 bounds = unDelete . getU' . unQD
 
 -- | Replace the bounds of a diagram.
-setBounds :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid m)
+setBounds :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid' m)
           => Bounds v -> QDiagram b v m -> QDiagram b v m
 setBounds b = over QD ( applyUpre (inj . toDeletable $ b)
                       . applyUpre (inj (deleteL :: Deletable (Bounds v)))
@@ -200,7 +199,7 @@ names = getU' . unQD
 -- | Attach an atomic name to (the local origin of) a diagram.
 named :: forall v b n m.
          ( IsName n
-         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
       => n -> QDiagram b v m -> QDiagram b v m
 named = namePoint (locateBounds <$> const origin <*> bounds)
 
@@ -208,7 +207,7 @@ named = namePoint (locateBounds <$> const origin <*> bounds)
 --   computed from the given diagram.
 namePoint :: forall v b n m.
          ( IsName n
-         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
       => (QDiagram b v m -> LocatedBounds v) -> n -> QDiagram b v m -> QDiagram b v m
 namePoint p n d = over QD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
@@ -294,17 +293,21 @@ mkQD p b n a = QD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
 --   probably only makes sense in vector spaces of dimension lower
 --   than 3, but in theory it could make sense for, say, 3-dimensional
 --   diagrams when viewed by 4-dimensional beings.
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
   => Monoid (QDiagram b v m) where
   mempty = QD mempty
   (QD d1) `mappend` (QD d2) = QD (d2 `mappend` d1)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
 
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+  => Semigroup (QDiagram b v m) where
+  (<>) = mappend
+
 -- | A convenient synonym for 'mappend' on diagrams, designed to be
 --   used infix (to help remember which diagram goes on top of which
 --   when combining them, namely, the first on top of the second).
-atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
+atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid' m)
      => QDiagram b v m -> QDiagram b v m -> QDiagram b v m
 atop = mappend
 
@@ -366,7 +369,7 @@ freeze = over QD . applyD . inj
 
 ---- Juxtaposable
 
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
       => Juxtaposable (QDiagram b v m) where
   juxtapose = juxtaposeDefault
 
@@ -380,7 +383,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
       => HasOrigin (QDiagram b v m) where
 
   moveOriginTo = translate . (origin .-.)
@@ -389,7 +392,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
-instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid m)
+instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid' m)
       => Transformable (QDiagram b v m) where
   transform = over QD . applyD . inj
             . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
@@ -492,7 +495,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   information.  A default implementation is provided which makes
   --   no adjustments.  See the diagrams-lib package for other useful
   --   implementations.
-  adjustDia :: Monoid m => b -> Options b v
+  adjustDia :: Monoid' m => b -> Options b v
             -> QDiagram b v m -> (Options b v, QDiagram b v m)
   adjustDia _ o d = (o,d)
 
@@ -505,7 +508,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   primitive, the resulting operations are combined with
   --   'mconcat', and the final operation run with 'doRender') but
   --   backends may override it if desired.
-  renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid m)
+  renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
             => b -> Options b v -> QDiagram b v m -> Result b v
   renderDia b opts d =
     doRender b opts' . mconcat . map renderOne . prims $ d'

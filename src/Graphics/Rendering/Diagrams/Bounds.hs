@@ -2,6 +2,9 @@
            , FlexibleInstances
            , FlexibleContexts
            , UndecidableInstances
+           , GeneralizedNewtypeDeriving
+           , StandaloneDeriving
+           , MultiParamTypeClasses
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -22,6 +25,11 @@
 module Graphics.Rendering.Diagrams.Bounds
        ( -- * Bounding regions
          Bounds(..)
+
+       , inBounds
+       , appBounds
+       , onBounds
+       , mkBounds
 
        , Boundable(..)
 
@@ -46,8 +54,8 @@ import Graphics.Rendering.Diagrams.HasOrigin
 import Data.VectorSpace
 import Data.AffineSpace ((.+^), (.-^))
 
-import Data.Monoid
-import Control.Applicative ((<$>), (<*>))
+import Data.Semigroup
+import Control.Applicative ((<$>))
 
 ------------------------------------------------------------
 --  Bounds  ------------------------------------------------
@@ -68,33 +76,51 @@ import Control.Applicative ((<$>), (<*>))
 --   This could probably be expressed in terms of a Galois connection;
 --   this is left as an exercise for the reader.
 --
+--   There is also a special \"empty bounding function\".
+--
 --   Essentially, bounding functions are a functional representation
 --   of (a conservative approximation to) convex bounding regions.
 --   The idea for this representation came from Sebastian Setzer; see
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.
-newtype Bounds v = Bounds { appBounds :: v -> Scalar v }
+newtype Bounds v = Bounds { unBounds :: Option (v -> Max (Scalar v)) }
+
+inBounds :: (Option (v -> Max (Scalar v)) -> Option (v -> Max (Scalar v)))
+         -> Bounds v -> Bounds v
+inBounds f = Bounds . f . unBounds
+
+appBounds :: Bounds v -> Maybe (v -> Scalar v)
+appBounds (Bounds (Option b)) = (getMax .) <$> b
+
+onBounds :: ((v -> Scalar v) -> (v -> Scalar v)) -> Bounds v -> Bounds v
+onBounds t = (inBounds . fmap) ((Max .) . t . (getMax .))
+
+mkBounds :: (v -> Scalar v) -> Bounds v
+mkBounds = Bounds . Option . Just . (Max .)
+
+-- | Bounding functions form a semigroup with pointwise
+--   maximum as composition.  Hence, if @b1@ is the bounding function
+--   for diagram @d1@, and @b2@ is the bounding function for @d2@,
+--   then @b1 \`mappend\` b2@ is the bounding function for @d1
+--   \`atop\` d2@.
+deriving instance Ord (Scalar v) => Semigroup (Bounds v)
+
+-- | The special empty bounding function is the identity for the
+--   'Monoid' instance.
+deriving instance Ord (Scalar v) => Monoid (Bounds v)
+
+
 
 --   XXX add some diagrams here to illustrate!  Note that Haddock supports
 --   inline images, using a \<\<url\>\> syntax.
 
 type instance V (Bounds v) = v
 
--- | Bounding functions form a monoid, with the constantly zero
---   function (/i.e./ the empty region) as the identity, and pointwise
---   maximum as composition.  Hence, if @b1@ is the bounding function
---   for diagram @d1@, and @b2@ is the bounding function for @d2@,
---   then @b1 \`mappend\` b2@ is the bounding function for @d1
---   \`atop\` d2@.
-instance (Ord (Scalar v), AdditiveGroup (Scalar v)) => Monoid (Bounds v) where
-  mempty = Bounds $ const zeroV
-  mappend (Bounds b1) (Bounds b2) = Bounds $ max <$> b1 <*> b2
-
 -- | The local origin of a bounding function is the point with
 --   respect to which bounding queries are made, i.e. the point from
 --   which the input vectors are taken to originate.
 instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
          => HasOrigin (Bounds v) where
-  moveOriginTo (P u) (Bounds f) = Bounds $ \v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
+  moveOriginTo (P u) = onBounds $ \f v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
 instance Show (Bounds v) where
   show _ = "<bounds>"
@@ -108,12 +134,13 @@ instance Show (Bounds v) where
 instance ( HasLinearMap v, InnerSpace v
          , Floating (Scalar v), AdditiveGroup (Scalar v) )
     => Transformable (Bounds v) where
-  transform t (Bounds b) =   -- XXX add lots of comments explaining this!
-    moveOriginTo (P . negateV . transl $ t) $
-    Bounds $ \v ->
+  transform t =   -- XXX add lots of comments explaining this!
+    moveOriginTo (P . negateV . transl $ t) .
+    (onBounds $ \f v ->
       let v' = normalized $ lapp (transp t) v
           vi = apply (inv t) v
-      in  b v' / (v' <.> vi)
+      in  f v' / (v' <.> vi)
+    )
 
 ------------------------------------------------------------
 --  Boundable class
@@ -144,7 +171,7 @@ instance (Boundable b) => Boundable [b] where
   getBounds = mconcat . map getBounds
 
 instance (OrderedField (Scalar v), InnerSpace v) => Boundable (Point v) where
-  getBounds p = moveTo p mempty
+  getBounds p = moveTo p . mkBounds $ const zeroV
 
 ------------------------------------------------------------
 --  Located bounding regions
@@ -191,21 +218,22 @@ locateBounds p b = LocatedBounds p (TransInv b)
 ------------------------------------------------------------
 
 -- | Compute the vector from the local origin to a separating
---   hyperplane in the given direction.
+--   hyperplane in the given direction.  Returns the zero vector for
+--   the empty bounding function.
 boundaryV :: Boundable a => V a -> a -> V a
-boundaryV v a = appBounds (getBounds a) v *^ v
+boundaryV v a = maybe zeroV ((*^ v) . ($ v)) $ appBounds (getBounds a)
 
 -- | Compute the point on the boundary in the given direction.
+--   Returns the origin for the empty bounding function.
 boundary :: Boundable a => V a -> a -> Point (V a)
 boundary v a = P $ boundaryV v a
 
 -- | Compute the diameter of a boundable object along a particular
---   vector.
+--   vector.  Returns zero for the empty bounding function.
 diameter :: Boundable a => V a -> a -> Scalar (V a)
-diameter v a = f v ^+^ f (negateV v)
-  where f = appBounds (getBounds a)
+diameter v a = magnitude (boundaryV v a ^-^ boundaryV (negateV v) a)
 
--- | Compute the radius (1\/2 the diameter) of a boundable object
+-- | Compute the \"radius\" (1\/2 the diameter) of a boundable object
 --   along a particular vector.
 radius :: Boundable a => V a -> a -> Scalar (V a)
 radius v a = 0.5 * diameter v a

@@ -39,7 +39,7 @@ module Graphics.Rendering.Diagrams.MList
        , SM(..)
        ) where
 
-import Data.Monoid
+import Data.Semigroup
 import Graphics.Rendering.Diagrams.Monoids
 
 -- $mlist
@@ -82,19 +82,25 @@ instance MList l => MList (a ::: l) where
 
 -- Monoid ----------------------------------
 
+instance Semigroup Nil where
+  _ <> _ = Nil
+
 instance Monoid Nil where
-  mempty        = Nil
-  _ `mappend` _ = Nil
+  mempty  = Nil
+  mappend = (<>)
+
+instance (Semigroup a, Semigroup tl) => Semigroup (a ::: tl) where
+  (Missing t1) <> (Missing t2) = Missing (t1 <> t2)
+  (Missing t1) <> (a2 ::: t2)  = a2 ::: (t1 <> t2)
+  (a1 ::: t1)  <> (Missing t2) = a1 ::: (t1 <> t2)
+  (a1 ::: t1)  <> (a2 ::: t2)  = (a1 <> a2) ::: (t1 <> t2)
 
 -- | Heterogeneous monoidal lists are themselves instances of 'Monoid'
 --   as long as all their elements are, where 'mappend' is done
 --   elementwise.
-instance (Monoid a, Monoid tl) => Monoid (a ::: tl) where
-  mempty = Missing mempty
-  (Missing t1) `mappend` (Missing t2) = Missing (t1 `mappend` t2)
-  (Missing t1) `mappend` (a2 ::: t2)  = a2 ::: (t1 `mappend` t2)
-  (a1 ::: t1)  `mappend` (Missing t2) = a1 ::: (t1 `mappend` t2)
-  (a1 ::: t1)  `mappend` (a2 ::: t2)  = (a1 `mappend` a2) ::: (t1 `mappend` t2)
+instance (Semigroup a, Semigroup tl, Monoid tl) => Monoid (a ::: tl) where
+  mempty  = Missing mempty
+  mappend = (<>)
 
 -- ToTuple ---------------------------------
 

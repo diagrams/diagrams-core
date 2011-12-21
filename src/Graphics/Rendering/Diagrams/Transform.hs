@@ -63,14 +63,13 @@ import Data.LinearMap
 import Data.Basis
 import Data.MemoTrie
 
-import Data.Monoid
+import Data.Semigroup
 import qualified Data.Map as M
 import qualified Data.Set as S
 
 import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Util
 import Graphics.Rendering.Diagrams.HasOrigin
 
 ------------------------------------------------------------
@@ -90,11 +89,14 @@ infixr 7 :-:
 (<->) :: (HasLinearMap u, HasLinearMap v) => (u -> v) -> (v -> u) -> (u :-: v)
 f <-> g = linear f :-: linear g
 
+instance HasLinearMap v => Semigroup (v :-: v) where
+  (f :-: f') <> (g :-: g') = f *.* g :-: g' *.* f'
+
 -- | Invertible linear maps from a vector space to itself form a
 --   monoid under composition.
 instance HasLinearMap v => Monoid (v :-: v) where
   mempty = idL :-: idL
-  (f :-: f') `mappend` (g :-: g') = f *.* g :-: g' *.* f'
+  mappend = (<>)
 
 -- | Invert a linear map.
 linv :: (u :-: v) -> (v :-: u)
@@ -131,10 +133,13 @@ transl (Transformation _ _ v) = v
 
 -- | Transformations are closed under composition; @t1 <> t2@ is the
 --   transformation which performs first @t2@, then @t1@.
+instance HasLinearMap v => Semigroup (Transformation v) where
+  Transformation t1 t1' v1 <> Transformation t2 t2' v2
+    = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
+
 instance HasLinearMap v => Monoid (Transformation v) where
   mempty = Transformation mempty mempty zeroV
-  mappend (Transformation t1 t1' v1) (Transformation t2 t2' v2)
-    = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
+  mappend = (<>)
 
 -- | Transformations can act on transformable things.
 instance (HasLinearMap v, v ~ (V a), Transformable a)
@@ -196,6 +201,9 @@ instance Transformable m => Transformable (Forgetful m) where
 instance Transformable m => Transformable (Deletable m) where
   transform = fmap . transform
 
+instance Transformable Double where
+  transform = apply
+
 ------------------------------------------------------------
 --  Translational invariance  ------------------------------
 ------------------------------------------------------------
@@ -205,7 +213,7 @@ instance Transformable m => Transformable (Deletable m) where
 --   transformations will no longer affect things wrapped in
 --   @TransInv@.
 newtype TransInv t = TransInv { unTransInv :: t }
-  deriving (Show, Monoid)
+  deriving (Show, Semigroup, Monoid)
 
 type instance V (TransInv t) = V t
 

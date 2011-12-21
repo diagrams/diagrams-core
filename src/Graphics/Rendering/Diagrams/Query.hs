@@ -25,7 +25,7 @@ import Graphics.Rendering.Diagrams.HasOrigin
 import Data.VectorSpace
 import Data.AffineSpace
 
-import Data.Monoid
+import Data.Semigroup
 import Control.Applicative
 
 ------------------------------------------------------------
@@ -39,7 +39,7 @@ import Control.Applicative
 --   The idea for annotating diagrams with monoidal queries came from
 --   the graphics-drawingcombinators package, <http://hackage.haskell.org/package/graphics-drawingcombinators>.
 newtype Query v m = Query { runQuery :: Point v -> m }
-  deriving (Functor, Applicative, Monoid)
+  deriving (Functor, Applicative, Semigroup, Monoid)
 
 type instance V (Query v m) = v
 

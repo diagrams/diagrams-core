@@ -30,11 +30,10 @@ module Graphics.Rendering.Diagrams.UDTree
 
        ) where
 
-import Data.Monoid
+import Data.Semigroup
 
 import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.MList
-import Graphics.Rendering.Diagrams.Util
 
 -- | Abstractly, a UDTree is a rose (n-way) tree with data at the
 --   leaves and two types of monoidal annotations, one (called @u@)
@@ -68,6 +67,11 @@ data UDTree u d a
   = Leaf u a
   | Branch u [d] [UDTree u d a]
   deriving (Functor)
+
+-- XXX need to sort out all the semigroup/monoid stuff in here!
+
+instance (Action d u, Monoid u, Monoid d) => Semigroup (UDTree u d a) where
+  t1 <> t2 = branch [t1,t2]
 
 -- | @UDTree@s form a monoid where @mappend@ corresponds to adjoining
 --   two trees under a common parent root.  Note that this technically
@@ -115,13 +119,13 @@ applyD d (Branch u ds ts) = Branch u (d : ds) ts
 
 -- | Add a @u@ annotation to the root, combining it (on the left) with
 --   the existing @u@ annotation.
-applyUpre :: (Monoid u, Action d u) => u -> UDTree u d a -> UDTree u d a
+applyUpre :: (Semigroup u, Action d u) => u -> UDTree u d a -> UDTree u d a
 applyUpre u' (Leaf u a) = Leaf (u' <> u) a
 applyUpre u' b          = Branch (u' <> getU b) [] [b]
 
 -- | Add a @u@ annotation to the root, combining it (on the right) with
 --   the existing @u@ annotation.
-applyUpost :: (Monoid u, Action d u) => u -> UDTree u d a -> UDTree u d a
+applyUpost :: (Semigroup u, Action d u) => u -> UDTree u d a -> UDTree u d a
 applyUpost u' (Leaf u a) = Leaf (u <> u') a
 applyUpost u' b          = Branch (getU b <> u') [] [b]
 
@@ -134,7 +138,7 @@ mapU f (Leaf u a)       = Leaf (f u) a
 mapU f (Branch u ds ts) = Branch (f u) ds (map (mapU f) ts)
 
 -- | A fold for UDTrees.
-foldUD :: (Monoid r, Monoid d, Action d u)
+foldUD :: (Monoid r, Semigroup d, Monoid d, Action d u)
       => (u -> d -> a -> r)  -- ^ Function for processing leaf nodes.
                              --   Given the u annotation at this node, the
                              --   'mconcat' of all d annotations above, and the
@@ -153,5 +157,5 @@ foldUD = foldUD' mempty     -- Pass along accumulated d value
 
 -- | A specialized fold provided for convenience: flatten a tree into
 --   a list of leaves along with their @d@ annotations.
-flatten :: (Monoid d, Action d u) => UDTree u d a -> [(a,d)]
+flatten :: (Semigroup d, Monoid d, Action d u) => UDTree u d a -> [(a,d)]
 flatten = foldUD (\_ d a -> [(a,d)]) (\_ _ r -> r)
