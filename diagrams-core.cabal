@@ -38,7 +38,7 @@ Library
   Build-depends:       base >= 4.2 && < 4.6,
                        containers >= 0.3 && < 0.5,
                        semigroups >= 0.3.4 && < 0.9,
-                       vector-space >= 0.7.7 && < 0.9,
+                       vector-space >= 0.8 && < 0.9,
                        vector-space-points >= 0.1 && < 0.2,
                        MemoTrie >= 0.4.7 && < 0.5,
                        newtype >= 0.2 && < 0.3
