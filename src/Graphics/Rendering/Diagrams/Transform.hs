@@ -113,6 +113,21 @@ lapp (f :-: _) = lapply f
 -- | General (affine) transformations, represented by an invertible
 --   linear map, its /transpose/, and a vector representing a
 --   translation component.
+--
+--   By the /transpose/ of a linear map we mean simply the linear map
+--   corresponding to the transpose of the map's matrix
+--   representation.  For example, any scale is its own transpose,
+--   since scales are represented by matrices with zeros everywhere
+--   except the diagonal.  The transpose of a rotation is the same as
+--   its inverse.
+--
+--   The reason we need to keep track of transposes is because it
+--   turns out that when transforming a shape according to some linear
+--   map L, the shape's /normal vectors/ transform according to L's
+--   inverse transpose.  This is exactly what we need when
+--   transforming bounding functions, which are defined in terms of
+--   /perpendicular/ (i.e. normal) hyperplanes.
+
 data Transformation v = Transformation (v :-: v) (v :-: v) v
 
 type instance V (Transformation v) = v
