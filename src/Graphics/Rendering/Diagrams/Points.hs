@@ -1,8 +1,4 @@
 {-# LANGUAGE TypeFamilies
-           , MultiParamTypeClasses
-           , FlexibleInstances
-           , DeriveFunctor
-           , DeriveDataTypeable
   #-}
 -----------------------------------------------------------------------------
 -- |
