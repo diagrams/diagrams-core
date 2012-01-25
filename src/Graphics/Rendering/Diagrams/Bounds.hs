@@ -57,6 +57,8 @@ import Data.AffineSpace ((.+^), (.-^))
 import Data.Semigroup
 import Control.Applicative ((<$>))
 
+import qualified Data.Map as M
+
 ------------------------------------------------------------
 --  Bounds  ------------------------------------------------
 ------------------------------------------------------------
@@ -167,11 +169,14 @@ class (InnerSpace (V b), OrderedField (Scalar (V b))) => Boundable b where
 instance (InnerSpace v, OrderedField (Scalar v)) => Boundable (Bounds v) where
   getBounds = id
 
+instance (OrderedField (Scalar v), InnerSpace v) => Boundable (Point v) where
+  getBounds p = moveTo p . mkBounds $ const zeroV
+
 instance (Boundable b) => Boundable [b] where
   getBounds = mconcat . map getBounds
 
-instance (OrderedField (Scalar v), InnerSpace v) => Boundable (Point v) where
-  getBounds p = moveTo p . mkBounds $ const zeroV
+instance (Boundable b) => Boundable (M.Map k b) where
+  getBounds = mconcat . map getBounds . M.elems
 
 ------------------------------------------------------------
 --  Located bounding regions

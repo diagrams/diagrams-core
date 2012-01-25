@@ -21,6 +21,8 @@ import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Bounds
 import Graphics.Rendering.Diagrams.HasOrigin
 
+import qualified Data.Map as M
+
 import Data.VectorSpace
 
 -- | Class of things which can be placed \"next to\" other things, for some
@@ -46,4 +48,7 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Juxtaposable (Bounds v) wher
   juxtapose = juxtaposeDefault
 
 instance (Boundable b, HasOrigin b) => Juxtaposable [b] where
+  juxtapose = juxtaposeDefault
+
+instance (Boundable b, HasOrigin b) => Juxtaposable (M.Map k b) where
   juxtapose = juxtaposeDefault
