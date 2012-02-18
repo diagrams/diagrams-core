@@ -1,8 +1,8 @@
 Name:                diagrams-core
 Version:             0.5
 Synopsis:            Core libraries for diagrams EDSL
-Description:         The core modules underlying diagrams, 
-                     an embedded domain-specific language 
+Description:         The core modules underlying diagrams,
+                     an embedded domain-specific language
                      for compositional, declarative drawing.
 Homepage:            http://projects.haskell.org/diagrams
 License:             BSD3
@@ -26,7 +26,7 @@ Library
                        Graphics.Rendering.Diagrams.V,
                        Graphics.Rendering.Diagrams.Query,
                        Graphics.Rendering.Diagrams.Transform,
-                       Graphics.Rendering.Diagrams.Bounds,
+                       Graphics.Rendering.Diagrams.Envelope,
                        Graphics.Rendering.Diagrams.HasOrigin,
                        Graphics.Rendering.Diagrams.Juxtapose,
                        Graphics.Rendering.Diagrams.Points,

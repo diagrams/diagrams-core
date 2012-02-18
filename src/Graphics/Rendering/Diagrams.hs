@@ -78,16 +78,16 @@ module Graphics.Rendering.Diagrams
        , getAttr, combineAttr
        , applyAttr, applyTAttr
 
-         -- * Bounding regions
+         -- * Envelopes
 
-       , Bounds
-       , inBounds, appBounds, onBounds, mkBounds
-       , Boundable(..)
-       , boundaryV, boundary, boundaryFrom
+       , Envelope
+       , inEnvelope, appEnvelope, onEnvelope, mkEnvelope
+       , Enveloped(..)
+       , envelopeV, boundary, boundaryFrom
        , diameter, radius
 
-       , LocatedBounds(..)
-       , location, locateBounds
+       , LocatedEnvelope(..)
+       , location, locateEnvelope
 
          -- * Things with local origins
 
@@ -109,7 +109,7 @@ module Graphics.Rendering.Diagrams
 
        , QDiagram, mkQD, Diagram
        , prims
-       , bounds, names, query, sample
+       , envelope, names, query, sample
        , value, resetValue, clearValue
 
        , named, namePoint
@@ -117,7 +117,7 @@ module Graphics.Rendering.Diagrams
        , withNameAll
        , withNames
 
-       , freeze, setBounds
+       , freeze, setEnvelope
 
        , atop
 
@@ -142,7 +142,7 @@ module Graphics.Rendering.Diagrams
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Util
 import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Bounds
+import Graphics.Rendering.Diagrams.Envelope
 import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Juxtapose
 import Graphics.Rendering.Diagrams.Query

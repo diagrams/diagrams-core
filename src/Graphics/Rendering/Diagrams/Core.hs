@@ -48,7 +48,7 @@ module Graphics.Rendering.Diagrams.Core
          -- * Operations on diagrams
          -- ** Extracting information
        , prims
-       , bounds, names, query, sample
+       , envelope, names, query, sample
        , value, resetValue, clearValue
 
          -- ** Combining diagrams
@@ -68,7 +68,7 @@ module Graphics.Rendering.Diagrams.Core
 
          -- *** Other
        , freeze
-       , setBounds
+       , setEnvelope
 
          -- * Primtives
          -- $prim
@@ -97,7 +97,7 @@ import Graphics.Rendering.Diagrams.UDTree
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Query
 import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Bounds
+import Graphics.Rendering.Diagrams.Envelope
 import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Juxtapose
 import Graphics.Rendering.Diagrams.Points
@@ -127,16 +127,16 @@ import Data.Typeable
 -- | Monoidal annotations which travel up the diagram tree, i.e. which
 --   are aggregated from component diagrams to the whole:
 --
---   * functional bounds (see "Graphics.Rendering.Diagrams.Bounds").
---     The bounds are \"deletable\" meaning that at any point we can
---     throw away the existing bounds and replace them with new ones;
---     sometimes we want to consider a diagram as having different
---     bounds unrelated to its \"natural\" bounds.
+--   * envelopes (see "Graphics.Rendering.Diagrams.Envelope").
+--     The envelopes are \"deletable\" meaning that at any point we can
+--     throw away the existing envelope and replace it with a new one;
+--     sometimes we want to consider a diagram as having a different
+--     envelope unrelated to its \"natural\" envelope.
 --
 --   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
 --
 --   * query functions (see "Graphics.Rendering.Diagrams.Query")
-type UpAnnots v m = Deletable (Bounds v) ::: NameMap v ::: Query v m ::: Nil
+type UpAnnots v m = Deletable (Envelope v) ::: NameMap v ::: Query v m ::: Nil
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -178,17 +178,17 @@ prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
       => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
 prims = (map . second) (untangle . fst . toTuple) . flatten . unQD
 
--- | Get the bounds of a diagram.
-bounds :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
-       => QDiagram b v m -> Bounds v
-bounds = unDelete . getU' . unQD
+-- | Get the envelope of a diagram.
+envelope :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
+       => QDiagram b v m -> Envelope v
+envelope = unDelete . getU' . unQD
 
--- | Replace the bounds of a diagram.
-setBounds :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid' m)
-          => Bounds v -> QDiagram b v m -> QDiagram b v m
-setBounds b = over QD ( applyUpre (inj . toDeletable $ b)
-                      . applyUpre (inj (deleteL :: Deletable (Bounds v)))
-                      . applyUpost (inj (deleteR :: Deletable (Bounds v)))
+-- | Replace the envelope of a diagram.
+setEnvelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid' m)
+          => Envelope v -> QDiagram b v m -> QDiagram b v m
+setEnvelope b = over QD ( applyUpre (inj . toDeletable $ b)
+                      . applyUpre (inj (deleteL :: Deletable (Envelope v)))
+                      . applyUpost (inj (deleteR :: Deletable (Envelope v)))
                       )
 
 -- | Get the name map of a diagram.
@@ -201,45 +201,45 @@ named :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
       => n -> QDiagram b v m -> QDiagram b v m
-named = namePoint (locateBounds <$> const origin <*> bounds)
+named = namePoint (locateEnvelope <$> const origin <*> envelope)
 
--- | Attach an atomic name to a certain point and bounding function,
---   computed from the given diagram.
+-- | Attach an atomic name to a certain point and envelope, computed
+--   from the given diagram.
 namePoint :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
-      => (QDiagram b v m -> LocatedBounds v) -> n -> QDiagram b v m -> QDiagram b v m
+      => (QDiagram b v m -> LocatedEnvelope v) -> n -> QDiagram b v m -> QDiagram b v m
 namePoint p n d = over QD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
--- | Given a name and a diagram transformation indexed by a point and
---   a bounding function, perform the transformation using the most
---   recent (point, bounding function) pair associated with (some
---   qualification of) the name, or perform the identity
---   transformation if the name does not exist.
+-- | Given a name and a diagram transformation indexed by a located
+--   envelope, perform the transformation using the most recent
+--   located envelope associated with (some qualification of) the
+--   name, or perform the identity transformation if the name does not
+--   exist.
 withName :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
             , InnerSpace v, HasLinearMap v)
-         => n -> (LocatedBounds v -> QDiagram b v m -> QDiagram b v m)
+         => n -> (LocatedEnvelope v -> QDiagram b v m -> QDiagram b v m)
          -> QDiagram b v m -> QDiagram b v m
 withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
 
 -- | Given a name and a diagram transformation indexed by a list of
--- (point, bounding function) pairs, perform the transformation using
--- the collection of all pairs associated with (some qualification of)
--- the given name.
+--   located envelopes, perform the transformation using the
+--   collection of all such located envelopes associated with (some
+--   qualification of) the given name.
 withNameAll :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
                , InnerSpace v, HasLinearMap v)
-            => n -> ([LocatedBounds v] -> QDiagram b v m -> QDiagram b v m)
+            => n -> ([LocatedEnvelope v] -> QDiagram b v m -> QDiagram b v m)
             -> QDiagram b v m -> QDiagram b v m
 withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
 
 -- | Given a list of names and a diagram transformation indexed by a
---   list of (point,bounding function) pairs, perform the
---   transformation using the list of most recent pairs associated
---   with (some qualification of) each name.  Do nothing (the identity
---   transformation) if any of the names do not exist.
+--   list of located envelopes, perform the transformation using the
+--   list of most recent envelopes associated with (some qualification
+--   of) each name.  Do nothing (the identity transformation) if any
+--   of the names do not exist.
 withNames :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
              , InnerSpace v, HasLinearMap v)
-          => [n] -> ([LocatedBounds v] -> QDiagram b v m -> QDiagram b v m)
+          => [n] -> ([LocatedEnvelope v] -> QDiagram b v m -> QDiagram b v m)
           -> QDiagram b v m -> QDiagram b v m
 withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupN . toName) ns)) d
   where nd = names d
@@ -271,9 +271,9 @@ resetValue = fmap toAny
 clearValue :: QDiagram b v m -> QDiagram b v Any
 clearValue = fmap (const (Any False))
 
--- | Create a diagram from a single primitive, along with a bounding
---   region, name map, and query function.
-mkQD :: Prim b v -> Bounds v -> NameMap v -> Query v m -> QDiagram b v m
+-- | Create a diagram from a single primitive, along with an envelope,
+--   name map, and query function.
+mkQD :: Prim b v -> Envelope v -> NameMap v -> Query v m -> QDiagram b v m
 mkQD p b n a = QD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
 
 ------------------------------------------------------------
@@ -282,9 +282,9 @@ mkQD p b n a = QD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
 
 ---- Monoid
 
--- | Diagrams form a monoid since each of their components do:
---   the empty diagram has no primitives, a constantly zero bounding
---   function, no named points, and a constantly empty query function.
+-- | Diagrams form a monoid since each of their components do: the
+--   empty diagram has no primitives, an empty envelope, no named
+--   points, and a constantly empty query function.
 --
 --   Diagrams compose by aligning their respective local origins.  The
 --   new diagram has all the primitives and all the names from the two
@@ -373,11 +373,11 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
       => Juxtaposable (QDiagram b v m) where
   juxtapose = juxtaposeDefault
 
----- Boundable
+---- Enveloped
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
-         => Boundable (QDiagram b v m) where
-  getBounds = bounds
+         => Enveloped (QDiagram b v m) where
+  getEnvelope = envelope
 
 ---- HasOrigin
 

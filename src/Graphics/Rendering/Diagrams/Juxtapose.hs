@@ -18,7 +18,7 @@ module Graphics.Rendering.Diagrams.Juxtapose
        ) where
 
 import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Bounds
+import Graphics.Rendering.Diagrams.Envelope
 import Graphics.Rendering.Diagrams.HasOrigin
 
 import qualified Data.Map as M
@@ -38,17 +38,17 @@ class Juxtaposable a where
   juxtapose :: V a -> a -> a -> a
 
 -- | Default implementation of 'juxtapose' for things which are
---   instances of 'Boundable' and 'HasOrigin'.
-juxtaposeDefault :: (Boundable a, HasOrigin a) => V a -> a -> a -> a
+--   instances of 'Enveloped' and 'HasOrigin'.
+juxtaposeDefault :: (Enveloped a, HasOrigin a) => V a -> a -> a -> a
 juxtaposeDefault v a1 a2 = moveOriginBy (v1 ^+^ v2) a2
-  where v1 = negateV (boundaryV v a1)
-        v2 = boundaryV (negateV v) a2
+  where v1 = negateV (envelopeV v a1)
+        v2 = envelopeV (negateV v) a2
 
-instance (InnerSpace v, OrderedField (Scalar v)) => Juxtaposable (Bounds v) where
+instance (InnerSpace v, OrderedField (Scalar v)) => Juxtaposable (Envelope v) where
   juxtapose = juxtaposeDefault
 
-instance (Boundable b, HasOrigin b) => Juxtaposable [b] where
+instance (Enveloped b, HasOrigin b) => Juxtaposable [b] where
   juxtapose = juxtaposeDefault
 
-instance (Boundable b, HasOrigin b) => Juxtaposable (M.Map k b) where
+instance (Enveloped b, HasOrigin b) => Juxtaposable (M.Map k b) where
   juxtapose = juxtaposeDefault
