@@ -40,7 +40,7 @@ module Graphics.Rendering.Diagrams.Envelope
          -- * Utility functions
        , diameter
        , radius
-       , envelopeV, boundary, boundaryFrom
+       , envelopeV, envelopeP, boundaryFrom
 
          -- * Miscellaneous
        , OrderedField
@@ -231,10 +231,10 @@ locateEnvelope p b = LocatedEnvelope p (TransInv b)
 envelopeV :: Enveloped a => V a -> a -> V a
 envelopeV v a = maybe zeroV ((*^ v) . ($ v)) $ appEnvelope (getEnvelope a)
 
--- | Compute the point on the boundary in the given direction.
---   Returns the origin for the empty envelope.
-boundary :: Enveloped a => V a -> a -> Point (V a)
-boundary v a = P $ envelopeV v a
+-- | Compute the point on a separating hyperplane in the given
+--   direction.  Returns the origin for the empty envelope.
+envelopeP :: Enveloped a => V a -> a -> Point (V a)
+envelopeP v a = P $ envelopeV v a
 
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
