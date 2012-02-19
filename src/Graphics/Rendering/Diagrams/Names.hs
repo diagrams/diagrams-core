@@ -106,7 +106,7 @@ instance Eq AName where
 instance Ord AName where
   (AName a1) `compare` (AName a2) =
     case cast a2 of
-      Nothing  -> (show $ typeOf a1) `compare` (show $ typeOf a2)
+      Nothing  -> show (typeOf a1) `compare` show (typeOf a2)
       Just a2' -> a1 `compare` a2'
 
 instance Show AName where
@@ -223,8 +223,8 @@ instance Action Name a
 --   names of which the given name is a suffix.
 lookupN :: IsName n => n -> NameMap v -> Maybe [LocatedEnvelope v]
 lookupN a (NameMap m)
-  = (M.lookup n m `mplus`
-    (flatten . filter ((n `nameSuffixOf`) . fst) . M.assocs $ m))
+  = M.lookup n m `mplus`
+    (flatten . filter ((n `nameSuffixOf`) . fst) . M.assocs $ m)
   where (Name n1) `nameSuffixOf` (Name n2) = n1 `isSuffixOf` n2
         flatten [] = Nothing
         flatten xs = Just . concatMap snd $ xs

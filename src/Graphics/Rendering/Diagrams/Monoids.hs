@@ -464,4 +464,4 @@ untangle (MCo elts) = untangle' mempty elts
 -- | Coproducts act on other things by having each of the components
 --   act individually.
 instance (Action m r, Action n r) => Action (m :+: n) r where
-  act = appEndo . mconcat . map Endo . map (either act act) . unMCo
+  act = appEndo . mconcat . map (Endo . either act act) . unMCo
