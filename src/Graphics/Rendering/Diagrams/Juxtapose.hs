@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts
            , UndecidableInstances
+           , TypeFamilies
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -22,6 +23,7 @@ import Graphics.Rendering.Diagrams.Envelope
 import Graphics.Rendering.Diagrams.HasOrigin
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Data.VectorSpace
 
@@ -47,8 +49,15 @@ juxtaposeDefault v a1 a2 = moveOriginBy (v1 ^+^ v2) a2
 instance (InnerSpace v, OrderedField (Scalar v)) => Juxtaposable (Envelope v) where
   juxtapose = juxtaposeDefault
 
+instance (Enveloped a, HasOrigin a, Enveloped b, HasOrigin b, V a ~ V b)
+         => Juxtaposable (a,b) where
+  juxtapose = juxtaposeDefault
+
 instance (Enveloped b, HasOrigin b) => Juxtaposable [b] where
   juxtapose = juxtaposeDefault
 
 instance (Enveloped b, HasOrigin b) => Juxtaposable (M.Map k b) where
+  juxtapose = juxtaposeDefault
+
+instance (Enveloped b, HasOrigin b, Ord b) => Juxtaposable (S.Set b) where
   juxtapose = juxtaposeDefault

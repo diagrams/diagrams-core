@@ -44,9 +44,10 @@ import Graphics.Rendering.Diagrams.Monoids
 
 import Data.Typeable
 
--- import Control.Arrow ((***))  XXX
+import Control.Arrow ((***))
 import Data.Semigroup
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------
@@ -203,14 +204,20 @@ class HasStyle a where
 instance HasStyle (Style v) where
   applyStyle = mappend
 
+instance (HasStyle a, HasStyle b, V a ~ V b) => HasStyle (a,b) where
+  applyStyle s = applyStyle s *** applyStyle s
+
 instance HasStyle a => HasStyle [a] where
   applyStyle = fmap . applyStyle
 
 instance HasStyle b => HasStyle (a -> b) where
   applyStyle = fmap . applyStyle
 
--- instance (HasStyle a, HasStyle b) => HasStyle (a,b) where
---   applyStyle s = applyStyle s *** applyStyle s
+instance HasStyle a => HasStyle (M.Map k a) where
+  applyStyle = fmap . applyStyle
+
+instance (HasStyle a, Ord a) => HasStyle (S.Set a) where
+  applyStyle = S.map . applyStyle
 
 -- | Apply an attribute to an instance of 'HasStyle' (such as a
 --   diagram or a style).  If the object already has an attribute of

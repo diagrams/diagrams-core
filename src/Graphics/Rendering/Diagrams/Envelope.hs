@@ -58,6 +58,7 @@ import Data.Semigroup
 import Control.Applicative ((<$>))
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 ------------------------------------------------------------
 --  Envelopes  ---------------------------------------------
@@ -170,11 +171,17 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Enveloped (Envelope v) where
 instance (OrderedField (Scalar v), InnerSpace v) => Enveloped (Point v) where
   getEnvelope p = moveTo p . mkEnvelope $ const zeroV
 
+instance (Enveloped a, Enveloped b, V a ~ V b) => Enveloped (a,b) where
+  getEnvelope (x,y) = getEnvelope x <> getEnvelope y
+
 instance (Enveloped b) => Enveloped [b] where
   getEnvelope = mconcat . map getEnvelope
 
 instance (Enveloped b) => Enveloped (M.Map k b) where
   getEnvelope = mconcat . map getEnvelope . M.elems
+
+instance (Enveloped b) => Enveloped (S.Set b) where
+  getEnvelope = mconcat . map getEnvelope . S.elems
 
 -- XXX  rename this?  Move it elsewhere?
 ------------------------------------------------------------

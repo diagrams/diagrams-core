@@ -5,6 +5,7 @@
            , TypeFamilies
            , MultiParamTypeClasses
            , GeneralizedNewtypeDeriving
+           , TypeSynonymInstances
   #-}
 
 -----------------------------------------------------------------------------
@@ -198,6 +199,17 @@ instance HasLinearMap v => Transformable (Transformation v) where
 instance HasLinearMap v => HasOrigin (Transformation v) where
   moveOriginTo p = translate (origin .-. p)
 
+instance Transformable t => Transformable (t,t) where
+  transform t (x,y) =  ( transform t x
+                       , transform t y
+                       )
+
+instance Transformable t => Transformable (t,t,t) where
+  transform t (x,y,z) = ( transform t x
+                        , transform t y
+                        , transform t z
+                        )
+
 instance Transformable t => Transformable [t] where
   transform = map . transform
 
@@ -217,6 +229,9 @@ instance Transformable m => Transformable (Deletable m) where
   transform = fmap . transform
 
 instance Transformable Double where
+  transform = apply
+
+instance Transformable Rational where
   transform = apply
 
 ------------------------------------------------------------

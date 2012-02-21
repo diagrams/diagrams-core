@@ -29,6 +29,13 @@ import Data.Map
 type family V a :: *
 
 type instance V Double    = Double
+type instance V Rational  = Rational
+
+-- Note, to use these instances one often needs a constraint of the form
+--   V a ~ V b, etc.
+type instance V (a,b)     = V a
+type instance V (a,b,c)   = V a
+
 type instance V (a -> b)  = V b
 type instance V [a]       = V a
 type instance V (Set a)   = V a

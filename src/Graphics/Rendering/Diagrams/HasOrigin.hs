@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances
            , FlexibleContexts
+           , TypeFamilies
   #-}
 
 -----------------------------------------------------------------------------
@@ -22,6 +23,7 @@ import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Points
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Data.AffineSpace ((.-^), (.-.))
 import Data.VectorSpace
@@ -75,8 +77,14 @@ place = flip moveTo
 instance VectorSpace v => HasOrigin (Point v) where
   moveOriginTo (P u) p = p .-^ u
 
+instance (HasOrigin a, HasOrigin b, V a ~ V b) => HasOrigin (a,b) where
+  moveOriginTo p (x,y) = (moveOriginTo p x, moveOriginTo p y)
+
 instance HasOrigin a => HasOrigin [a] where
   moveOriginTo = map . moveOriginTo
+
+instance (HasOrigin a, Ord a) => HasOrigin (S.Set a) where
+  moveOriginTo = S.map . moveOriginTo
 
 instance HasOrigin a => HasOrigin (M.Map k a) where
   moveOriginTo = M.map . moveOriginTo
