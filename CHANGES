@@ -1,15 +1,9 @@
-0.1: 17 May 2011
+0.4: 23 October 2011
+  * improved documentation
+  * a few new instances (Newtype Point, Boundable Point)
+  * new functions (value, clearValue, resetValue) for working with
+    alternate query monoids0.1: 17 May 2011
   * initial preview release
-
-0.1.1: 18 May 2011
-  * link to new website
-
-0.2: 3 June 2011
-  * bounding regions can now be overridden
-  * new namePoint function for more flexibly assigning names to arbitrary points
-  * add HasStyle, Boundable, and HasOrigin instances for lists
-  * add a "trivial backend"
-  * transformable attributes
 
 0.3: 18 June 2011
   * big overhaul of name maps:
@@ -19,8 +13,12 @@
   * fix for issue #34 (fix behavior of setBounds)
   * Transformable and HasOrigin instances for Transformations
 
-0.4: 23 October 2011
-  * improved documentation
-  * a few new instances (Newtype Point, Boundable Point)
-  * new functions (value, clearValue, resetValue) for working with
-    alternate query monoids
+0.2: 3 June 2011
+  * bounding regions can now be overridden
+  * new namePoint function for more flexibly assigning names to arbitrary points
+  * add HasStyle, Boundable, and HasOrigin instances for lists
+  * add a "trivial backend"
+  * transformable attributes
+
+0.1.1: 18 May 2011
+  * link to new website
