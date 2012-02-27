@@ -1,3 +1,52 @@
+* 0.5: XXX
+
+  * New features:
+
+    - New 'Juxtaposable' class
+    - New NullBackend and D types, for conveniently giving a
+      monomorphic type to diagrams when we don't care which one it is.
+    - #27: Change type of adjustDia to return a new options record
+      (with an explicitly filled-in size)
+
+  * New instances:
+
+    - Enveloped, HasOrigin, Juxtaposable, HasStyle, and Transformable
+      instances for Sets and tuples
+    - V Double = Double
+    - Juxtaposable and Boundable instances for Map
+
+  * Renaming/refactoring:
+
+    - AnnDiagram -> QDiagram
+
+    - #61: terminology change from "bounds" to "envelope"
+      + boundary -> envelopeP
+      + "bounding region" -> "envelope"
+      + Bounds -> Envelope
+      + Boundable -> Enveloped
+      + getBounds -> getEnvelope
+      + etc.
+
+    - Split out definition of Point into separate package
+      (vector-space-points)
+
+    - The Point constructor P is no longer exported from
+      Graphics.Rendering.Diagrams.  See the Diagrams.TwoD.Types module
+      from diagrams-lib for new tools for working with abstract 2D
+      points.  If you really need the P constructor, import
+      Graphics.Rendering.Diagrams.Points.
+
+    - Name-related functions now return "located bounding functions"
+      instead of pairs of points and bounds, to allow for future
+      expansion.
+
+  * Dependency/version changes:
+    - vector-space 0.8 is now required.
+    - Bump base upper bound to allow 4.5; now tested with GHC 7.4.1.
+
+  * Bug fixes:
+    - Bug fix related to empty envelopes
+
 0.4: 23 October 2011
   * improved documentation
   * a few new instances (Newtype Point, Boundable Point)
