@@ -3,19 +3,20 @@
   * New features:
 
     - New 'Juxtaposable' class
+
     - New NullBackend and D types, for conveniently giving a
       monomorphic type to diagrams when we don't care which one it is.
+
     - #27: Change type of adjustDia to return a new options record
       (with an explicitly filled-in size)
 
   * New instances:
-
     - Enveloped, HasOrigin, Juxtaposable, HasStyle, and Transformable
       instances for Sets and tuples
     - V Double = Double
     - Juxtaposable and Boundable instances for Map
 
-  * Renaming/refactoring:
+  * API changes
 
     - AnnDiagram -> QDiagram
 
