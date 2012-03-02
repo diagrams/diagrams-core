@@ -1,7 +1,11 @@
 {-# LANGUAGE FlexibleInstances
            , FlexibleContexts
            , TypeFamilies
+           , UndecidableInstances
   #-}
+
+-- The UndecidableInstances flag is needed under 6.12.3 for the
+-- HasOrigin (a,b) instance.
 
 -----------------------------------------------------------------------------
 -- |

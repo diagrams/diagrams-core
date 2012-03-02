@@ -4,7 +4,11 @@
            , FlexibleInstances
            , MultiParamTypeClasses
            , TypeFamilies
+           , UndecidableInstances
   #-}
+
+-- The UndecidableInstances flag is needed under 6.12.3 for the
+-- HasStyle (a,b) instance.
 
 -----------------------------------------------------------------------------
 -- |
