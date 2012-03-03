@@ -152,7 +152,7 @@ type DownAnnots v = (Split (Transformation v) :+: Style v) ::: AM [] Name ::: Ni
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
---   @QDiagram@ stands for "Queriable", as distinguished from
+--   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
 newtype QDiagram b v m
