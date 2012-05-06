@@ -96,10 +96,9 @@ instance (Semigroup a, Semigroup tl) => Semigroup (a ::: tl) where
   (a1 ::: t1)  <> (a2 ::: t2)  = (a1 <> a2) ::: (t1 <> t2)
 
 -- | Heterogeneous monoidal lists are themselves instances of 'Monoid'
---   as long as all their elements are, where 'mappend' is done
---   elementwise.
-instance (Semigroup a, Semigroup tl, Monoid tl) => Monoid (a ::: tl) where
-  mempty  = Missing mempty
+--   as long as all their elements are instances of 'Semigroup'.
+instance (Semigroup a, Semigroup tl, MList tl) => Monoid (a ::: tl) where
+  mempty  = Missing empty
   mappend = (<>)
 
 -- ToTuple ---------------------------------
@@ -163,16 +162,15 @@ instance (t :>: a) => (:>:) (b ::: t) a where
 --   guide instance selection when defining the action of
 --   heterogeneous monoidal lists on each other.
 newtype SM m = SM m
-  deriving (Monoid)
 
 instance Action Nil l where
   act _ a = a
 
-instance (Monoid a, Action (SM a) l2, Action l1 l2) => Action (a ::: l1) l2 where
+instance (Action (SM a) l2, Action l1 l2) => Action (a ::: l1) l2 where
   act (Missing l1) l2 = act l1 l2
   act (a ::: l1) l2   = act (SM a) (act l1 l2)
 
-instance Monoid a => Action (SM a) Nil where
+instance Action (SM a) Nil where
   act _ _ = Nil
 
 instance (Action a a', Action (SM a) l) => Action (SM a) (a' ::: l) where

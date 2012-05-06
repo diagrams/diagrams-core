@@ -79,6 +79,8 @@ instance (Semigroup m, Monoid m) => Monoid' m
 --  Monoid actions
 ------------------------------------------------------------
 
+-- XXX actually for semigroup and/or monoid actions
+
 -- | Type class for monoid actions, where monoidal values of type @m@
 --   \"act\" on values of another type @s@.  Instances are required to
 --   satisfy the laws
@@ -103,6 +105,10 @@ class Action m s where
   -- | Convert a monoidal value of type @m@ to an action on @s@ values.
   act :: m -> s -> s
   act = const id
+
+instance Action m s => Action (Option m) s where
+  act (Option Nothing)  s = s
+  act (Option (Just m)) s = act m s
 
 ------------------------------------------------------------
 --  Split monoids

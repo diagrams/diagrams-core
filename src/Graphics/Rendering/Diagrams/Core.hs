@@ -92,7 +92,7 @@ module Graphics.Rendering.Diagrams.Core
 
 import Graphics.Rendering.Diagrams.Monoids
 import Graphics.Rendering.Diagrams.MList
-import Graphics.Rendering.Diagrams.UDTree
+import Graphics.Rendering.Diagrams.DUBLTree
 
 import Graphics.Rendering.Diagrams.V
 import Graphics.Rendering.Diagrams.Query
@@ -148,7 +148,7 @@ type UpAnnots v m = Deletable (Envelope v) ::: NameMap v ::: Query v m ::: Nil
 --   * styles (see "Graphics.Rendering.Diagrams.Style")
 --
 --   * names (see "Graphics.Rendering.Diagrams.Names")
-type DownAnnots v = (Split (Transformation v) :+: Style v) ::: AM [] Name ::: Nil
+type DownAnnots v = (Split (Transformation v) :+: Style v) ::: Name ::: Nil
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
@@ -156,11 +156,11 @@ type DownAnnots v = (Split (Transformation v) :+: Style v) ::: AM [] Name ::: Ni
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
 newtype QDiagram b v m
-  = QD { unQD :: UDTree (UpAnnots v m) (DownAnnots v) (Prim b v) }
+  = QD { unQD :: DUBLTree (DownAnnots v) (UpAnnots v m) () (Prim b v) }
   deriving (Typeable)
 
 instance Newtype (QDiagram b v m)
-                 (UDTree (UpAnnots v m) (DownAnnots v) (Prim b v)) where
+                 (DUBLTree (DownAnnots v) (UpAnnots v m) () (Prim b v)) where
   pack   = QD
   unpack = unQD
 
@@ -172,11 +172,15 @@ type instance V (QDiagram b v m) = v
 --   query can be done via the 'Functor' instance of @'QDiagram' b@.
 type Diagram b v = QDiagram b v Any
 
+fromOption :: a -> Option a -> a
+fromOption a (Option Nothing)  = a
+fromOption _ (Option (Just a)) = a
+
 -- | Extract a list of primitives from a diagram, together with their
 --   associated transformations and styles.
-prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = (map . second) (untangle . fst . toTuple) . flatten . unQD
+prims = (map . second) (untangle . fst . toTuple . fromOption empty) . flatten . unQD
 
 -- | Get the envelope of a diagram.
 envelope :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
@@ -199,7 +203,7 @@ names = getU' . unQD
 -- | Attach an atomic name to (the local origin of) a diagram.
 named :: forall v b n m.
          ( IsName n
-         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => n -> QDiagram b v m -> QDiagram b v m
 named = namePoint (locateEnvelope <$> const origin <*> envelope)
 
@@ -207,7 +211,7 @@ named = namePoint (locateEnvelope <$> const origin <*> envelope)
 --   from the given diagram.
 namePoint :: forall v b n m.
          ( IsName n
-         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => (QDiagram b v m -> LocatedEnvelope v) -> n -> QDiagram b v m -> QDiagram b v m
 namePoint p n d = over QD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 
@@ -293,23 +297,23 @@ mkQD p b n a = QD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
 --   probably only makes sense in vector spaces of dimension lower
 --   than 3, but in theory it could make sense for, say, 3-dimensional
 --   diagrams when viewed by 4-dimensional beings.
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
   => Monoid (QDiagram b v m) where
-  mempty = QD mempty
-  (QD d1) `mappend` (QD d2) = QD (d2 `mappend` d1)
+  mempty  = QD Empty
+  mappend = (<>)
+
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+  => Semigroup (QDiagram b v m) where
+  (QD d1) <> (QD d2) = QD (d2 <> d1)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
-
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
-  => Semigroup (QDiagram b v m) where
-  (<>) = mappend
 
 -- | A convenient synonym for 'mappend' on diagrams, designed to be
 --   used infix (to help remember which diagram goes on top of which
 --   when combining them, namely, the first on top of the second).
-atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid' m)
+atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
      => QDiagram b v m -> QDiagram b v m -> QDiagram b v m
-atop = mappend
+atop = (<>)
 
 infixl 6 `atop`
 
@@ -340,7 +344,7 @@ instance Functor (QDiagram b v) where
 
 ---- HasStyle
 
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => HasStyle (QDiagram b v m) where
   applyStyle = over QD . applyD . inj
              . (inR :: Style v -> Split (Transformation v) :+: Style v)
@@ -361,7 +365,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
 --   produce a concrete drawing of the diagram, and it is this visual
 --   representation itself which is acted upon by subsequent
 --   transformations.
-freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+freeze :: forall v b m. (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
        => QDiagram b v m -> QDiagram b v m
 freeze = over QD . applyD . inj
        . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
@@ -369,7 +373,7 @@ freeze = over QD . applyD . inj
 
 ---- Juxtaposable
 
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => Juxtaposable (QDiagram b v m) where
   juxtapose = juxtaposeDefault
 
@@ -383,7 +387,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => HasOrigin (QDiagram b v m) where
 
   moveOriginTo = translate . (origin .-.)
@@ -392,7 +396,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
 
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
-instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid' m)
+instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v)
       => Transformable (QDiagram b v m) where
   transform = over QD . applyD . inj
             . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
@@ -402,9 +406,9 @@ instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Monoid' m)
 
 -- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
-instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => Qualifiable (QDiagram b v m) where
-  (|>) = over QD . applyD . inj . AM . (:[]) . toName
+  (|>) = over QD . applyD . inj . toName
 
 
 ------------------------------------------------------------
