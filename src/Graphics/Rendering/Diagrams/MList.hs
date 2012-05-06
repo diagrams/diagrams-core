@@ -22,12 +22,9 @@ module Graphics.Rendering.Diagrams.MList
 
          -- $mlist
 
-         Nil(..), (:::)(..)
+         (:::), (*:)
 
        , MList(..)
-
-         -- * Converting to tuples
-       , Tuple, ToTuple(..)
 
          -- * Accessing embedded values
        , (:>:)(..)
@@ -39,7 +36,9 @@ module Graphics.Rendering.Diagrams.MList
        , SM(..)
        ) where
 
+import Control.Arrow
 import Data.Semigroup
+
 import Graphics.Rendering.Diagrams.Monoids
 
 -- $mlist
@@ -52,17 +51,12 @@ import Graphics.Rendering.Diagrams.Monoids
 -- types, by leaving all the other values out.
 
 infixr 5 :::
+infixr 5 *:
 
--- | The empty heterogeneous list.
-data Nil     = Nil
-  deriving (Show, Eq, Ord)
+type a ::: l = (Option a, l)
 
--- | Cons for heterogeneous lists.
-data a ::: l = Missing l -- ^ The @a@ value is missing, and should be
-                         --   construed as 'mempty'.
-             | a ::: l   -- ^ An @a@ value followed by a heterogeneous
-                         --   list @l@.
-  deriving (Show, Eq, Ord)
+(*:) :: a -> l -> a ::: l
+a *: l = (Option (Just a), l)
 
 -- MList -----------------------------------
 
@@ -74,52 +68,11 @@ class MList l where
   -- 'Monoid' constraints on all the elements of @l@.
   empty   :: l
 
-instance MList Nil where
-  empty     = Nil
+instance MList () where
+  empty     = ()
 
 instance MList l => MList (a ::: l) where
-  empty   = Missing empty
-
--- Monoid ----------------------------------
-
-instance Semigroup Nil where
-  _ <> _ = Nil
-
-instance Monoid Nil where
-  mempty  = Nil
-  mappend = (<>)
-
-instance (Semigroup a, Semigroup tl) => Semigroup (a ::: tl) where
-  (Missing t1) <> (Missing t2) = Missing (t1 <> t2)
-  (Missing t1) <> (a2 ::: t2)  = a2 ::: (t1 <> t2)
-  (a1 ::: t1)  <> (Missing t2) = a1 ::: (t1 <> t2)
-  (a1 ::: t1)  <> (a2 ::: t2)  = (a1 <> a2) ::: (t1 <> t2)
-
--- | Heterogeneous monoidal lists are themselves instances of 'Monoid'
---   as long as all their elements are instances of 'Semigroup'.
-instance (Semigroup a, Semigroup tl, MList tl) => Monoid (a ::: tl) where
-  mempty  = Missing empty
-  mappend = (<>)
-
--- ToTuple ---------------------------------
-
--- | A type function to compute the tuple-based representation for
---   instances of 'MList'.
-type family Tuple l :: *
-type instance Tuple Nil       = ()
-type instance Tuple (a ::: b) = (a, Tuple b)
-
--- | @toTuple@ can be used to convert a heterogeneous list to its
---   tuple-based representation.
-class ToTuple l where
-  toTuple :: l -> Tuple l
-
-instance ToTuple Nil where
-  toTuple _ = ()
-
-instance (Monoid a, ToTuple l) => ToTuple (a ::: l) where
-  toTuple (Missing l) = (mempty, toTuple l)
-  toTuple (a ::: l)   = (a, toTuple l)
+  empty   = (Option Nothing, empty)
 
 -- Embedding -------------------------------------------
 
@@ -129,25 +82,22 @@ class l :>: a where
   -- | Inject a value into an otherwise empty heterogeneous list.
   inj  :: a -> l
 
-  -- | Get the value of type @a@ from a heterogeneous list.
-  get  :: l -> a
+  -- | Get the value of type @a@ from a heterogeneous list, if there
+  --   is one.
+  get  :: l -> Option a
 
   -- | Alter the value of type @a@ by applying the given function to it.
-  alt  :: (a -> a) -> l -> l
+  alt  :: (Option a -> Option a) -> l -> l
 
-instance (MList t, Monoid a) => (:>:) (a ::: t) a where
-  inj a                = a ::: empty
-  get (Missing _)      = mempty
-  get (a ::: _)        = a
-  alt f (Missing l)    = f mempty ::: l
-  alt f (a ::: l)      = f a ::: l
+instance MList t => (:>:) (a ::: t) a where
+  inj a = (Option (Just a), empty)
+  get   = fst
+  alt   = first
 
 instance (t :>: a) => (:>:) (b ::: t) a where
-  inj a                = Missing (inj a)
-  get (Missing l)      = get l
-  get (_ ::: l)        = get l
-  alt f (Missing l)    = Missing (alt f l)
-  alt f (a ::: l)      = a ::: alt f l
+  inj a = (Option Nothing, inj a)
+  get   = get . snd
+  alt   = second . alt
 
 -- Monoid actions -----------------------------------------
 
@@ -163,16 +113,15 @@ instance (t :>: a) => (:>:) (b ::: t) a where
 --   heterogeneous monoidal lists on each other.
 newtype SM m = SM m
 
-instance Action Nil l where
+instance Action () l where
   act _ a = a
 
-instance (Action (SM a) l2, Action l1 l2) => Action (a ::: l1) l2 where
-  act (Missing l1) l2 = act l1 l2
-  act (a ::: l1) l2   = act (SM a) (act l1 l2)
+instance (Action (SM a) l2, Action l1 l2) => Action (a, l1) l2 where
+  act (a,l) = act (SM a) . act l
 
-instance Action (SM a) Nil where
-  act _ _ = Nil
+instance Action (SM a) () where
+  act _ _ = ()
 
-instance (Action a a', Action (SM a) l) => Action (SM a) (a' ::: l) where
-  act (SM a) (Missing l) = Missing (act (SM a) l)
-  act (SM a) (a' ::: l)  = act a a' ::: act (SM a) l
+instance (Action a a', Action (SM a) l) => Action (SM a) (Option a', l) where
+  act (SM a) (Option Nothing,   l) = (Option Nothing, act (SM a) l)
+  act (SM a) (Option (Just a'), l) = (Option (Just (act a a')), act (SM a) l)

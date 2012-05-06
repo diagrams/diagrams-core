@@ -133,7 +133,7 @@ import           Graphics.Rendering.Diagrams.Style
 --   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
 --
 --   * query functions (see "Graphics.Rendering.Diagrams.Query")
-type UpAnnots v m = Deletable (Envelope v) ::: NameMap v ::: Query v m ::: Nil
+type UpAnnots v m = Deletable (Envelope v) ::: NameMap v ::: Query v m ::: ()
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -145,7 +145,7 @@ type UpAnnots v m = Deletable (Envelope v) ::: NameMap v ::: Query v m ::: Nil
 --   * styles (see "Graphics.Rendering.Diagrams.Style")
 --
 --   * names (see "Graphics.Rendering.Diagrams.Names")
-type DownAnnots v = (Split (Transformation v) :+: Style v) ::: Name ::: Nil
+type DownAnnots v = (Split (Transformation v) :+: Style v) ::: Name ::: ()
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
@@ -169,15 +169,17 @@ type instance V (QDiagram b v m) = v
 --   query can be done via the 'Functor' instance of @'QDiagram' b@.
 type Diagram b v = QDiagram b v Any
 
+-- XXX move this
 fromOption :: a -> Option a -> a
-fromOption a (Option Nothing)  = a
-fromOption _ (Option (Just a)) = a
+fromOption a = fromMaybe a . getOption
 
 -- | Extract a list of primitives from a diagram, together with their
 --   associated transformations and styles.
 prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = (map . second) (untangle . fst . toTuple . fromOption empty) . flatten . unQD
+prims = (map . second) (untangle . fromOption mempty . fst . fromOption empty)
+      . flatten
+      . unQD
 
 -- | Get the envelope of a diagram.
 envelope :: (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
@@ -275,7 +277,7 @@ clearValue = fmap (const (Any False))
 -- | Create a diagram from a single primitive, along with an envelope,
 --   name map, and query function.
 mkQD :: Prim b v -> Envelope v -> NameMap v -> Query v m -> QDiagram b v m
-mkQD p b n a = QD $ leaf (toDeletable b ::: n ::: a ::: Nil) p
+mkQD p b n a = QD $ leaf (toDeletable b *: n *: a *: ()) p
 
 ------------------------------------------------------------
 --  Instances
@@ -316,11 +318,8 @@ infixl 6 `atop`
 
 ---- Functor
 
--- This is a bit ugly, but it will have to do for now...
 instance Functor (QDiagram b v) where
-  fmap f = over QD (mapU g)
-    where g (b ::: n ::: a ::: Nil) = b ::: n ::: fmap f a ::: Nil
-          g _ = error "impossible case in Functor (QDiagram b v) instance (g)"
+  fmap = over QD . mapU . second . second . first . fmap . fmap
 
 ---- Applicative
 

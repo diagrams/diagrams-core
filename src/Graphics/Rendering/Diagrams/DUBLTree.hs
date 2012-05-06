@@ -38,10 +38,10 @@ import           Data.Semigroup
 import           Graphics.Rendering.Diagrams.Monoids
 import           Graphics.Rendering.Diagrams.MList
 
--- | Abstractly, a DUBLTree is a rose (n-way) tree with data at the
---   leaves and two types of monoidal annotations, one (called @u@)
---   travelling \"up\" the tree and one (called @d@) traveling
---   \"down\".
+-- | Abstractly, a DUBLTree is a rose (n-way) tree with data at
+--   leaves, a different type of data at internal nodes, and two types
+--   of monoidal annotations, one (called @u@) travelling \"up\" the
+--   tree and one (called @d@) traveling \"down\".
 --
 --   Specifically, every node (both leaf nodes and internal nodes)
 --   has two annotations, one of type @d@ and one of type @u@,
@@ -74,6 +74,9 @@ data DUBLTree d u b l
 
 oNothing = Option Nothing
 oJust    = Option . Just
+
+fromOption :: a -> Option a -> a
+fromOption a = fromMaybe a . getOption
 
 -- | @DUBLTree@s form a semigroup where @(\<\>)@ corresponds to
 --   adjoining two trees under a common parent root.  Note that this
@@ -122,14 +125,22 @@ getU (Branch (Option (Just d)) u _ _) = act d <$> u
 --   This method is provided for convenience, since its context only
 --   requires an action of @d@ on @u'@, rather than on @u@ in its
 --   entirety.
-getU' :: (Monoid u', Action d (u' ::: Nil), u :>: u') => DUBLTree d u b l -> u'
+getU' :: (Monoid u', Action d (u' ::: ()), u :>: u') => DUBLTree d u b l -> u'
 getU' Empty                            = mempty
-getU' (Leaf u _)                       = get u
-getU' (Branch (Option Nothing)  u _ _) = fromMaybe mempty . getOption $ get <$> u
+getU' (Leaf u _)                       = fromOption mempty $ get u
+getU' (Branch (Option Nothing)  u _ _) = fromOption mempty $ get =<< u
 getU' (Branch (Option (Just d)) (Option Nothing) _ _)  = mempty
-getU' (Branch (Option (Just d)) (Option (Just u)) _ _) = hd $ act d (get u ::: Nil)
-  where hd (u' ::: Nil) = u'
-        hd (Missing _)  = error "Impossible case in DUBLTree.getU' (hd)"
+getU' (Branch (Option (Just d)) (Option (Just u)) _ _) = fromOption mempty . fst
+                                                       $ act d (get u, ())
+  -- Note: the contortions with the Action d (u' ::: ()) constraint
+  -- and sticking 'get u' in a tuple with () before acting on it with
+  -- d is because of the way the Action instances for tuples are set
+  -- up (in order to avoid overlapping).  There's an instance for (SM
+  -- a) on tuples with an Option in the first component, but we don't
+  -- want to also make an instance for (SM a) directly on the
+  -- components, since it would overlap.  Also, the Action instances
+  -- are driven by the first type argument, so we can't make an
+  -- instance Action a b => Action a (Option b).
 
 -- | Add a @d@ annotation to the root, combining it (on the left) with
 --   any pre-existing @d@ annotation, and transforming all @u@
