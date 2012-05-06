@@ -379,14 +379,16 @@ http://hackage.haskell.org/packages/archive/base/latest/doc/html/Control-Applica
 -}
 
 
+{- Note: we HAD this instance but it is kind of weird.  I am not
+   convinced by it.  In any case I don't think we really need it.
+
 -- | An applicative monoid acts on a value of a monoidal type by
 --   having each element in the structure act on the value
 --   independently, and then folding the resulting structure.
 instance (Action m n, Foldable f, Functor f, Monoid n) => Action (AM f m) n where
   act (AM f) n = fold $ fmap (`act` n) f
 
--- XXX need to prove that this satisfies the laws!  There are other
--- "obvious" instances too.
+-}
 
 ------------------------------------------------------------
 -- Monoid coproduct
