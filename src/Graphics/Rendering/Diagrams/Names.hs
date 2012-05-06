@@ -193,7 +193,7 @@ instance Qualifiable (NameMap v) where
 -- | Construct a 'NameMap' from a list of (name, point) pairs.
 fromNames :: (InnerSpace v, AdditiveGroup (Scalar v), Ord (Scalar v), Floating (Scalar v), IsName a)
           => [(a, Point v)] -> NameMap v
-fromNames = NameMap . M.fromListWith (++) 
+fromNames = NameMap . M.fromListWith (++)
           . map (toName *** ((:[]) . (\p -> locateEnvelope p (getEnvelope p))))
 
 -- | Construct a 'NameMap' from a list of associations between names
