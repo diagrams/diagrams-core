@@ -90,32 +90,29 @@ module Graphics.Rendering.Diagrams.Core
 
        ) where
 
-import Graphics.Rendering.Diagrams.Monoids
-import Graphics.Rendering.Diagrams.MList
-import Graphics.Rendering.Diagrams.DUBLTree
-
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Query
-import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Envelope
-import Graphics.Rendering.Diagrams.HasOrigin
-import Graphics.Rendering.Diagrams.Juxtapose
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Names
-import Graphics.Rendering.Diagrams.Style
-
-import Data.VectorSpace
-import Data.AffineSpace ((.-.))
-
-import Data.Maybe (listToMaybe, fromMaybe)
-import Data.Semigroup
+import           Control.Applicative ((<$>), (<*>))
+import           Control.Arrow (first, second)
+import           Control.Newtype
+import           Data.AffineSpace ((.-.))
+import           Data.Maybe (listToMaybe, fromMaybe)
+import           Data.Semigroup
 import qualified Data.Traversable as T
-import Control.Arrow (second)
-import Control.Applicative ((<$>), (<*>))
+import           Data.Typeable
+import           Data.VectorSpace
 
-import Control.Newtype
+import           Graphics.Rendering.Diagrams.Monoids
+import           Graphics.Rendering.Diagrams.MList
+import           Graphics.Rendering.Diagrams.DUBLTree
 
-import Data.Typeable
+import           Graphics.Rendering.Diagrams.V
+import           Graphics.Rendering.Diagrams.Query
+import           Graphics.Rendering.Diagrams.Transform
+import           Graphics.Rendering.Diagrams.Envelope
+import           Graphics.Rendering.Diagrams.HasOrigin
+import           Graphics.Rendering.Diagrams.Juxtapose
+import           Graphics.Rendering.Diagrams.Points
+import           Graphics.Rendering.Diagrams.Names
+import           Graphics.Rendering.Diagrams.Style
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.

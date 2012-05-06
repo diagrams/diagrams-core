@@ -139,15 +139,15 @@ module Graphics.Rendering.Diagrams
 
        ) where
 
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Util
-import Graphics.Rendering.Diagrams.Transform
+import Graphics.Rendering.Diagrams.Core
 import Graphics.Rendering.Diagrams.Envelope
 import Graphics.Rendering.Diagrams.HasOrigin
 import Graphics.Rendering.Diagrams.Juxtapose
-import Graphics.Rendering.Diagrams.Query
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Names
-import Graphics.Rendering.Diagrams.Style
-import Graphics.Rendering.Diagrams.Core
 import Graphics.Rendering.Diagrams.Monoids (Monoid')
+import Graphics.Rendering.Diagrams.Names
+import Graphics.Rendering.Diagrams.Points
+import Graphics.Rendering.Diagrams.Query
+import Graphics.Rendering.Diagrams.Style
+import Graphics.Rendering.Diagrams.Transform
+import Graphics.Rendering.Diagrams.Util
+import Graphics.Rendering.Diagrams.V

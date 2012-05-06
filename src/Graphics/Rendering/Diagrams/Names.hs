@@ -45,24 +45,22 @@ module Graphics.Rendering.Diagrams.Names
        , lookupN
        ) where
 
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Monoids
-import Graphics.Rendering.Diagrams.HasOrigin
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Envelope
-import Graphics.Rendering.Diagrams.Transform
-
-import Data.VectorSpace
-
-import Data.List (intercalate, isSuffixOf)
+import           Control.Arrow ((***))
+import           Control.Monad (mplus)
+import           Data.List (intercalate, isSuffixOf)
 import qualified Data.Map as M
-import Data.Semigroup
-import Control.Arrow ((***))
-import Control.Monad (mplus)
+import           Data.Semigroup
+import           Data.Typeable
 
-import Control.Newtype
+import           Control.Newtype
+import           Data.VectorSpace
 
-import Data.Typeable
+import           Graphics.Rendering.Diagrams.Envelope
+import           Graphics.Rendering.Diagrams.HasOrigin
+import           Graphics.Rendering.Diagrams.Monoids
+import           Graphics.Rendering.Diagrams.Points
+import           Graphics.Rendering.Diagrams.Transform
+import           Graphics.Rendering.Diagrams.V
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------

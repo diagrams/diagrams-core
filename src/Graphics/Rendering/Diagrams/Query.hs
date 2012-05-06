@@ -17,16 +17,16 @@ module Graphics.Rendering.Diagrams.Query
        ( Query(..)
        ) where
 
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.HasOrigin
-
-import Data.VectorSpace
-import Data.AffineSpace
-
-import Data.Semigroup
 import Control.Applicative
+import Data.Semigroup
+
+import Data.AffineSpace
+import Data.VectorSpace
+
+import Graphics.Rendering.Diagrams.HasOrigin
+import Graphics.Rendering.Diagrams.Points
+import Graphics.Rendering.Diagrams.Transform
+import Graphics.Rendering.Diagrams.V
 
 ------------------------------------------------------------
 --  Queries  -----------------------------------------------

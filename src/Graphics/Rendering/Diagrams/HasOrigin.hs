@@ -23,14 +23,14 @@ module Graphics.Rendering.Diagrams.HasOrigin
        ( HasOrigin(..), moveOriginBy, moveTo, place
        ) where
 
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Points
-
 import qualified Data.Map as M
 import qualified Data.Set as S
 
-import Data.AffineSpace ((.-^), (.-.))
-import Data.VectorSpace
+import           Data.AffineSpace ((.-^), (.-.))
+import           Data.VectorSpace
+
+import           Graphics.Rendering.Diagrams.Points
+import           Graphics.Rendering.Diagrams.V
 
 -- | Class of types which have an intrinsic notion of a \"local
 --   origin\", i.e. things which are not invariant under translation,

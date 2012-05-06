@@ -18,14 +18,14 @@ module Graphics.Rendering.Diagrams.Juxtapose
        ( Juxtaposable(..), juxtaposeDefault
        ) where
 
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Envelope
-import Graphics.Rendering.Diagrams.HasOrigin
-
 import qualified Data.Map as M
 import qualified Data.Set as S
 
-import Data.VectorSpace
+import           Data.VectorSpace
+
+import           Graphics.Rendering.Diagrams.Envelope
+import           Graphics.Rendering.Diagrams.HasOrigin
+import           Graphics.Rendering.Diagrams.V
 
 -- | Class of things which can be placed \"next to\" other things, for some
 --   appropriate notion of \"next to\".

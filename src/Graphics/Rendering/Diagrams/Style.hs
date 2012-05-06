@@ -42,16 +42,15 @@ module Graphics.Rendering.Diagrams.Style
 
        ) where
 
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Monoids
-
-import Data.Typeable
-
-import Control.Arrow ((***))
-import Data.Semigroup
+import           Control.Arrow ((***))
 import qualified Data.Map as M
+import           Data.Semigroup
 import qualified Data.Set as S
+import           Data.Typeable
+
+import           Graphics.Rendering.Diagrams.Monoids
+import           Graphics.Rendering.Diagrams.Transform
+import           Graphics.Rendering.Diagrams.V
 
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------

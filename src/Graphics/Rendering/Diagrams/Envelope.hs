@@ -46,19 +46,18 @@ module Graphics.Rendering.Diagrams.Envelope
        , OrderedField
        ) where
 
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.HasOrigin
-
-import Data.VectorSpace
-import Data.AffineSpace ((.+^), (.-^))
-
-import Data.Semigroup
-import Control.Applicative ((<$>))
-
+import           Control.Applicative ((<$>))
 import qualified Data.Map as M
+import           Data.Semigroup
 import qualified Data.Set as S
+
+import           Data.AffineSpace ((.+^), (.-^))
+import           Data.VectorSpace
+
+import           Graphics.Rendering.Diagrams.HasOrigin
+import           Graphics.Rendering.Diagrams.Points
+import           Graphics.Rendering.Diagrams.Transform
+import           Graphics.Rendering.Diagrams.V
 
 ------------------------------------------------------------
 --  Envelopes  ---------------------------------------------

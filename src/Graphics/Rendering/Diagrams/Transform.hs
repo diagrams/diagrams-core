@@ -57,21 +57,21 @@ module Graphics.Rendering.Diagrams.Transform
 
        ) where
 
-import Data.AdditiveGroup
-import Data.VectorSpace
-import Data.AffineSpace ((.-.))
-import Data.LinearMap
-import Data.Basis
-import Data.MemoTrie
-
-import Data.Semigroup
 import qualified Data.Map as M
+import           Data.Semigroup
 import qualified Data.Set as S
 
-import Graphics.Rendering.Diagrams.Monoids
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.HasOrigin
+import           Data.AdditiveGroup
+import           Data.AffineSpace ((.-.))
+import           Data.Basis
+import           Data.LinearMap
+import           Data.MemoTrie
+import           Data.VectorSpace
+
+import           Graphics.Rendering.Diagrams.HasOrigin
+import           Graphics.Rendering.Diagrams.Monoids
+import           Graphics.Rendering.Diagrams.Points
+import           Graphics.Rendering.Diagrams.V
 
 ------------------------------------------------------------
 --  Transformations  ---------------------------------------

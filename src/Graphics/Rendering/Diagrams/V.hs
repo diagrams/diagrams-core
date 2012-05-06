@@ -16,8 +16,8 @@ module Graphics.Rendering.Diagrams.V
 
        ) where
 
-import Data.Set
 import Data.Map
+import Data.Set
 
 ------------------------------------------------------------
 -- Vector spaces -------------------------------------------

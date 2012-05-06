@@ -52,12 +52,12 @@ module Graphics.Rendering.Diagrams.Monoids
        , untangle
        ) where
 
-import Graphics.Rendering.Diagrams.V
-
-import Data.Semigroup
-import Data.Foldable
 import Control.Applicative
 import Data.Either (lefts, rights)
+import Data.Foldable
+import Data.Semigroup
+
+import Graphics.Rendering.Diagrams.V
 
 ------------------------------------------------------------
 --  Monoids and semigroups
