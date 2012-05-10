@@ -67,39 +67,54 @@ import           Graphics.Rendering.Diagrams.MList
 --   monoid homomorphism.
 
 data DUBLTree d u b l
-    = Empty
-    | Leaf u l
+    = Empty               -- ^ An empty tree
+    | Leaf u l            -- ^ A leaf, containing a value of type @l@
+                          --   and an annotation of type @u@.
     | Branch (Option d) (Option u) (Maybe b) [DUBLTree d u b l]
+        -- ^ A branch contains a @d@ annotation and a cached @u@
+        -- annotation (in fact we use @Option@ wrappers so we don't
+        -- need to require a @Monoid@ constraint just to make up empty
+        -- annotations in some cases).  It may also contain a value of
+        -- type @b@, representing arbitrary data stored at this node.
+        -- Finally, it contains a list of subtrees.
   deriving (Functor)
 
+-- | Convenience function for construction @Option@ values.
+oNothing :: Option d
 oNothing = Option Nothing
+
+-- | Convenience function for construction @Option@ values.
+oJust :: d -> Option d
 oJust    = Option . Just
 
+-- | Convenience function for eliminating @Option@ values.
 fromOption :: a -> Option a -> a
 fromOption a = fromMaybe a . getOption
 
 -- | @DUBLTree@s form a semigroup where @(\<\>)@ corresponds to
 --   adjoining two trees under a common parent root.  Note that this
 --   does not satisfy associativity up to structural equality, but up
---   to observational equivalence.  XXX @sconcat@ is specialized to
---   put all the trees under a single parent.
+--   to observational equivalence under 'flatten'.  Technically using
+--   'foldDUBL' directly enables one to observe the difference, but it
+--   is understood that 'foldDUBL' should be used only in ways such
+--   that reassociation of subtrees \"does not matter\".
+--
+--   @sconcat@ is specialized to put all the trees under a single
+--   parent.
 instance (Action d u, Semigroup u) => Semigroup (DUBLTree d u b l) where
   Empty <> t = t
   t <> Empty = t
   t1 <> t2   = branchGen [t1,t2]
   sconcat    = branchGen . NEL.toList
 
--- | @DUBLTree@s form a monoid where @mappend@ corresponds to adjoining
---   two trees under a common parent root. Note that this does not
---   satisfy associativity up to structural equality, but up to
---   observational equivalence. XXX @mconcat@ is specialized to put all
---   the trees under a single parent.
+-- | @DUBLTree@s form a monoid with the empty tree as the identity,
+--   and @mappend@ as in the @Semigroup@ instance.
 instance (Action d u, Semigroup u) => Monoid (DUBLTree d u b l) where
   mempty            = Empty
   mappend           = (<>)
   mconcat           = branchGen
 
--- | Construct a leaf node from a @u@ annotations along with a leaf
+-- | Construct a leaf node from a @u@ annotation along with a leaf
 --   datum.
 leaf :: u -> l -> DUBLTree d u b l
 leaf = Leaf
@@ -143,8 +158,10 @@ getU' (Branch (Option (Just d)) (Option (Just u)) _ _) = fromOption mempty . fst
   -- instance Action a b => Action a (Option b).
 
 -- | Add a @d@ annotation to the root, combining it (on the left) with
---   any pre-existing @d@ annotation, and transforming all @u@
---   annotations by the action of @d@.
+--   any pre-existing @d@ annotation.  All @u@ annotations are also
+--   (conceptually) transformed by the action of @d@, although the
+--   actual computation of new @u@ annotations is deferred until a
+--   call to 'foldDUBL'.
 applyD :: (Action d u, Semigroup d)
        => d -> DUBLTree d u b l -> DUBLTree d u b l
 applyD d (Branch d' u b ts) = Branch (oJust d <> d') u b ts
@@ -174,16 +191,17 @@ mapU f Empty             = Empty
 mapU f (Leaf u l)        = Leaf (f u) l
 mapU f (Branch d u b ts) = Branch d (f <$> u) b (map (mapU f) ts)
 
--- | A fold for DUBLTrees.
+-- | A fold for DUBLTrees.  @Nothing@ is returned iff the tree is
+--   empty.
 foldDUBL :: (Semigroup d, Action d u)
       => (Option d -> u -> l -> r)
          -- ^ Function for processing leaf nodes. Given the 'mconcat'
-         --   of all d annotations above this node, the u annotation
+         --   of all @d@ annotations above this node, the @u@ annotation
          --   at this node, and the leaf datum.
 
       -> (Option d -> Option u -> Maybe b -> [Maybe r] -> r)
-         -- ^ Function for processing internal nodes.  Given the d and
-         --   u annotations at this node, the b datum, and the
+         -- ^ Function for processing internal nodes.  Given the @d@ and
+         --   @u@ annotations at this node, the @b@ datum, and the
          --   recursive results.
       -> DUBLTree d u b l -> Maybe r
 foldDUBL = foldDUBL' oNothing     -- Pass along accumulated d value
