@@ -222,9 +222,6 @@ instance Transformable t => Transformable (M.Map k t) where
 instance HasLinearMap v => Transformable (Point v) where
   transform = papply
 
-instance Transformable m => Transformable (Forgetful m) where
-  transform = fmap . transform
-
 instance Transformable m => Transformable (Deletable m) where
   transform = fmap . transform
 
