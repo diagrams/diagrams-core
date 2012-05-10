@@ -21,7 +21,6 @@ Source-repository head
 
 Library
   Exposed-modules:     Graphics.Rendering.Diagrams,
-                       Graphics.Rendering.Diagrams.DUBLTree,
                        Graphics.Rendering.Diagrams.V,
                        Graphics.Rendering.Diagrams.Query,
                        Graphics.Rendering.Diagrams.Transform,
@@ -41,6 +40,7 @@ Library
                        vector-space-points >= 0.1 && < 0.2,
                        MemoTrie >= 0.4.7 && < 0.5,
                        newtype >= 0.2 && < 0.3,
-                       monoid-extras >= 0.1 && < 0.2
+                       monoid-extras >= 0.1 && < 0.2,
+                       dubl-tree >= 0.1 && < 0.2
 
   hs-source-dirs:      src
