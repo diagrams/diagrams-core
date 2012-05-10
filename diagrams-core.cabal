@@ -30,7 +30,6 @@ Library
                        Graphics.Rendering.Diagrams.Points,
                        Graphics.Rendering.Diagrams.Names,
                        Graphics.Rendering.Diagrams.Style,
-                       Graphics.Rendering.Diagrams.Util,
                        Graphics.Rendering.Diagrams.Core
 
   Build-depends:       base >= 4.2 && < 4.6,

@@ -30,10 +30,6 @@ module Graphics.Rendering.Diagrams
 
        , Point, origin, (*.)
 
-         -- * Vectors
-
-       , withLength
-
          -- * Transformations
 
          -- ** Invertible linear transformations
@@ -148,7 +144,6 @@ import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Query
 import Graphics.Rendering.Diagrams.Style
 import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Util
 import Graphics.Rendering.Diagrams.V
 
 import Data.Monoid.WithSemigroup (Monoid')
