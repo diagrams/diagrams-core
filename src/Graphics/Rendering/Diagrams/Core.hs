@@ -102,10 +102,10 @@ import           Data.VectorSpace
 
 import           Data.Monoid.Coproduct
 import           Data.Monoid.Deletable
+import           Data.Monoid.MList
 import           Data.Monoid.Split
 import           Data.Monoid.WithSemigroup
 import           Graphics.Rendering.Diagrams.DUBLTree
-import           Graphics.Rendering.Diagrams.MList
 
 import           Graphics.Rendering.Diagrams.V
 import           Graphics.Rendering.Diagrams.Query
