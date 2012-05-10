@@ -53,11 +53,11 @@ import           Data.Semigroup
 import           Data.Typeable
 
 import           Control.Newtype
+import           Data.Monoid.Action
 import           Data.VectorSpace
 
 import           Graphics.Rendering.Diagrams.Envelope
 import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.Monoids
 import           Graphics.Rendering.Diagrams.Points
 import           Graphics.Rendering.Diagrams.Transform
 import           Graphics.Rendering.Diagrams.V

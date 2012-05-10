@@ -48,7 +48,8 @@ import           Data.Semigroup
 import qualified Data.Set as S
 import           Data.Typeable
 
-import           Graphics.Rendering.Diagrams.Monoids
+import Data.Monoid.Action
+
 import           Graphics.Rendering.Diagrams.Transform
 import           Graphics.Rendering.Diagrams.V
 

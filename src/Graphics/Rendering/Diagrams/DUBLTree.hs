@@ -33,10 +33,10 @@ module Graphics.Rendering.Diagrams.DUBLTree
 import           Data.Functor ((<$>))
 import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe (fromMaybe, catMaybes)
+import           Data.Monoid.Action
 import           Data.Semigroup
 
-import           Graphics.Rendering.Diagrams.Monoids
-import           Graphics.Rendering.Diagrams.MList
+import           Data.Monoid.MList
 
 -- | Abstractly, a DUBLTree is a rose (n-way) tree with data at
 --   leaves, a different type of data at internal nodes, and two types

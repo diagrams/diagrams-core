@@ -66,10 +66,11 @@ import           Data.AffineSpace ((.-.))
 import           Data.Basis
 import           Data.LinearMap
 import           Data.MemoTrie
+import           Data.Monoid.Action
+import           Data.Monoid.Deletable
 import           Data.VectorSpace
 
 import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.Monoids
 import           Graphics.Rendering.Diagrams.Points
 import           Graphics.Rendering.Diagrams.V
 

@@ -100,9 +100,12 @@ import qualified Data.Traversable as T
 import           Data.Typeable
 import           Data.VectorSpace
 
-import           Graphics.Rendering.Diagrams.Monoids
-import           Graphics.Rendering.Diagrams.MList
+import           Data.Monoid.Coproduct
+import           Data.Monoid.Deletable
+import           Data.Monoid.Split
+import           Data.Monoid.WithSemigroup
 import           Graphics.Rendering.Diagrams.DUBLTree
+import           Graphics.Rendering.Diagrams.MList
 
 import           Graphics.Rendering.Diagrams.V
 import           Graphics.Rendering.Diagrams.Query

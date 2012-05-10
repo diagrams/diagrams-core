@@ -17,6 +17,7 @@ module Graphics.Rendering.Diagrams.V
        ) where
 
 import Data.Map
+import Data.Monoid.Deletable
 import Data.Set
 
 ------------------------------------------------------------
@@ -40,3 +41,5 @@ type instance V (a -> b)  = V b
 type instance V [a]       = V a
 type instance V (Set a)   = V a
 type instance V (Map k a) = V a
+
+type instance V (Deletable m) = V m
