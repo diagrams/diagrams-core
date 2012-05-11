@@ -91,7 +91,7 @@ inEnvelope :: (Option (v -> Max (Scalar v)) -> Option (v -> Max (Scalar v)))
 inEnvelope f = Envelope . f . unEnvelope
 
 appEnvelope :: Envelope v -> Maybe (v -> Scalar v)
-appEnvelope (Envelope (Option b)) = (getMax .) <$> b
+appEnvelope (Envelope (Option e)) = (getMax .) <$> e
 
 onEnvelope :: ((v -> Scalar v) -> (v -> Scalar v)) -> Envelope v -> Envelope v
 onEnvelope t = (inEnvelope . fmap) ((Max .) . t . (getMax .))
@@ -100,8 +100,8 @@ mkEnvelope :: (v -> Scalar v) -> Envelope v
 mkEnvelope = Envelope . Option . Just . (Max .)
 
 -- | Envelopes form a semigroup with pointwise maximum as composition.
---   Hence, if @b1@ is the envelope for diagram @d1@, and
---   @b2@ is the envelope for @d2@, then @b1 \`mappend\` b2@
+--   Hence, if @e1@ is the envelope for diagram @d1@, and
+--   @e2@ is the envelope for @d2@, then @e1 \`mappend\` e2@
 --   is the envelope for @d1 \`atop\` d2@.
 deriving instance Ord (Scalar v) => Semigroup (Envelope v)
 
@@ -155,14 +155,14 @@ class (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
 instance (Fractional s, Floating s, Ord s, AdditiveGroup s) => OrderedField s
 
 -- | @Enveloped@ abstracts over things which have an envelope.
-class (InnerSpace (V b), OrderedField (Scalar (V b))) => Enveloped b where
+class (InnerSpace (V a), OrderedField (Scalar (V a))) => Enveloped a where
 
   -- | Compute the envelope of an object.  For types with an intrinsic
   --   notion of \"local origin\", the envelope will be based there.
   --   Other types (e.g. 'Trail') may have some other default
   --   reference point at which the envelope will be based; their
   --   instances should document what it is.
-  getEnvelope :: b -> Envelope (V b)
+  getEnvelope :: a -> Envelope (V a)
 
 instance (InnerSpace v, OrderedField (Scalar v)) => Enveloped (Envelope v) where
   getEnvelope = id
@@ -223,12 +223,12 @@ locateEnvelope p b = LocatedEnvelope p (TransInv b)
 --   hyperplane in the given direction.  Returns the zero vector for
 --   the empty envelope.
 envelopeV :: Enveloped a => V a -> a -> V a
-envelopeV v a = maybe zeroV ((*^ v) . ($ v)) $ appEnvelope (getEnvelope a)
+envelopeV v = maybe zeroV ((*^ v) . ($ v)) . appEnvelope . getEnvelope
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction.  Returns the origin for the empty envelope.
 envelopeP :: Enveloped a => V a -> a -> Point (V a)
-envelopeP v a = P $ envelopeV v a
+envelopeP v = P . envelopeV v
 
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
@@ -238,4 +238,4 @@ diameter v a = magnitude (envelopeV v a ^-^ envelopeV (negateV v) a)
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
 --   along a particular vector.
 radius :: Enveloped a => V a -> a -> Scalar (V a)
-radius v a = 0.5 * diameter v a
+radius v = (0.5*) . diameter v
