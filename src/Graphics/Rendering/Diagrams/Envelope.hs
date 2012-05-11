@@ -40,7 +40,7 @@ module Graphics.Rendering.Diagrams.Envelope
          -- * Utility functions
        , diameter
        , radius
-       , envelopeV, envelopeP, boundaryFrom
+       , envelopeV, envelopeP
 
          -- * Miscellaneous
        , OrderedField
@@ -209,18 +209,6 @@ instance ( HasLinearMap v, InnerSpace v
 -- | Get the location of a located envelope.
 location :: LocatedEnvelope v -> Point v
 location (LocatedEnvelope p _) = p
-
--- XXX boundaryFrom really ought to use the 'trace' of a diagram
--- instead of the envelope.  Leave it here for now, move it when we
--- implement traces so it will have a different semantics.
-
--- | @boundaryFrom v b@ computes the point on the boundary of the
---   located envelope @b@ in the direction of @v@ from the
---   bounding region's base point.  This is most often used to compute
---   a point on the boundary of a named subdiagram.
-boundaryFrom :: (OrderedField (Scalar v), InnerSpace v)
-             => LocatedEnvelope v -> v -> Point v
-boundaryFrom b v = location b .+^ envelopeV v b
 
 -- | Create a 'LocatedEnvelope' value by specifying a location and an
 --   envelope.

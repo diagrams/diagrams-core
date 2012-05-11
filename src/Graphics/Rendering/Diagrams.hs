@@ -79,7 +79,7 @@ module Graphics.Rendering.Diagrams
        , Envelope
        , inEnvelope, appEnvelope, onEnvelope, mkEnvelope
        , Enveloped(..)
-       , envelopeV, envelopeP, boundaryFrom
+       , envelopeV, envelopeP
        , diameter, radius
 
        , LocatedEnvelope(..)
