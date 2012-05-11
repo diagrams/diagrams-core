@@ -85,6 +85,14 @@ module Graphics.Rendering.Diagrams
        , LocatedEnvelope(..)
        , location, locateEnvelope
 
+         -- * Traces
+
+       , Trace
+       , inTrace, mkTrace
+       , Traced(..)
+       , traceV, traceP
+       , maxTraceV, maxTraceP
+
          -- * Things with local origins
 
        , HasOrigin(..), moveOriginBy
@@ -143,6 +151,7 @@ import Graphics.Rendering.Diagrams.Names
 import Graphics.Rendering.Diagrams.Points
 import Graphics.Rendering.Diagrams.Query
 import Graphics.Rendering.Diagrams.Style
+import Graphics.Rendering.Diagrams.Trace
 import Graphics.Rendering.Diagrams.Transform
 import Graphics.Rendering.Diagrams.V
 

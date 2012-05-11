@@ -25,6 +25,7 @@ Library
                        Graphics.Rendering.Diagrams.Query,
                        Graphics.Rendering.Diagrams.Transform,
                        Graphics.Rendering.Diagrams.Envelope,
+                       Graphics.Rendering.Diagrams.Trace,
                        Graphics.Rendering.Diagrams.HasOrigin,
                        Graphics.Rendering.Diagrams.Juxtapose,
                        Graphics.Rendering.Diagrams.Points,
