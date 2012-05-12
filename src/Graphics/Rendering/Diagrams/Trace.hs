@@ -49,6 +49,7 @@ import           Data.VectorSpace
 
 import           Graphics.Rendering.Diagrams.HasOrigin
 import           Graphics.Rendering.Diagrams.Points
+import           Graphics.Rendering.Diagrams.Transform
 import           Graphics.Rendering.Diagrams.V
 
 ------------------------------------------------------------
@@ -117,25 +118,8 @@ instance Show (Trace v) where
 --  Transforming traces  -----------------------------------
 ------------------------------------------------------------
 
--- XXX write me
-
-{-
-
--- XXX can we get away with removing this Floating constraint? It's the
---   call to normalized here which is the culprit.
-instance ( HasLinearMap v, InnerSpace v
-         , Floating (Scalar v), AdditiveGroup (Scalar v) )
-    => Transformable (Envelope v) where
-  transform t =   -- XXX add lots of comments explaining this!
-    moveOriginTo (P . negateV . transl $ t) .
-    (onEnvelope $ \f v ->
-      let v' = normalized $ lapp (transp t) v
-          vi = apply (inv t) v
-      in  f v' / (v' <.> vi)
-    )
-
--}
-
+instance HasLinearMap v => Transformable (Trace v) where
+  transform t = inTrace $ \f p v -> f (papply (inv t) p) (apply (inv t) v)
 
 ------------------------------------------------------------
 --  Traced class  ------------------------------------------
