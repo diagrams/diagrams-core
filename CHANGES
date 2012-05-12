@@ -1,3 +1,7 @@
+* 0.5.0.1: 11 May 2012
+
+  - Update MemoTrie upper bound to allow MemoTrie-0.5
+
 * 0.5: 9 March 2012
 
   * New features:
