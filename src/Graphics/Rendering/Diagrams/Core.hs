@@ -107,15 +107,16 @@ import           Data.Monoid.Split
 import           Data.Monoid.WithSemigroup
 import           Data.Tree.DUBL
 
-import           Graphics.Rendering.Diagrams.V
-import           Graphics.Rendering.Diagrams.Query
-import           Graphics.Rendering.Diagrams.Transform
 import           Graphics.Rendering.Diagrams.Envelope
 import           Graphics.Rendering.Diagrams.HasOrigin
 import           Graphics.Rendering.Diagrams.Juxtapose
-import           Graphics.Rendering.Diagrams.Points
 import           Graphics.Rendering.Diagrams.Names
+import           Graphics.Rendering.Diagrams.Points
+import           Graphics.Rendering.Diagrams.Query
 import           Graphics.Rendering.Diagrams.Style
+import           Graphics.Rendering.Diagrams.Trace
+import           Graphics.Rendering.Diagrams.Transform
+import           Graphics.Rendering.Diagrams.V
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -133,10 +134,17 @@ import           Graphics.Rendering.Diagrams.Style
 --     sometimes we want to consider a diagram as having a different
 --     envelope unrelated to its \"natural\" envelope.
 --
+--   * traces (see "Graphics.Rendering.Diagrams.Trace"), also
+--     deletable.
+--
 --   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
 --
 --   * query functions (see "Graphics.Rendering.Diagrams.Query")
-type UpAnnots v m = Deletable (Envelope v) ::: NameMap v ::: Query v m ::: ()
+type UpAnnots v m = Deletable (Envelope v)
+                ::: Deletable (Trace v)
+                ::: NameMap v
+                ::: Query v m
+                ::: ()
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -148,7 +156,13 @@ type UpAnnots v m = Deletable (Envelope v) ::: NameMap v ::: Query v m ::: ()
 --   * styles (see "Graphics.Rendering.Diagrams.Style")
 --
 --   * names (see "Graphics.Rendering.Diagrams.Names")
-type DownAnnots v = (Split (Transformation v) :+: Style v) ::: Name ::: ()
+type DownAnnots v = (Split (Transformation v) :+: Style v)
+                ::: Name
+                ::: ()
+
+  -- Note that we have to put the transformations and styles together
+  -- using a coproduct because the transformations can act on the
+  -- styles.
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
@@ -279,8 +293,8 @@ clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with an envelope,
 --   name map, and query function.
-mkQD :: Prim b v -> Envelope v -> NameMap v -> Query v m -> QDiagram b v m
-mkQD p b n a = QD $ leaf (toDeletable b *: n *: a *: ()) p
+mkQD :: Prim b v -> Envelope v -> Trace v -> NameMap v -> Query v m -> QDiagram b v m
+mkQD p e t n q = QD $ leaf (toDeletable e *: toDeletable t *: n *: q *: ()) p
 
 ------------------------------------------------------------
 --  Instances
@@ -322,7 +336,7 @@ infixl 6 `atop`
 ---- Functor
 
 instance Functor (QDiagram b v) where
-  fmap = over QD . mapU . second . second . first . fmap . fmap
+  fmap = over QD . mapU . second . second . second . first . fmap . fmap
 
 ---- Applicative
 
