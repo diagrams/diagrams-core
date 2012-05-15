@@ -63,7 +63,7 @@ import           Graphics.Rendering.Diagrams.V
 --  Envelopes  ---------------------------------------------
 ------------------------------------------------------------
 
--- | Every diagram comes equipped with an *envelope*.
+-- | Every diagram comes equipped with an /envelope/.
 --   Intuitively, the envelope for a diagram tells us the
 --   minimum distance we have to go in a given direction to get to a
 --   (hyper)plane entirely containing the diagram on one side of
@@ -80,9 +80,10 @@ import           Graphics.Rendering.Diagrams.V
 --
 --   There is also a special \"empty envelope\".
 --
---   Essentially, envelopes are a functional representation
---   of (a conservative approximation to) convex bounding regions.
---   The idea for this representation came from Sebastian Setzer; see
+--   Essentially, envelopes are a functional/extensional
+--   representation of (a conservative approximation to) convex
+--   bounding regions.  The idea for this representation came from
+--   Sebastian Setzer; see
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.
 newtype Envelope v = Envelope { unEnvelope :: Option (v -> Max (Scalar v)) }
 
