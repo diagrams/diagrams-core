@@ -207,10 +207,10 @@ envelope = unDelete . getU' . unQD
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid' m)
           => Envelope v -> QDiagram b v m -> QDiagram b v m
-setEnvelope b = over QD ( applyUpre (inj . toDeletable $ b)
-                      . applyUpre (inj (deleteL :: Deletable (Envelope v)))
-                      . applyUpost (inj (deleteR :: Deletable (Envelope v)))
-                      )
+setEnvelope e = over QD ( applyUpre (inj . toDeletable $ e)
+                        . applyUpre (inj (deleteL :: Deletable (Envelope v)))
+                        . applyUpost (inj (deleteR :: Deletable (Envelope v)))
+                        )
 
 -- | Get the trace of a diagram.
 trace :: (Ord (Scalar v), VectorSpace v, HasLinearMap v) => QDiagram b v m -> Trace v
