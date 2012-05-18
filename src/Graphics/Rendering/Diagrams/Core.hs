@@ -48,7 +48,7 @@ module Graphics.Rendering.Diagrams.Core
          -- * Operations on diagrams
          -- ** Extracting information
        , prims
-       , envelope, names, query, sample
+       , envelope, trace, names, query, sample
        , value, resetValue, clearValue
 
          -- ** Combining diagrams
@@ -69,6 +69,7 @@ module Graphics.Rendering.Diagrams.Core
          -- *** Other
        , freeze
        , setEnvelope
+       , setTrace
 
          -- * Primtives
          -- $prim
@@ -210,6 +211,18 @@ setEnvelope b = over QD ( applyUpre (inj . toDeletable $ b)
                       . applyUpre (inj (deleteL :: Deletable (Envelope v)))
                       . applyUpost (inj (deleteR :: Deletable (Envelope v)))
                       )
+
+-- | Get the trace of a diagram.
+trace :: (Ord (Scalar v), VectorSpace v, HasLinearMap v) => QDiagram b v m -> Trace v
+trace = unDelete . getU' . unQD
+
+-- | Replace the trace of a diagram.
+setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid' m)
+         => Trace v -> QDiagram b v m -> QDiagram b v m
+setTrace t = over QD ( applyUpre (inj . toDeletable $ t)
+                     . applyUpre (inj (deleteL :: Deletable (Trace v)))
+                     . applyUpost (inj (deleteR :: Deletable (Trace v)))
+                     )
 
 -- | Get the name map of a diagram.
 names :: (AdditiveGroup (Scalar v), Floating (Scalar v), InnerSpace v, HasLinearMap v)
@@ -395,6 +408,12 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v) )
          => Enveloped (QDiagram b v m) where
   getEnvelope = envelope
+
+---- Traced
+
+instance (HasLinearMap v, VectorSpace v, Ord (Scalar v))
+         => Traced (QDiagram b v m) where
+  getTrace = trace
 
 ---- HasOrigin
 
