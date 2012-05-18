@@ -113,7 +113,7 @@ module Graphics.Rendering.Diagrams
 
        , QDiagram, mkQD, Diagram
        , prims
-       , envelope, names, query, sample
+       , envelope, trace, names, query, sample
        , value, resetValue, clearValue
 
        , named, namePoint
@@ -121,7 +121,7 @@ module Graphics.Rendering.Diagrams
        , withNameAll
        , withNames
 
-       , freeze, setEnvelope
+       , freeze, setEnvelope, setTrace
 
        , atop
 
