@@ -87,7 +87,7 @@ module Graphics.Rendering.Diagrams
 
          -- * Traces
 
-       , Trace
+       , Trace(..)
        , inTrace, mkTrace
        , Traced(..)
        , traceV, traceP
