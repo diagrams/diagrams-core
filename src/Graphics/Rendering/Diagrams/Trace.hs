@@ -45,26 +45,13 @@ import           Data.Semigroup
 import qualified Data.Set as S
 
 import           Data.AffineSpace
+import           Data.Monoid.PosInf
 import           Data.VectorSpace
 
 import           Graphics.Rendering.Diagrams.HasOrigin
 import           Graphics.Rendering.Diagrams.Points
 import           Graphics.Rendering.Diagrams.Transform
 import           Graphics.Rendering.Diagrams.V
-
-------------------------------------------------------------
---  Adjoining positive infinity  ---------------------------
-------------------------------------------------------------
-
-data Inf a = Finite a | PosInfty
-  deriving (Eq, Ord)
-
-instance Ord a => Semigroup (Inf a) where
-  (<>) = min
-
-instance Ord a => Monoid (Inf a) where
-  mempty = PosInfty
-  mappend = (<>)
 
 ------------------------------------------------------------
 --  Trace  -------------------------------------------------
@@ -87,13 +74,13 @@ instance Ord a => Monoid (Inf a) where
 --   scalar is @s@, the distance from the base point to the
 --   intersection is given by @s *^ magnitude v@.
 
-newtype Trace v = Trace { appTrace :: Point v -> v -> Inf (Scalar v) }
+newtype Trace v = Trace { appTrace :: Point v -> v -> PosInf (Scalar v) }
 
-inTrace :: ((Point v -> v -> Inf (Scalar v)) -> (Point v -> v -> Inf (Scalar v)))
+inTrace :: ((Point v -> v -> PosInf (Scalar v)) -> (Point v -> v -> PosInf (Scalar v)))
         -> Trace v -> Trace v
 inTrace f = Trace . f . appTrace
 
-mkTrace :: (Point v -> v -> Inf (Scalar v)) -> Trace v
+mkTrace :: (Point v -> v -> PosInf (Scalar v)) -> Trace v
 mkTrace = Trace
 
 -- | Traces form a semigroup with pointwise minimum as composition.
