@@ -96,7 +96,7 @@ deriving instance Ord (Scalar v) => Monoid (Trace v)
 type instance V (Trace v) = v
 
 instance (VectorSpace v) => HasOrigin (Trace v) where
-  moveOriginTo (P u) = inTrace $ \f p -> f (p .-^ u)
+  moveOriginTo (P u) = inTrace $ \f p -> f (p .+^ u)
 
 instance Show (Trace v) where
   show _ = "<trace>"
