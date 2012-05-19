@@ -187,15 +187,11 @@ type instance V (QDiagram b v m) = v
 --   query can be done via the 'Functor' instance of @'QDiagram' b@.
 type Diagram b v = QDiagram b v Any
 
--- XXX move this
-fromOption :: a -> Option a -> a
-fromOption a = fromMaybe a . getOption
-
 -- | Extract a list of primitives from a diagram, together with their
 --   associated transformations and styles.
 prims :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = (map . second) (untangle . fromOption mempty . fst . fromOption empty)
+prims = (map . second) (untangle . option mempty id . fst . option empty id)
       . flatten
       . unQD
 
