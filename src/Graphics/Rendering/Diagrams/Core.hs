@@ -61,6 +61,7 @@ module Graphics.Rendering.Diagrams.Core
          -- ** Modifying diagrams
          -- *** Names
        , named
+       , nameSub
        , namePoint
        , withName
        , withNameAll
@@ -70,6 +71,19 @@ module Graphics.Rendering.Diagrams.Core
        , freeze
        , setEnvelope
        , setTrace
+
+         -- * Subdiagrams
+
+       , Subdiagram(..), mkSubdiagram
+       , getSub, rawSub
+       , location
+       , subPoint
+
+         -- * Subdiagram maps
+
+       , SubMap(..)
+
+       , fromNames, rememberAs, lookupSub
 
          -- * Primtives
          -- $prim
@@ -92,15 +106,19 @@ module Graphics.Rendering.Diagrams.Core
        ) where
 
 import           Control.Applicative ((<$>), (<*>))
-import           Control.Arrow (first, second)
+import           Control.Arrow (first, second, (***))
+import           Control.Monad (mplus)
 import           Control.Newtype
 import           Data.AffineSpace ((.-.))
+import           Data.List (isSuffixOf)
+import qualified Data.Map as M
 import           Data.Maybe (listToMaybe, fromMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable as T
 import           Data.Typeable
 import           Data.VectorSpace
 
+import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
 import           Data.Monoid.Deletable
 import           Data.Monoid.MList
@@ -138,14 +156,14 @@ import           Graphics.Rendering.Diagrams.V
 --   * traces (see "Graphics.Rendering.Diagrams.Trace"), also
 --     deletable.
 --
---   * name/point associations (see "Graphics.Rendering.Diagrams.Names")
+--   * name/subdiagram associations (see "Graphics.Rendering.Diagrams.Names")
 --
 --   * query functions (see "Graphics.Rendering.Diagrams.Query")
-type UpAnnots v m = Deletable (Envelope v)
-                ::: Deletable (Trace v)
-                ::: NameMap v
-                ::: Query v m
-                ::: ()
+type UpAnnots b v m = Deletable (Envelope v)
+                  ::: Deletable (Trace v)
+                  ::: SubMap b v m
+                  ::: Query v m
+                  ::: ()
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   i.e. which accumulate along each path to a leaf (and which can
@@ -165,27 +183,47 @@ type DownAnnots v = (Split (Transformation v) :+: Style v)
   -- using a coproduct because the transformations can act on the
   -- styles.
 
+-- | Inject a transformation into a default downwards annotation
+--   value.
+transfToAnnot :: Transformation v -> DownAnnots v
+transfToAnnot
+  = inj
+  . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
+  . M
+
+-- | Extract the (total) transformation from a downwards annotation
+--   value.
+transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
+transfFromAnnot = option mempty (unsplit . killR) . fst
+
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
 newtype QDiagram b v m
-  = QD { unQD :: DUBLTree (DownAnnots v) (UpAnnots v m) () (Prim b v) }
+  = QD { unQD :: DUBLTree (DownAnnots v) (UpAnnots b v m) () (Prim b v) }
   deriving (Typeable)
 
 instance Newtype (QDiagram b v m)
-                 (DUBLTree (DownAnnots v) (UpAnnots v m) () (Prim b v)) where
+                 (DUBLTree (DownAnnots v) (UpAnnots b v m) () (Prim b v)) where
   pack   = QD
   unpack = unQD
 
 type instance V (QDiagram b v m) = v
 
 -- | The default sort of diagram is one where querying at a point
---   simply tells you whether that point is occupied or not.
+--   simply tells you whether the diagram contains that point or not.
 --   Transforming a default diagram into one with a more interesting
---   query can be done via the 'Functor' instance of @'QDiagram' b@.
+--   query can be done via the 'Functor' instance of @'QDiagram' b@ or
+--   the 'value' function.
 type Diagram b v = QDiagram b v Any
+
+-- | Create a \"point diagram\", which has no content, no trace, an
+--   empty query, and a point envelope.
+pointDiagram :: (OrderedField (Scalar v), HasLinearMap v, InnerSpace v, Semigroup m)
+             => Point v -> QDiagram b v m
+pointDiagram p = QD $ applyUpre (inj . toDeletable $ pointEnvelope p) Empty
 
 -- | Extract a list of primitives from a diagram, together with their
 --   associated transformations and styles.
@@ -222,23 +260,33 @@ setTrace t = over QD ( applyUpre (inj . toDeletable $ t)
 
 -- | Get the name map of a diagram.
 names :: (AdditiveGroup (Scalar v), Floating (Scalar v), InnerSpace v, HasLinearMap v)
-       => QDiagram b v m -> NameMap v
+       => QDiagram b v m -> SubMap b v m
 names = getU' . unQD
 
--- | Attach an atomic name to (the local origin of) a diagram.
+-- | Attach an atomic name to a diagram.
 named :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => n -> QDiagram b v m -> QDiagram b v m
-named = namePoint (locateEnvelope <$> const origin <*> envelope)
+named = nameSub mkSubdiagram
 
--- | Attach an atomic name to a certain point and envelope, computed
---   from the given diagram.
+-- | Attach an atomic name to a certain point (which may be computed
+--   from the given diagram), treated as a subdiagram with no content
+--   and a point envelope.
 namePoint :: forall v b n m.
+           ( IsName n
+           , Backend b v
+           , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+       => (QDiagram b v m -> Point v) -> n -> QDiagram b v m -> QDiagram b v m
+namePoint p = nameSub (subPoint . p)
+
+-- | Attach an atomic name to a certain subdiagram, computed from the
+--   given diagram.
+nameSub :: forall v b n m.
          ( IsName n
          , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
-      => (QDiagram b v m -> LocatedEnvelope v) -> n -> QDiagram b v m -> QDiagram b v m
-namePoint p n d = over QD (applyUpre . inj $ fromNamesB [(n,p d)]) d
+      => (QDiagram b v m -> Subdiagram b v m) -> n -> QDiagram b v m -> QDiagram b v m
+nameSub s n d = over QD (applyUpre . inj $ fromNames [(n,s d)]) d
 
 -- | Given a name and a diagram transformation indexed by a located
 --   envelope, perform the transformation using the most recent
@@ -247,9 +295,9 @@ namePoint p n d = over QD (applyUpre . inj $ fromNamesB [(n,p d)]) d
 --   exist.
 withName :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
             , InnerSpace v, HasLinearMap v)
-         => n -> (LocatedEnvelope v -> QDiagram b v m -> QDiagram b v m)
+         => n -> (Subdiagram b v m -> QDiagram b v m -> QDiagram b v m)
          -> QDiagram b v m -> QDiagram b v m
-withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
+withName n f d = maybe id f (lookupSub (toName n) (names d) >>= listToMaybe) d
 
 -- | Given a name and a diagram transformation indexed by a list of
 --   located envelopes, perform the transformation using the
@@ -257,9 +305,9 @@ withName n f d = maybe id f (lookupN (toName n) (names d) >>= listToMaybe) d
 --   qualification of) the given name.
 withNameAll :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
                , InnerSpace v, HasLinearMap v)
-            => n -> ([LocatedEnvelope v] -> QDiagram b v m -> QDiagram b v m)
+            => n -> ([Subdiagram b v m] -> QDiagram b v m -> QDiagram b v m)
             -> QDiagram b v m -> QDiagram b v m
-withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
+withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (names d))) d
 
 -- | Given a list of names and a diagram transformation indexed by a
 --   list of located envelopes, perform the transformation using the
@@ -268,9 +316,9 @@ withNameAll n f d = f (fromMaybe [] (lookupN (toName n) (names d))) d
 --   of the names do not exist.
 withNames :: ( IsName n, AdditiveGroup (Scalar v), Floating (Scalar v)
              , InnerSpace v, HasLinearMap v)
-          => [n] -> ([LocatedEnvelope v] -> QDiagram b v m -> QDiagram b v m)
+          => [n] -> ([Subdiagram b v m] -> QDiagram b v m -> QDiagram b v m)
           -> QDiagram b v m -> QDiagram b v m
-withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupN . toName) ns)) d
+withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupSub . toName) ns)) d
   where nd = names d
 
 -- | Get the query function associated with a diagram.
@@ -302,7 +350,7 @@ clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with an envelope,
 --   name map, and query function.
-mkQD :: Prim b v -> Envelope v -> Trace v -> NameMap v -> Query v m -> QDiagram b v m
+mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m -> Query v m -> QDiagram b v m
 mkQD p e t n q = QD $ leaf (toDeletable e *: toDeletable t *: n *: q *: ()) p
 
 ------------------------------------------------------------
@@ -345,7 +393,10 @@ infixl 6 `atop`
 ---- Functor
 
 instance Functor (QDiagram b v) where
-  fmap = over QD . mapU . second . second . second . first . fmap . fmap
+  fmap f = (over QD . mapU . second . second)
+             ( (first . fmap . fmap) f
+             . (second . first . fmap . fmap) f
+             )
 
 ---- Applicative
 
@@ -426,9 +477,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v)
       => Transformable (QDiagram b v m) where
-  transform = over QD . applyD . inj
-            . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
-            . M
+  transform = over QD . applyD . transfToAnnot
 
 ---- Qualifiable
 
@@ -438,6 +487,152 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => Qualifiable (QDiagram b v m) where
   (|>) = over QD . applyD . inj . toName
 
+
+------------------------------------------------------------
+--  Subdiagrams
+------------------------------------------------------------
+
+-- | A @Subdiagram@ represents a diagram embedded within the context
+--   of a larger diagram.  Essentially, it consists of a diagram
+--   paired with any accumulated information from the larger context
+--   (transformations, attributes, etc.).
+
+data Subdiagram b v m = Subdiagram (QDiagram b v m) (DownAnnots v)
+
+type instance V (Subdiagram b v m) = v
+
+-- | Turn a diagram into a subdiagram with no accumulated context.
+mkSubdiagram :: QDiagram b v m -> Subdiagram b v m
+mkSubdiagram d = Subdiagram d empty
+
+-- | Create a \"point subdiagram\", that is, a 'pointDiagram' (with no
+--   content and a point envelope) treated as a subdiagram with local
+--   origin at the given point.  Note this is not the same as
+--   @mkSubdiagram . pointDiagram@, which would result in a subdiagram
+--   with local origin at the parent origin, rather than at the given
+--   point.
+subPoint :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+         => Point v -> Subdiagram b v m
+subPoint p = Subdiagram
+               (pointDiagram origin)
+               (transfToAnnot $ translation (p .-. origin))
+
+instance Functor (Subdiagram b v) where
+  fmap f (Subdiagram d a) = Subdiagram (fmap f d) a
+
+instance (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
+      => Enveloped (Subdiagram b v m) where
+  getEnvelope (Subdiagram d a) = transform (transfFromAnnot a) $ getEnvelope d
+
+instance (Ord (Scalar v), VectorSpace v, HasLinearMap v)
+      => Traced (Subdiagram b v m) where
+  getTrace (Subdiagram d a) = transform (transfFromAnnot a) $ getTrace d
+
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
+      => HasOrigin (Subdiagram b v m) where
+  moveOriginTo = translate . (origin .-.)
+
+instance ( HasLinearMap v, InnerSpace v
+         , Floating (Scalar v), AdditiveGroup (Scalar v) )
+    => Transformable (Subdiagram b v m) where
+  transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
+
+-- | Get the location of a subdiagram; that is, the location of its
+--   local origin with respect to the vector space of its parent
+--   diagram.  In other words, the point where its local origin
+--   \"ended up\".
+location :: HasLinearMap v => Subdiagram b v m -> Point v
+location (Subdiagram _ a) = transform (transfFromAnnot a) origin
+
+-- | Turn a subdiagram into a normal diagram, including the enclosing
+--   context.  XXX example
+getSub :: ( HasLinearMap v, InnerSpace v
+          , Floating (Scalar v), AdditiveGroup (Scalar v) )
+       => Subdiagram b v m -> QDiagram b v m
+getSub (Subdiagram d a) = over QD (applyD a) d
+
+-- | Extract the \"raw\" content of a subdiagram, by throwing away the
+--   context.  XXX example
+rawSub :: Subdiagram b v m -> QDiagram b v m
+rawSub (Subdiagram d _) = d
+
+------------------------------------------------------------
+--  Subdiagram maps  ---------------------------------------
+------------------------------------------------------------
+
+-- | A 'SubMap' is a map associating names to subdiagrams. There can
+--   be multiple associations for any given name.
+newtype SubMap b v m = SubMap (M.Map Name [Subdiagram b v m])
+  -- See Note [SubMap Set vs list]
+
+instance Newtype (SubMap b v m) (M.Map Name [Subdiagram b v m]) where
+  pack              = SubMap
+  unpack (SubMap m) = m
+
+-- ~~~~ [SubMap Set vs list]
+-- In some sense it would be nicer to use
+-- Sets instead of a list, but then we would have to put Ord
+-- constraints on v everywhere. =P
+
+type instance V (SubMap b v m) = v
+
+instance Functor (SubMap b v) where
+  fmap = over SubMap . fmap . map . fmap
+
+instance Semigroup (SubMap b v m) where
+  SubMap s1 <> SubMap s2 = SubMap $ M.unionWith (++) s1 s2
+
+-- | 'SubMap's form a monoid with the empty map as the identity, and
+--   map union as the binary operation.  No information is ever lost:
+--   if two maps have the same name in their domain, the resulting map
+--   will associate that name to the concatenation of the information
+--   associated with that name.
+instance Monoid (SubMap b v m) where
+  mempty  = SubMap M.empty
+  mappend = (<>)
+
+instance (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
+      => HasOrigin (SubMap b v m) where
+  moveOriginTo = over SubMap . moveOriginTo
+
+instance (AdditiveGroup (Scalar v), InnerSpace v, Floating (Scalar v), HasLinearMap v)
+  => Transformable (SubMap b v m) where
+  transform = over SubMap . transform
+
+-- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a |>
+--   ns@ is the same 'SubMap' except with every name qualified by
+--   @a@.
+instance Qualifiable (SubMap b v m) where
+  a |> (SubMap m) = SubMap $ M.mapKeys (a |>) m
+
+-- | Construct a 'SubMap' from a list of associations between names
+--   and subdiagrams.
+fromNames :: IsName a => [(a, Subdiagram b v m)] -> SubMap b v m
+fromNames = SubMap . M.fromListWith (++) . map (toName *** (:[]))
+
+-- | Add a name/diagram association to a submap.
+rememberAs :: IsName a => a -> QDiagram b v m -> SubMap b v m -> SubMap b v m
+rememberAs n b = over SubMap $ M.insertWith (++) (toName n) [mkSubdiagram b]
+
+-- | A name acts on a name map by qualifying every name in it.
+instance Action Name (SubMap b v m) where
+  act = (|>)
+
+-- | Names don't act on anything else.
+instance Action Name a
+
+-- | Look for the given name in a name map, returning a list of
+--   subdiagrams associated with that name.  If no names match the
+--   given name exactly, return all the subdiagrams associated with
+--   names of which the given name is a suffix.
+lookupSub :: IsName n => n -> SubMap b v m -> Maybe [Subdiagram b v m]
+lookupSub a (SubMap m)
+  = M.lookup n m `mplus`
+    (flatten . filter ((n `nameSuffixOf`) . fst) . M.assocs $ m)
+  where (Name n1) `nameSuffixOf` (Name n2) = n1 `isSuffixOf` n2
+        flatten [] = Nothing
+        flatten xs = Just . concatMap snd $ xs
+        n = toName a
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------

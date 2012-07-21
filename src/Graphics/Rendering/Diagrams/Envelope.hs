@@ -30,12 +30,9 @@ module Graphics.Rendering.Diagrams.Envelope
        , appEnvelope
        , onEnvelope
        , mkEnvelope
+       , pointEnvelope
 
        , Enveloped(..)
-
-       , LocatedEnvelope(..)
-       , location
-       , locateEnvelope
 
          -- * Utility functions
        , diameter
@@ -99,6 +96,11 @@ onEnvelope t = (inEnvelope . fmap) ((Max .) . t . (getMax .))
 
 mkEnvelope :: (v -> Scalar v) -> Envelope v
 mkEnvelope = Envelope . Option . Just . (Max .)
+
+-- | Create an envelope for the given point.
+pointEnvelope :: (AdditiveGroup (Scalar v), Fractional (Scalar v), InnerSpace v)
+              => Point v -> Envelope v
+pointEnvelope p = moveTo p (mkEnvelope (const zeroV))
 
 -- | Envelopes form a semigroup with pointwise maximum as composition.
 --   Hence, if @e1@ is the envelope for diagram @d1@, and
@@ -182,39 +184,6 @@ instance (Enveloped b) => Enveloped (M.Map k b) where
 
 instance (Enveloped b) => Enveloped (S.Set b) where
   getEnvelope = mconcat . map getEnvelope . S.elems
-
--- XXX  rename this?  Move it elsewhere?
-------------------------------------------------------------
---  Located envelopes
-------------------------------------------------------------
-
--- | A @LocatedEnvelope@ value represents an envelope with its
---   base point at a particular location.
-data LocatedEnvelope v = LocatedEnvelope (Point v) (TransInv (Envelope v))
-  deriving (Show)
-
-type instance V (LocatedEnvelope v) = v
-
-instance (OrderedField (Scalar v), InnerSpace v) => Enveloped (LocatedEnvelope v) where
-  getEnvelope (LocatedEnvelope _ (TransInv b)) = b
-
-instance VectorSpace v => HasOrigin (LocatedEnvelope v) where
-  moveOriginTo (P u) (LocatedEnvelope p b) = LocatedEnvelope (p .-^ u) b
-
-instance ( HasLinearMap v, InnerSpace v
-         , Floating (Scalar v), AdditiveGroup (Scalar v) )
-    => Transformable (LocatedEnvelope v) where
-  transform t (LocatedEnvelope p b) = LocatedEnvelope (papply t p)
-                                                  (transform t b)
-
--- | Get the location of a located envelope.
-location :: LocatedEnvelope v -> Point v
-location (LocatedEnvelope p _) = p
-
--- | Create a 'LocatedEnvelope' value by specifying a location and an
---   envelope.
-locateEnvelope :: Point v -> Envelope v -> LocatedEnvelope v
-locateEnvelope p b = LocatedEnvelope p (TransInv b)
 
 ------------------------------------------------------------
 --  Computing with envelopes

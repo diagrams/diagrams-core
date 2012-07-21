@@ -59,11 +59,14 @@ module Graphics.Rendering.Diagrams
        , AName
        , Name, IsName(..)
        , Qualifiable(..), (.>)
-       , NameMap
-       , fromNames, fromNamesB
+
+         -- ** Subdiagram maps
+
+       , SubMap(..)
+       , fromNames
        , rememberAs
 
-       , lookupN
+       , lookupSub
 
          -- * Attributes and styles
 
@@ -81,9 +84,6 @@ module Graphics.Rendering.Diagrams
        , Enveloped(..)
        , envelopeV, envelopeP
        , diameter, radius
-
-       , LocatedEnvelope(..)
-       , location, locateEnvelope
 
          -- * Traces
 
@@ -116,7 +116,7 @@ module Graphics.Rendering.Diagrams
        , envelope, trace, names, query, sample
        , value, resetValue, clearValue
 
-       , named, namePoint
+       , named, nameSub, namePoint
        , withName
        , withNameAll
        , withNames
@@ -124,6 +124,13 @@ module Graphics.Rendering.Diagrams
        , freeze, setEnvelope, setTrace
 
        , atop
+
+         -- ** Subdiagrams
+
+       , Subdiagram(..), mkSubdiagram
+       , getSub, rawSub
+       , location
+       , subPoint
 
          -- * Backends
 
