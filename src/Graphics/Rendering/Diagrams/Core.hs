@@ -1,18 +1,17 @@
-{-# LANGUAGE FlexibleContexts
-           , FlexibleInstances
-           , TypeFamilies
-           , MultiParamTypeClasses
-           , GADTs
-           , ExistentialQuantification
-           , ScopedTypeVariables
-           , GeneralizedNewtypeDeriving
-           , DeriveDataTypeable
-           , TypeOperators
-           , OverlappingInstances
-           , UndecidableInstances
-           , TupleSections
-           , EmptyDataDecls
-           #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE EmptyDataDecls #-}
 
 -----------------------------------------------------------------------------
 -- |
