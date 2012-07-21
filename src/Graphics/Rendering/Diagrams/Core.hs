@@ -639,16 +639,16 @@ lookupSub a (SubMap m)
 ------------------------------------------------------------
 
 -- $prim
--- Ultimately, every diagram is essentially a collection of
--- /primitives/, basic building blocks which can be rendered by
--- backends.  However, not every backend must be able to render every
--- type of primitive; the collection of primitives a given backend
--- knows how to render is determined by instances of 'Renderable'.
+-- Ultimately, every diagram is essentially a list of /primitives/,
+-- basic building blocks which can be rendered by backends.  However,
+-- not every backend must be able to render every type of primitive;
+-- the collection of primitives a given backend knows how to render is
+-- determined by instances of 'Renderable'.
 
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: Renderable t b => t -> Prim b (V t)
+  Prim :: Renderable p b => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
 
