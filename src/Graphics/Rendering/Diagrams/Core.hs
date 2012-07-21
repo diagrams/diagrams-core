@@ -678,7 +678,6 @@ instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b wher
 nullPrim :: (HasLinearMap v, Monoid (Render b v)) => Prim b v
 nullPrim = Prim NullPrim
 
-
 ------------------------------------------------------------
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
@@ -856,4 +855,3 @@ return some associated type applied to b (e.g. Render b) and unifying
 them with something else will never work, since type families are not
 necessarily injective.
 -}
-
