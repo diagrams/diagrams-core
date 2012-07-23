@@ -12,7 +12,7 @@ Maintainer:          diagrams-discuss@googlegroups.com
 Bug-reports:         http://code.google.com/p/diagrams/issues/list
 Category:            Graphics
 Build-type:          Simple
-Cabal-version:       >=1.6
+Cabal-version:       >=1.10
 Extra-source-files:  CHANGES, README
 Tested-with:         GHC == 6.12.3, GHC == 7.0.4, GHC == 7.2.1, GHC == 7.4.1
 Source-repository head
@@ -44,3 +44,22 @@ Library
                        dubl-tree >= 0.1 && < 0.2
 
   hs-source-dirs:      src
+
+  Other-extensions:    DeriveDataTypeable
+                       EmptyDataDecls
+                       ExistentialQuantification
+                       FlexibleContexts
+                       FlexibleInstances
+                       GADTs
+                       GeneralizedNewtypeDeriving
+                       MultiParamTypeClasses
+                       OverlappingInstances
+                       ScopedTypeVariables
+                       StandaloneDeriving
+                       TupleSections
+                       TypeFamilies
+                       TypeOperators
+                       TypeSynonymInstances
+                       UndecidableInstances
+
+  Default-language:    Haskell2010
