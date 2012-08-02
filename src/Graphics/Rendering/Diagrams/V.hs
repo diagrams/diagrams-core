@@ -29,8 +29,8 @@ import Data.Set
 ------------------------------------------------------------
 
 -- | Many sorts of objects have an associated vector space in which
---   they live.  The type function @V@ maps from objects to their
---   associated vector space.
+--   they \"live\".  The type function @V@ maps from object types to
+--   the associated vector space.
 type family V a :: *
 
 type instance V Double    = Double
