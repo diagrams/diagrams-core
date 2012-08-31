@@ -82,7 +82,7 @@ module Graphics.Rendering.Diagrams
        , Envelope
        , inEnvelope, appEnvelope, onEnvelope, mkEnvelope
        , Enveloped(..)
-       , envelopeV, envelopeP
+       , envelopeVMay, envelopeV, envelopePMay, envelopeP
        , diameter, radius
 
          -- * Traces
