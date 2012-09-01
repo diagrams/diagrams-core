@@ -6,4 +6,5 @@ cabal-dev
 *.chs.h
 .virthualenv
 *~
-dist_diagrams
+dist_*
+.hsenv_*
