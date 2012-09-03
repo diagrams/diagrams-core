@@ -232,6 +232,8 @@ prims = (map . second) (untangle . option mempty id . fst)
       . D.flatten
       . unQD
 
+-- | A useful variant of 'getU' which projects out a certain
+--   component.
 getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
 getU' = maybe mempty (option mempty id . get) . D.getU
 
