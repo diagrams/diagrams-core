@@ -37,7 +37,7 @@ module Graphics.Rendering.Diagrams.Envelope
          -- * Utility functions
        , diameter
        , radius
-       , envelopeV, envelopeP
+       , envelopeVMay, envelopeV, envelopePMay, envelopeP
 
          -- * Miscellaneous
        , OrderedField
@@ -45,6 +45,7 @@ module Graphics.Rendering.Diagrams.Envelope
 
 import           Control.Applicative ((<$>))
 import qualified Data.Map as M
+import           Data.Maybe (fromMaybe)
 import           Data.Semigroup
 import qualified Data.Set as S
 
@@ -190,10 +191,21 @@ instance (Enveloped b) => Enveloped (S.Set b) where
 ------------------------------------------------------------
 
 -- | Compute the vector from the local origin to a separating
+--   hyperplane in the given direction, or @Nothing@ for the empty
+--   envelope.
+envelopeVMay :: Enveloped a => V a -> a -> Maybe (V a)
+envelopeVMay v = fmap ((*^ v) . ($ v)) . appEnvelope . getEnvelope
+
+-- | Compute the vector from the local origin to a separating
 --   hyperplane in the given direction.  Returns the zero vector for
 --   the empty envelope.
 envelopeV :: Enveloped a => V a -> a -> V a
-envelopeV v = maybe zeroV ((*^ v) . ($ v)) . appEnvelope . getEnvelope
+envelopeV v = fromMaybe zeroV . envelopeVMay v
+
+-- | Compute the point on a separating hyperplane in the given
+--   direction, or @Nothing@ for the empty envelope.
+envelopePMay :: Enveloped a => V a -> a -> Maybe (Point (V a))
+envelopePMay v = fmap P . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction.  Returns the origin for the empty envelope.

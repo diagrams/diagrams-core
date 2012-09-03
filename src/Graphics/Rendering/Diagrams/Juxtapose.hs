@@ -18,6 +18,7 @@ module Graphics.Rendering.Diagrams.Juxtapose
        ( Juxtaposable(..), juxtaposeDefault
        ) where
 
+import           Data.Functor ((<$>))
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -40,11 +41,15 @@ class Juxtaposable a where
   juxtapose :: V a -> a -> a -> a
 
 -- | Default implementation of 'juxtapose' for things which are
---   instances of 'Enveloped' and 'HasOrigin'.
+--   instances of 'Enveloped' and 'HasOrigin'.  If either envelope is
+--   empty, the second object is returned unchanged.
 juxtaposeDefault :: (Enveloped a, HasOrigin a) => V a -> a -> a -> a
-juxtaposeDefault v a1 a2 = moveOriginBy (v1 ^+^ v2) a2
-  where v1 = negateV (envelopeV v a1)
-        v2 = envelopeV (negateV v) a2
+juxtaposeDefault v a1 a2 =
+  case (mv1, mv2) of
+    (Just v1, Just v2) -> moveOriginBy (v1 ^+^ v2) a2
+    _                  -> a2
+  where mv1 = negateV <$> envelopeVMay v a1
+        mv2 = envelopeVMay (negateV v) a2
 
 instance (InnerSpace v, OrderedField (Scalar v)) => Juxtaposable (Envelope v) where
   juxtapose = juxtaposeDefault
