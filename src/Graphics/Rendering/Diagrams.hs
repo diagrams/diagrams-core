@@ -113,7 +113,7 @@ module Graphics.Rendering.Diagrams
 
        , QDiagram, mkQD, Diagram
        , prims
-       , envelope, trace, names, query, sample
+       , envelope, trace, subMap, names, query, sample
        , value, resetValue, clearValue
 
        , named, nameSub, namePoint
