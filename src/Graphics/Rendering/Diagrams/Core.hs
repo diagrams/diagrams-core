@@ -47,7 +47,7 @@ module Graphics.Rendering.Diagrams.Core
          -- * Operations on diagrams
          -- ** Extracting information
        , prims
-       , envelope, trace, names, query, sample
+       , envelope, trace, subMap, names, query, sample
        , value, resetValue, clearValue
 
          -- ** Combining diagrams
@@ -262,9 +262,14 @@ setTrace t = over QD ( D.applyUpre (inj . toDeletable $ t)
                      . D.applyUpost (inj (deleteR :: Deletable (Trace v)))
                      )
 
--- | Get the name map of a diagram.
-names :: QDiagram b v m -> SubMap b v m
-names = getU' . unQD
+-- | Get the subdiagram map (*i.e.* an association from names to
+--   subdiagrams) of a diagram.
+subMap :: QDiagram b v m -> SubMap b v m
+subMap = getU' . unQD
+
+-- | Get a list of names of subdiagrams and their locations.
+names :: HasLinearMap v => QDiagram b v m -> [(Name, [Point v])]
+names = (map . second . map) location . M.assocs . unpack . subMap
 
 -- | Attach an atomic name to a diagram.
 named :: ( IsName n
@@ -295,7 +300,7 @@ nameSub s n d = over QD (D.applyUpre . inj $ fromNames [(n,s d)]) d
 withName :: IsName n
          => n -> (Subdiagram b v m -> QDiagram b v m -> QDiagram b v m)
          -> QDiagram b v m -> QDiagram b v m
-withName n f d = maybe id f (lookupSub (toName n) (names d) >>= listToMaybe) d
+withName n f d = maybe id f (lookupSub (toName n) (subMap d) >>= listToMaybe) d
 
 -- | Given a name and a diagram transformation indexed by a list of
 --   located envelopes, perform the transformation using the
@@ -304,7 +309,7 @@ withName n f d = maybe id f (lookupSub (toName n) (names d) >>= listToMaybe) d
 withNameAll :: IsName n
             => n -> ([Subdiagram b v m] -> QDiagram b v m -> QDiagram b v m)
             -> QDiagram b v m -> QDiagram b v m
-withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (names d))) d
+withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (subMap d))) d
 
 -- | Given a list of names and a diagram transformation indexed by a
 --   list of located envelopes, perform the transformation using the
@@ -315,7 +320,7 @@ withNames :: IsName n
           => [n] -> ([Subdiagram b v m] -> QDiagram b v m -> QDiagram b v m)
           -> QDiagram b v m -> QDiagram b v m
 withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupSub . toName) ns)) d
-  where nd = names d
+  where nd = subMap d
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v m -> Query v m
