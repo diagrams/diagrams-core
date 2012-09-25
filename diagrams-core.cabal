@@ -16,8 +16,8 @@ Cabal-version:       >=1.10
 Extra-source-files:  CHANGES, README
 Tested-with:         GHC == 6.12.3, GHC == 7.0.4, GHC == 7.2.1, GHC == 7.4.1
 Source-repository head
-  type:     darcs
-  location: http://patch-tag.com/r/byorgey/diagrams-core
+  type:     git
+  location: git://github.com/diagrams/diagrams-core.git
 
 Library
   Exposed-modules:     Graphics.Rendering.Diagrams,
