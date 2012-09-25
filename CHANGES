@@ -1,3 +1,74 @@
+* 0.6: XXX
+
+  * New features
+
+    - Proper support for subdiagrams: previous versions of
+      diagrams-core had a mechanism for associating names with a pair
+      of a location and an envelope.  Now, names are associated with
+      actual subdiagrams (including their location and envelope, along
+      with all the other information stored by a diagram).
+
+      See Graphics.Rendering.Diagrams.Core.
+
+    - Traces: in addition to an envelope, each diagram now stores a
+      'trace', which is like an embedded raytracer: given any ray
+      (represented by a base point and a vector), the trace computes
+      the closest point of intersection with the diagram along the
+      ray.  This is useful for determining points on the boundary of a
+      diagram, e.g. when drawing arrows between diagrams.
+
+      See Graphics.Rendering.Diagrams.Trace.
+
+  * API changes
+
+    - 'Graphics.Rendering.Diagrams.UDTree' has been split out into a
+      separate 'dual-tree' package (which has also been substantially
+      rewritten).
+
+    - 'Graphics.Rendering.Diagrams.{Monoids,MList}' have been split
+      out into a separate 'monoid-extras' package.
+
+    - The 'names' function now returns a list of names and their
+      associated locations, instead of the associated subdiagrams.  In
+      particular the output is suitable to be rendered to a String
+      using 'show'.
+
+    - The new 'subMap' function fills a similar role that 'names' used
+      to play, returning the entire mapping from names to subdiagrams.
+
+    - 'juxtaposeDefault' is now the identity on the second object if
+      either one has an empty envelope.  In particular this means that
+      'mempty' is now an identity element for 'beside' and friends.
+
+    - New functions envelope[VP]May
+
+      'envelopeV' and 'envelopeP' return the zero vector and origin,
+      respectively, when called on an empty envelope.  However,
+      sometimes it's useful to actually know whether the envelope was
+      empty or not (the zero vector and the origin are legitimate
+      outputs from non-empty envelopes).  The new functions have their
+      return type wrapped in Maybe for this purpose.
+
+    - The Graphics.Rendering.Diagrams.Util module has been removed,
+      along with the 'withLength' function.  Calls to withLength can
+      be replaced using
+
+        withLength s v = s *^ normalized v
+
+  * Dependency/version changes
+
+    - Tested with GHC 7.6.1
+    - allow base-4.6
+    - allow containers-0.5.*
+
+  * Bug fixes
+
+    - juxtaposeDefault now correctly handles empty envelopes (#37)
+
+      'juxtaposeDefault' is now the identity on the second object if
+      either one has an empty envelope.  In particular this means that
+      'mempty' is now an identity element for 'beside' and friends.
+
 * 0.5.0.1: 11 May 2012
 
   - Update MemoTrie upper bound to allow MemoTrie-0.5
