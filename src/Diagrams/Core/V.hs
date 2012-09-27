@@ -3,7 +3,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.MList
+-- Module      :  Diagrams.Core.MList
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -12,7 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.V
+module Diagrams.Core.V
        ( V
 
        ) where

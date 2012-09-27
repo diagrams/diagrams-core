@@ -6,12 +6,12 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Trace
+-- Module      :  Diagrams.Core.Trace
 -- Copyright   :  (c) 2012 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- "Graphics.Rendering.Diagrams" defines the core library of primitives
+-- "Diagrams" defines the core library of primitives
 -- forming the basis of an embedded domain-specific language for
 -- describing and rendering diagrams.
 --
@@ -21,7 +21,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Trace
+module Diagrams.Core.Trace
        ( -- * Traces
          Trace(..)
 
@@ -48,10 +48,10 @@ import           Data.AffineSpace
 import           Data.Monoid.PosInf
 import           Data.VectorSpace
 
-import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.Points
-import           Graphics.Rendering.Diagrams.Transform
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Points
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Trace  -------------------------------------------------
@@ -127,7 +127,7 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Trace v) where
 --   given point and infinity for everything else, but due to
 --   floating-point inaccuracy this is problematic.  Note that the
 --   envelope for a single point is *not* the empty envelope (see
---   "Graphics.Rendering.Diagrams.Envelope").
+--   "Diagrams.Core.Envelope").
 instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
   getTrace p = mempty
 

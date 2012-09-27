@@ -10,12 +10,12 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Transform
+-- Module      :  Diagrams.Core.Transform
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- "Graphics.Rendering.Diagrams" defines the core library of primitives
+-- "Diagrams" defines the core library of primitives
 -- forming the basis of an embedded domain-specific language for
 -- describing and rendering diagrams.
 --
@@ -24,7 +24,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Transform
+module Diagrams.Core.Transform
        (
          -- * Transformations
 
@@ -70,9 +70,9 @@ import           Data.Monoid.Action
 import           Data.Monoid.Deletable
 import           Data.VectorSpace
 
-import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.Points
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Points
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Transformations  ---------------------------------------

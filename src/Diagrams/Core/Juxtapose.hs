@@ -4,7 +4,7 @@
   #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Juxtapose
+-- Module      :  Diagrams.Core.Juxtapose
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -14,7 +14,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Juxtapose
+module Diagrams.Core.Juxtapose
        ( Juxtaposable(..), juxtaposeDefault
        ) where
 
@@ -24,9 +24,9 @@ import qualified Data.Set as S
 
 import           Data.VectorSpace
 
-import           Graphics.Rendering.Diagrams.Envelope
-import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.Envelope
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.V
 
 -- | Class of things which can be placed \"next to\" other things, for some
 --   appropriate notion of \"next to\".

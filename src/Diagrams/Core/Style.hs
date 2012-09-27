@@ -12,7 +12,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Style
+-- Module      :  Diagrams.Core.Style
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -22,7 +22,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Style
+module Diagrams.Core.Style
        ( -- * Attributes
          -- $attr
 
@@ -50,8 +50,8 @@ import           Data.Typeable
 
 import Data.Monoid.Action
 
-import           Graphics.Rendering.Diagrams.Transform
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------

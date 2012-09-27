@@ -22,7 +22,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Envelope
+module Diagrams.Core.Envelope
        ( -- * Envelopes
          Envelope(..)
 
@@ -52,10 +52,10 @@ import qualified Data.Set as S
 import           Data.AffineSpace ((.+^), (.-^))
 import           Data.VectorSpace
 
-import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.Points
-import           Graphics.Rendering.Diagrams.Transform
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Points
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Envelopes  ---------------------------------------------

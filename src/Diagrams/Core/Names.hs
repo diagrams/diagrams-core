@@ -12,7 +12,7 @@
   #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Names
+-- Module      :  Diagrams.Core.Names
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -22,7 +22,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Names
+module Diagrams.Core.Names
        (-- * Names
         -- ** Atomic names
          AName(..)
@@ -48,11 +48,11 @@ import           Control.Newtype
 import           Data.Monoid.Action
 import           Data.VectorSpace
 
-import           Graphics.Rendering.Diagrams.Envelope
-import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.Points
-import           Graphics.Rendering.Diagrams.Transform
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.Envelope
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Points
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------

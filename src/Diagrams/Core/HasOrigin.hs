@@ -9,7 +9,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.HasOrigin
+-- Module      :  Diagrams.Core.HasOrigin
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -19,7 +19,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.HasOrigin
+module Diagrams.Core.HasOrigin
        ( HasOrigin(..), moveOriginBy, moveTo, place
        ) where
 
@@ -29,8 +29,8 @@ import qualified Data.Set as S
 import           Data.AffineSpace ((.-^), (.-.))
 import           Data.VectorSpace
 
-import           Graphics.Rendering.Diagrams.Points
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.Points
+import           Diagrams.Core.V
 
 -- | Class of types which have an intrinsic notion of a \"local
 --   origin\", i.e. things which are not invariant under translation,

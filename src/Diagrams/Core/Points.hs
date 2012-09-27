@@ -2,7 +2,7 @@
   #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Points
+-- Module      :  Diagrams.Core.Points
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -11,7 +11,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Points
+module Diagrams.Core.Points
        ( -- * Points
 
          Point(..), origin, (*.)
@@ -23,6 +23,6 @@ module Graphics.Rendering.Diagrams.Points
 -- instance of V for Point here.
 import Data.AffineSpace.Point
 
-import Graphics.Rendering.Diagrams.V
+import Diagrams.Core.V
 
 type instance V (Point v) = v

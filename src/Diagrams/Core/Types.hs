@@ -15,7 +15,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Core
+-- Module      :  Diagrams.Core.Types
 -- Copyright   :  (c) 2011-2012 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -23,12 +23,12 @@
 -- The core library of primitives forming the basis of an embedded
 -- domain-specific language for describing and rendering diagrams.
 --
--- "Graphics.Rendering.Diagrams.Core" defines types and classes for
+-- "Diagrams.Core" defines types and classes for
 -- primitives, diagrams, and backends.
 --
 -----------------------------------------------------------------------------
 
-{- ~~~~ Note [breaking up Core module]
+{- ~~~~ Note [breaking up Types module]
 
    Although it's not as bad as it used to be, this module has a lot of
    stuff in it, and it might seem a good idea in principle to break it up
@@ -36,7 +36,7 @@
    in this module cyclically depends on everything else.
 -}
 
-module Graphics.Rendering.Diagrams.Core
+module Diagrams.Core.Types
        (
          -- * Diagrams
 
@@ -125,16 +125,16 @@ import           Data.Monoid.Split
 import           Data.Monoid.WithSemigroup
 import qualified Data.Tree.DUAL as D
 
-import           Graphics.Rendering.Diagrams.Envelope
-import           Graphics.Rendering.Diagrams.HasOrigin
-import           Graphics.Rendering.Diagrams.Juxtapose
-import           Graphics.Rendering.Diagrams.Names
-import           Graphics.Rendering.Diagrams.Points
-import           Graphics.Rendering.Diagrams.Query
-import           Graphics.Rendering.Diagrams.Style
-import           Graphics.Rendering.Diagrams.Trace
-import           Graphics.Rendering.Diagrams.Transform
-import           Graphics.Rendering.Diagrams.V
+import           Diagrams.Core.Envelope
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Juxtapose
+import           Diagrams.Core.Names
+import           Diagrams.Core.Points
+import           Diagrams.Core.Query
+import           Diagrams.Core.Style
+import           Diagrams.Core.Trace
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -146,18 +146,18 @@ import           Graphics.Rendering.Diagrams.V
 -- | Monoidal annotations which travel up the diagram tree, i.e. which
 --   are aggregated from component diagrams to the whole:
 --
---   * envelopes (see "Graphics.Rendering.Diagrams.Envelope").
+--   * envelopes (see "Diagrams.Core.Envelope").
 --     The envelopes are \"deletable\" meaning that at any point we can
 --     throw away the existing envelope and replace it with a new one;
 --     sometimes we want to consider a diagram as having a different
 --     envelope unrelated to its \"natural\" envelope.
 --
---   * traces (see "Graphics.Rendering.Diagrams.Trace"), also
+--   * traces (see "Diagrams.Core.Trace"), also
 --     deletable.
 --
---   * name/subdiagram associations (see "Graphics.Rendering.Diagrams.Names")
+--   * name/subdiagram associations (see "Diagrams.Core.Names")
 --
---   * query functions (see "Graphics.Rendering.Diagrams.Query")
+--   * query functions (see "Diagrams.Core.Query")
 type UpAnnots b v m = Deletable (Envelope v)
                   ::: Deletable (Trace v)
                   ::: SubMap b v m
@@ -169,11 +169,11 @@ type UpAnnots b v m = Deletable (Envelope v)
 --   act on the upwards-travelling annotations):
 --
 --   * transformations (split at the innermost freeze): see
---     "Graphics.Rendering.Diagrams.Transform"
+--     "Diagrams.Core.Transform"
 --
---   * styles (see "Graphics.Rendering.Diagrams.Style")
+--   * styles (see "Diagrams.Core.Style")
 --
---   * names (see "Graphics.Rendering.Diagrams.Names")
+--   * names (see "Diagrams.Core.Names")
 type DownAnnots v = (Split (Transformation v) :+: Style v)
                 ::: Name
                 ::: ()
@@ -762,6 +762,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   being rendered.  If the diagram does not have a monomorphic type,
 --   GHC complains that it cannot determine the diagram's type.
 --
+--   XXX fix me, no Ellipse any more
 --   For example, here is the error we get if we try to compute the
 --   width of a radius-1 circle (this example requires
 --   @diagrams-lib@):

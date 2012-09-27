@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams
+-- Module      :  Diagrams.Core
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -21,7 +21,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams
+module Diagrams.Core
        ( -- * Associated vector spaces
 
          V
@@ -150,16 +150,16 @@ module Graphics.Rendering.Diagrams
 
        ) where
 
-import Graphics.Rendering.Diagrams.Core
-import Graphics.Rendering.Diagrams.Envelope
-import Graphics.Rendering.Diagrams.HasOrigin
-import Graphics.Rendering.Diagrams.Juxtapose
-import Graphics.Rendering.Diagrams.Names
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Query
-import Graphics.Rendering.Diagrams.Style
-import Graphics.Rendering.Diagrams.Trace
-import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.V
+import Diagrams.Core.Types
+import Diagrams.Core.Envelope
+import Diagrams.Core.HasOrigin
+import Diagrams.Core.Juxtapose
+import Diagrams.Core.Names
+import Diagrams.Core.Points
+import Diagrams.Core.Query
+import Diagrams.Core.Style
+import Diagrams.Core.Trace
+import Diagrams.Core.Transform
+import Diagrams.Core.V
 
 import Data.Monoid.WithSemigroup (Monoid')

@@ -3,7 +3,7 @@
   #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Query
+-- Module      :  Diagrams.Core.Query
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
@@ -13,7 +13,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Diagrams.Query
+module Diagrams.Core.Query
        ( Query(..)
        ) where
 
@@ -23,10 +23,10 @@ import Data.Semigroup
 import Data.AffineSpace
 import Data.VectorSpace
 
-import Graphics.Rendering.Diagrams.HasOrigin
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.V
+import Diagrams.Core.HasOrigin
+import Diagrams.Core.Points
+import Diagrams.Core.Transform
+import Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Queries  -----------------------------------------------
