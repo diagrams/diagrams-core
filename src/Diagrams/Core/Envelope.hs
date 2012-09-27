@@ -61,11 +61,28 @@ import           Diagrams.Core.V
 --  Envelopes  ---------------------------------------------
 ------------------------------------------------------------
 
--- | Every diagram comes equipped with an /envelope/.
---   Intuitively, the envelope for a diagram tells us the
---   minimum distance we have to go in a given direction to get to a
---   (hyper)plane entirely containing the diagram on one side of
---   it. Formally, given a vector @v@, it returns a scalar @s@ such
+-- | Every diagram comes equipped with an /envelope/.  What is an envelope?
+--
+--   Consider first the idea of a /bounding box/. A bounding box
+--   expresses the distance to a bounding plane in every direction
+--   parallel to an axis.  That is, a bounding box can be thought of
+--   as the intersection of a collection of half-planes, two
+--   perpendicular to each axis.
+--
+--   More generally, the intersection of half-planes in /every/
+--   direction would give a tight \"bounding region\", or convex hull.
+--   However, representing such a thing intensionally would be
+--   impossible; hence bounding boxes are often used as an
+--   approximation.
+--
+--   An envelope is an /extensional/ representation of such a
+--   \"bounding region\".  Instead of storing some sort of direct
+--   representation, we store a /function/ which takes a direction as
+--   input and gives a distance to a bounding half-plane as output.
+--   The important point is that envelopes can be composed, and
+--   transformed by any affine transformation.
+--
+--   Formally, given a vector @v@, the envelope computes a scalar @s@ such
 --   that
 --
 --     * for every point @u@ inside the diagram,
@@ -73,16 +90,11 @@ import           Diagrams.Core.V
 --
 --     * @s@ is the smallest such scalar.
 --
---   This could probably be expressed in terms of a Galois connection;
---   this is left as an exercise for the reader.
---
 --   There is also a special \"empty envelope\".
 --
---   Essentially, envelopes are a functional/extensional
---   representation of (a conservative approximation to) convex
---   bounding regions.  The idea for this representation came from
+--   The idea for envelopes came from
 --   Sebastian Setzer; see
---   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.
+--   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://www.cis.upenn.edu/~byorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
 newtype Envelope v = Envelope { unEnvelope :: Option (v -> Max (Scalar v)) }
 
 inEnvelope :: (Option (v -> Max (Scalar v)) -> Option (v -> Max (Scalar v)))
