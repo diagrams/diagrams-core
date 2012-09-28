@@ -1,9 +1,6 @@
-The core modules underlying diagrams, a Haskell embedded
-domain-specific language for compositional, declarative drawing.  See
+[![Build Status](https://secure.travis-ci.org/diagrams/diagrams-core.png)](http://travis-ci.org/diagrams/diagrams-core)
 
-  http://projects.haskell.org/diagrams/
+The core modules defining the basic data structures and algorithms for
+[diagrams](http://projects.haskell.org/diagrams), a Haskell embedded
+domain-specific language for compositional, declarative drawing.
 
-for more information about the project, including installation
-instructions, tutorials, a user manual, a gallery of example images,
-and links to the mailing list, IRC channel, developer wiki and bug
-tracker.
