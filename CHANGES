@@ -21,6 +21,14 @@
 
   * API changes
 
+    - The modules have all been renamed to be more consistent with the
+      module naming scheme in the rest of the diagrams universe.  In
+      particular:
+
+      Graphics.Rendering.Diagrams       -->  Diagrams.Core
+      Grahpics.Rendering.Diagrams.Core  -->  Diagrams.Core.Types
+      Graphics.Rendering.Diagrams.*     -->  Diagrams.Core.*
+
     - 'Graphics.Rendering.Diagrams.UDTree' has been split out into a
       separate 'dual-tree' package (which has also been substantially
       rewritten).
