@@ -834,7 +834,8 @@ instance HasLinearMap v => Backend NullBackend v where
 class Backend b v => MultiBackend b v where
 
   -- | Render multiple diagrams at once.
-  renderDias :: b -> Options b v -> [QDiagram b v m] -> Result b v
+  renderDias :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
+             => b -> Options b v -> [QDiagram b v m] -> Result b v
 
   -- See Note [backend token]
 
