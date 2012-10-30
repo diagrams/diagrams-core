@@ -227,7 +227,9 @@ envelopeP v = P . envelopeV v
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
 diameter :: Enveloped a => V a -> a -> Scalar (V a)
-diameter v a = magnitude (envelopeV v a ^-^ envelopeV (negateV v) a)
+diameter v a = case appEnvelope $ getEnvelope a of
+  (Just env) -> (env v - env (negateV v)) * magnitude v
+  Nothing -> 0
 
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
 --   along a particular vector.
