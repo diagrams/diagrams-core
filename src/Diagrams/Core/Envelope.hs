@@ -224,6 +224,16 @@ envelopePMay v = fmap P . envelopeVMay v
 envelopeP :: Enveloped a => V a -> a -> Point (V a)
 envelopeP v = P . envelopeV v
 
+-- | Compute the amount that the separating hyperplane would need to be moved
+--   in the given direction, or @Nothing@ for the empty envelope.
+envelopeSMay :: Enveloped a => V a -> Maybe (Scalar (V a))
+envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
+
+-- | Compute the amount that the separating hyperplane would need to be moved
+--   in the given direction, or 0 for the empty envelope.
+envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> Scalar (V a)
+envelopeS v = fromMaybe 0 . envelopeSMay v
+
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
 diameter :: Enveloped a => V a -> a -> Scalar (V a)
