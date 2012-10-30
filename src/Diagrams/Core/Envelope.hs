@@ -37,7 +37,7 @@ module Diagrams.Core.Envelope
          -- * Utility functions
        , diameter
        , radius
-       , envelopeVMay, envelopeV, envelopePMay, envelopeP
+       , envelopeVMay, envelopeV, envelopePMay, envelopeP, envelopeSMay, envelopeS
 
          -- * Miscellaneous
        , OrderedField
@@ -226,11 +226,17 @@ envelopeP v = P . envelopeV v
 
 -- | Compute the amount that the separating hyperplane would need to be moved
 --   in the given direction, or @Nothing@ for the empty envelope.
+--
+--   Note that the "envelopeV" family of functions above should be preferred,
+--   as this requires a call to magnitude (which often uses sqrt).
 envelopeSMay :: Enveloped a => V a -> Maybe (Scalar (V a))
 envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
 
 -- | Compute the amount that the separating hyperplane would need to be moved
 --   in the given direction, or 0 for the empty envelope.
+--
+--   Note that the "envelopeV" family of functions above should be preferred,
+--   as this requires a call to magnitude (which often uses sqrt).
 envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> Scalar (V a)
 envelopeS v = fromMaybe 0 . envelopeSMay v
 
