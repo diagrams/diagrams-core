@@ -111,7 +111,7 @@ mkEnvelope :: (v -> Scalar v) -> Envelope v
 mkEnvelope = Envelope . Option . Just . (Max .)
 
 -- | Create an envelope for the given point.
-pointEnvelope :: (AdditiveGroup (Scalar v), Fractional (Scalar v), InnerSpace v)
+pointEnvelope :: (Fractional (Scalar v), InnerSpace v)
               => Point v -> Envelope v
 pointEnvelope p = moveTo p (mkEnvelope (const zeroV))
 
@@ -135,7 +135,7 @@ type instance V (Envelope v) = v
 -- | The local origin of an envelope is the point with respect to
 --   which bounding queries are made, /i.e./ the point from which the
 --   input vectors are taken to originate.
-instance (InnerSpace v, AdditiveGroup (Scalar v), Fractional (Scalar v))
+instance (InnerSpace v, Fractional (Scalar v))
          => HasOrigin (Envelope v) where
   moveOriginTo (P u) = onEnvelope $ \f v -> f v ^-^ ((u ^/ (v <.> v)) <.> v)
 
@@ -148,8 +148,7 @@ instance Show (Envelope v) where
 
 -- XXX can we get away with removing this Floating constraint? It's the
 --   call to normalized here which is the culprit.
-instance ( HasLinearMap v, InnerSpace v
-         , Floating (Scalar v), AdditiveGroup (Scalar v) )
+instance ( HasLinearMap v, InnerSpace v, Floating (Scalar v))
     => Transformable (Envelope v) where
   transform t =   -- XXX add lots of comments explaining this!
     moveOriginTo (P . negateV . transl $ t) .

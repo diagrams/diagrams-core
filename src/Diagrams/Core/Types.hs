@@ -220,7 +220,7 @@ type Diagram b v = QDiagram b v Any
 
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
-pointDiagram :: (Fractional (Scalar v), AdditiveGroup (Scalar v), InnerSpace v)
+pointDiagram :: (Fractional (Scalar v), InnerSpace v)
              => Point v -> QDiagram b v m
 pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
 
@@ -533,8 +533,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
       => HasOrigin (Subdiagram b v m) where
   moveOriginTo = translate . (origin .-.)
 
-instance ( HasLinearMap v, InnerSpace v
-         , Floating (Scalar v), AdditiveGroup (Scalar v) )
+instance ( HasLinearMap v, InnerSpace v, Floating (Scalar v))
     => Transformable (Subdiagram b v m) where
   transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
 
@@ -548,7 +547,7 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 -- | Turn a subdiagram into a normal diagram, including the enclosing
 --   context.  XXX example
 getSub :: ( HasLinearMap v, InnerSpace v
-          , Floating (Scalar v), AdditiveGroup (Scalar v), Ord (Scalar v)
+          , Floating (Scalar v), Ord (Scalar v)
           , Semigroup m
           )
        => Subdiagram b v m -> QDiagram b v m
@@ -598,7 +597,7 @@ instance (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
       => HasOrigin (SubMap b v m) where
   moveOriginTo = over SubMap . moveOriginTo
 
-instance (AdditiveGroup (Scalar v), InnerSpace v, Floating (Scalar v), HasLinearMap v)
+instance (InnerSpace v, Floating (Scalar v), HasLinearMap v)
   => Transformable (SubMap b v m) where
   transform = over SubMap . transform
 
