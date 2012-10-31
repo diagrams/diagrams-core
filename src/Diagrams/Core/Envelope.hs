@@ -229,7 +229,7 @@ envelopeP v = P . envelopeV v
 --
 --   Note that the "envelopeV" family of functions above should be preferred,
 --   as this requires a call to magnitude (which often uses sqrt).
-envelopeSMay :: Enveloped a => V a -> Maybe (Scalar (V a))
+envelopeSMay :: Enveloped a => V a -> a -> Maybe (Scalar (V a))
 envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
 
 -- | Compute the amount that the separating hyperplane would need to be moved
@@ -237,7 +237,7 @@ envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
 --
 --   Note that the "envelopeV" family of functions above should be preferred,
 --   as this requires a call to magnitude (which often uses sqrt).
-envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> Scalar (V a)
+envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> a -> Scalar (V a)
 envelopeS v = fromMaybe 0 . envelopeSMay v
 
 -- | Compute the diameter of a enveloped object along a particular
