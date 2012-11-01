@@ -224,19 +224,27 @@ envelopePMay v = fmap P . envelopeVMay v
 envelopeP :: Enveloped a => V a -> a -> Point (V a)
 envelopeP v = P . envelopeV v
 
--- | Compute the amount that the separating hyperplane would need to be moved
---   in the given direction, or @Nothing@ for the empty envelope.
+-- | Equivalent to the magnitude of 'envelopeVMay':
 --
---   Note that the "envelopeV" family of functions above should be preferred,
---   as this requires a call to magnitude (which often uses sqrt).
+--   @ envelopeSMay v x == fmap magnitude (envelopeVMay v x) @
+--
+--   (other than differences in rounding error)
+--
+--   Note that the 'envelopeVMay' / 'envelopePMay' functions above should be
+--   preferred, as this requires a call to magnitude.  However, it is more
+--   efficient than calling magnitude on the results of those functions.
 envelopeSMay :: Enveloped a => V a -> a -> Maybe (Scalar (V a))
 envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
 
--- | Compute the amount that the separating hyperplane would need to be moved
---   in the given direction, or 0 for the empty envelope.
+-- | Equivalent to the magnitude of 'envelopeV':
 --
---   Note that the "envelopeV" family of functions above should be preferred,
---   as this requires a call to magnitude (which often uses sqrt).
+--   @ envelopeS v x == magnitude (envelopeV v x) @
+--
+--   (other than differences in rounding error)
+--
+--   Note that the 'envelopeV' / 'envelopeP' functions above should be
+--   preferred, as this requires a call to magnitude. However, it is more
+--   efficient than calling magnitude on the results of those functions.
 envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> a -> Scalar (V a)
 envelopeS v = fromMaybe 0 . envelopeSMay v
 
