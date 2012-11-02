@@ -37,7 +37,7 @@ module Diagrams.Core.Envelope
          -- * Utility functions
        , diameter
        , radius
-       , envelopeVMay, envelopeV, envelopePMay, envelopeP
+       , envelopeVMay, envelopeV, envelopePMay, envelopeP, envelopeSMay, envelopeS
 
          -- * Miscellaneous
        , OrderedField
@@ -222,6 +222,30 @@ envelopePMay v = fmap P . envelopeVMay v
 --   direction.  Returns the origin for the empty envelope.
 envelopeP :: Enveloped a => V a -> a -> Point (V a)
 envelopeP v = P . envelopeV v
+
+-- | Equivalent to the magnitude of 'envelopeVMay':
+--
+--   @ envelopeSMay v x == fmap magnitude (envelopeVMay v x) @
+--
+--   (other than differences in rounding error)
+--
+--   Note that the 'envelopeVMay' / 'envelopePMay' functions above should be
+--   preferred, as this requires a call to magnitude.  However, it is more
+--   efficient than calling magnitude on the results of those functions.
+envelopeSMay :: Enveloped a => V a -> a -> Maybe (Scalar (V a))
+envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
+
+-- | Equivalent to the magnitude of 'envelopeV':
+--
+--   @ envelopeS v x == magnitude (envelopeV v x) @
+--
+--   (other than differences in rounding error)
+--
+--   Note that the 'envelopeV' / 'envelopeP' functions above should be
+--   preferred, as this requires a call to magnitude. However, it is more
+--   efficient than calling magnitude on the results of those functions.
+envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> a -> Scalar (V a)
+envelopeS v = fromMaybe 0 . envelopeSMay v
 
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
