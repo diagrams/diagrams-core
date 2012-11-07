@@ -1,15 +1,8 @@
-{-# LANGUAGE TypeSynonymInstances
-           , FlexibleInstances
-           , FlexibleContexts
-           , TypeFamilies
-           , GeneralizedNewtypeDeriving
-           , MultiParamTypeClasses
-           , OverlappingInstances
-           , TupleSections
-           , GADTs
-           , DeriveDataTypeable
-           , UndecidableInstances
-  #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE GADTs #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Names
@@ -35,24 +28,9 @@ module Diagrams.Core.Names
 
        ) where
 
--- XXX clean up these imports
-
-import           Control.Arrow ((***))
-import           Control.Monad (mplus)
-import           Data.List (intercalate, isSuffixOf)
-import qualified Data.Map as M
-import           Data.Semigroup
-import           Data.Typeable
-
-import           Control.Newtype
-import           Data.Monoid.Action
-import           Data.VectorSpace
-
-import           Diagrams.Core.Envelope
-import           Diagrams.Core.HasOrigin
-import           Diagrams.Core.Points
-import           Diagrams.Core.Transform
-import           Diagrams.Core.V
+import Data.List      ( intercalate )
+import Data.Semigroup
+import Data.Typeable
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
