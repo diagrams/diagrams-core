@@ -538,14 +538,18 @@ instance ( HasLinearMap v, InnerSpace v, Floating (Scalar v))
   transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
 
 -- | Get the location of a subdiagram; that is, the location of its
---   local origin with respect to the vector space of its parent
+--   local origin /with respect to/ the vector space of its parent
 --   diagram.  In other words, the point where its local origin
 --   \"ended up\".
 location :: HasLinearMap v => Subdiagram b v m -> Point v
 location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 
 -- | Turn a subdiagram into a normal diagram, including the enclosing
---   context.  XXX example
+--   context.  Concretely, a subdiagram is a pair of (1) a diagram and
+--   (2) a \"context\" consisting of an extra transformation and
+--   attributes.  @getSub@ simply applies the transformation and
+--   attributes to the diagram to get the corresponding "top-level"
+--   diagram.
 getSub :: ( HasLinearMap v, InnerSpace v
           , Floating (Scalar v), Ord (Scalar v)
           , Semigroup m
@@ -554,7 +558,7 @@ getSub :: ( HasLinearMap v, InnerSpace v
 getSub (Subdiagram d a) = over QD (D.applyD a) d
 
 -- | Extract the \"raw\" content of a subdiagram, by throwing away the
---   context.  XXX example
+--   context.
 rawSub :: Subdiagram b v m -> QDiagram b v m
 rawSub (Subdiagram d _) = d
 
@@ -761,36 +765,56 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   being rendered.  If the diagram does not have a monomorphic type,
 --   GHC complains that it cannot determine the diagram's type.
 --
---   XXX fix me, no Ellipse any more
 --   For example, here is the error we get if we try to compute the
---   width of a radius-1 circle (this example requires
---   @diagrams-lib@):
+--   width of an image (this example requires @diagrams-lib@):
+--
+--   > ghci> width (image "foo.png" 200 200)
+--   >
+--   > <interactive>:8:8:
+--   >     No instance for (Renderable Diagrams.TwoD.Image.Image b0)
+--   >       arising from a use of `image'
+--   >     Possible fix:
+--   >       add an instance declaration for
+--   >       (Renderable Diagrams.TwoD.Image.Image b0)
+--   >     In the first argument of `width', namely
+--   >       `(image "foo.png" 200 200)'
+--   >     In the expression: width (image "foo.png" 200 200)
+--   >     In an equation for `it': it = width (image "foo.png" 200 200)
+--
+--   GHC complains that there is no instance for @Renderable Image
+--   b0@; what is really going on is that it does not have enough
+--   information to decide what backend to use (hence the
+--   uninstantiated @b0@). This is annoying because /we/ know that the
+--   choice of backend cannot possibly affect the width of the image
+--   (it's 200! it's right there in the code!); /but/ there is no way
+--   for GHC to know that.
+--
+--   The solution is to annotate the call to 'image' with the type
+--   @'D' 'R2'@, like so:
+--
+--   > ghci> width (image "foo.png" 200 200 :: D R2)
+--   > 200.00000000000006
+--
+--   (It turns out the width wasn't 200 after all...)
+--
+--   As another example, here is the error we get if we try to compute
+--   the width of a radius-1 circle:
 --
 --   > ghci> width (circle 1)
 --   >
---   > <interactive>:1:8:
---   >     No instances for (Backend b0 R2,
---   >                       Renderable Diagrams.TwoD.Ellipse.Ellipse b0)
---   >       arising from a use of `circle'
---   >     Possible fix:
---   >       add instance declarations for
---   >       (Backend b0 R2, Renderable Diagrams.TwoD.Ellipse.Ellipse b0)
---   >     In the first argument of `width', namely `(circle 1)'
+--   > <interactive>:4:1:
+--   >     Couldn't match type `V a0' with `R2'
 --   >     In the expression: width (circle 1)
 --   >     In an equation for `it': it = width (circle 1)
 --
---   GHC complains that it cannot find an instance for \"@Backend b0
---   R2@\"; what is really going on is that it does not have enough
---   information to decide which backend to use for the circle (hence
---   the type variable @b0@).  This is annoying because /we/ know that
---   the choice of backend cannot possibly affect the width of the
---   circle; but there is no way for GHC to know that.
+--   There's even more ambiguity here.  Whereas 'image' always returns
+--   a 'Diagram', the 'circle' function can produce any 'PathLike'
+--   type, and the 'width' function can consume any 'Enveloped' type,
+--   so GHC has no idea what type to pick to go in the middle.
+--   However, the solution is the same:
 --
---   The solution is to annotate @circle 1@ with the type @'D' 'R2'@,
---   like so:
---
---   > ghci> width (circle 1 :: D R2)
---   > 2.0
+--  > ghci> width (circle 1 :: D R2)
+--  > 1.9999999999999998
 
 type D v = Diagram NullBackend v
 
