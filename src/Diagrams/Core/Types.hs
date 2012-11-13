@@ -23,7 +23,7 @@
 -- The core library of primitives forming the basis of an embedded
 -- domain-specific language for describing and rendering diagrams.
 --
--- "Diagrams.Core" defines types and classes for
+-- "Diagrams.Core.Types" defines types and classes for
 -- primitives, diagrams, and backends.
 --
 -----------------------------------------------------------------------------
@@ -165,7 +165,7 @@ type UpAnnots b v m = Deletable (Envelope v)
                   ::: ()
 
 -- | Monoidal annotations which travel down the diagram tree,
---   i.e. which accumulate along each path to a leaf (and which can
+--   /i.e./ which accumulate along each path to a leaf (and which can
 --   act on the upwards-travelling annotations):
 --
 --   * transformations (split at the innermost freeze): see
@@ -262,7 +262,7 @@ setTrace t = over QD ( D.applyUpre (inj . toDeletable $ t)
                      . D.applyUpost (inj (deleteR :: Deletable (Trace v)))
                      )
 
--- | Get the subdiagram map (*i.e.* an association from names to
+-- | Get the subdiagram map (/i.e./ an association from names to
 --   subdiagrams) of a diagram.
 subMap :: QDiagram b v m -> SubMap b v m
 subMap = getU' . unQD
