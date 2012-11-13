@@ -143,7 +143,7 @@ import           Diagrams.Core.V
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
 
--- | Monoidal annotations which travel up the diagram tree, i.e. which
+-- | Monoidal annotations which travel up the diagram tree, /i.e./ which
 --   are aggregated from component diagrams to the whole:
 --
 --   * envelopes (see "Diagrams.Core.Envelope").
@@ -331,13 +331,13 @@ sample :: Monoid m => QDiagram b v m -> Point v -> m
 sample = runQuery . query
 
 -- | Set the query value for 'True' points in a diagram (/i.e./ points
---   "inside" the diagram); 'False' points will be set to 'mempty'.
+--   \"inside\" the diagram); 'False' points will be set to 'mempty'.
 value :: Monoid m => m -> QDiagram b v Any -> QDiagram b v m
 value m = fmap fromAny
   where fromAny (Any True)  = m
         fromAny (Any False) = mempty
 
--- | Reset the query values of a diagram to True/False: any values
+-- | Reset the query values of a diagram to @True@/@False@: any values
 --   equal to 'mempty' are set to 'False'; any other values are set to
 --   'True'.
 resetValue :: (Eq m, Monoid m) => QDiagram b v m -> QDiagram b v Any
