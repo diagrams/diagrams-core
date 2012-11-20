@@ -292,19 +292,18 @@ nameSub :: ( IsName n
         => (QDiagram b v m -> Subdiagram b v m) -> n -> QDiagram b v m -> QDiagram b v m
 nameSub s n d = over QD (D.applyUpre . inj $ fromNames [(n,s d)]) d
 
--- | Given a name and a diagram transformation indexed by a located
---   envelope, perform the transformation using the most recent
---   located envelope associated with (some qualification of) the
---   name, or perform the identity transformation if the name does not
---   exist.
+-- | Given a name and a diagram transformation indexed by a
+--   subdiagram, perform the transformation using the most recent
+--   subdiagram associated with (some qualification of) the name,
+--   or perform the identity transformation if the name does not exist.
 withName :: IsName n
          => n -> (Subdiagram b v m -> QDiagram b v m -> QDiagram b v m)
          -> QDiagram b v m -> QDiagram b v m
 withName n f d = maybe id f (lookupSub (toName n) (subMap d) >>= listToMaybe) d
 
 -- | Given a name and a diagram transformation indexed by a list of
---   located envelopes, perform the transformation using the
---   collection of all such located envelopes associated with (some
+--   subdiagrams, perform the transformation using the
+--   collection of all such subdiagrams associated with (some
 --   qualification of) the given name.
 withNameAll :: IsName n
             => n -> ([Subdiagram b v m] -> QDiagram b v m -> QDiagram b v m)
@@ -312,8 +311,8 @@ withNameAll :: IsName n
 withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (subMap d))) d
 
 -- | Given a list of names and a diagram transformation indexed by a
---   list of located envelopes, perform the transformation using the
---   list of most recent envelopes associated with (some qualification
+--   list of subdiagrams, perform the transformation using the
+--   list of most recent subdiagrams associated with (some qualification
 --   of) each name.  Do nothing (the identity transformation) if any
 --   of the names do not exist.
 withNames :: IsName n
@@ -350,7 +349,7 @@ clearValue :: QDiagram b v m -> QDiagram b v Any
 clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with an envelope,
---   name map, and query function.
+--   trace, subdiagram map, and query function.
 mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m -> Query v m -> QDiagram b v m
 mkQD p e t n q = QD $ D.leaf (toDeletable e *: toDeletable t *: n *: q *: ()) p
 
@@ -361,8 +360,9 @@ mkQD p e t n q = QD $ D.leaf (toDeletable e *: toDeletable t *: n *: q *: ()) p
 ---- Monoid
 
 -- | Diagrams form a monoid since each of their components do: the
---   empty diagram has no primitives, an empty envelope, no named
---   points, and a constantly empty query function.
+--   empty diagram has no primitives, an empty envelope, an empty
+--   trace, no named subdiagrams, and a constantly empty query
+--   function.
 --
 --   Diagrams compose by aligning their respective local origins.  The
 --   new diagram has all the primitives and all the names from the two
