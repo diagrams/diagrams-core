@@ -548,7 +548,7 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 --   context.  Concretely, a subdiagram is a pair of (1) a diagram and
 --   (2) a \"context\" consisting of an extra transformation and
 --   attributes.  @getSub@ simply applies the transformation and
---   attributes to the diagram to get the corresponding "top-level"
+--   attributes to the diagram to get the corresponding \"top-level\"
 --   diagram.
 getSub :: ( HasLinearMap v, InnerSpace v
           , Floating (Scalar v), Ord (Scalar v)
