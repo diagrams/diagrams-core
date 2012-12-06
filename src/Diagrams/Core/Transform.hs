@@ -200,12 +200,14 @@ instance HasLinearMap v => Transformable (Transformation v) where
 instance HasLinearMap v => HasOrigin (Transformation v) where
   moveOriginTo p = translate (origin .-. p)
 
-instance Transformable t => Transformable (t,t) where
+instance (Transformable a, Transformable b, V a ~ V b)
+      => Transformable (a,b) where
   transform t (x,y) =  ( transform t x
                        , transform t y
                        )
 
-instance Transformable t => Transformable (t,t,t) where
+instance (Transformable a, Transformable b, Transformable c, V a ~ V b, V a ~ V c)
+      => Transformable (a,b,c) where
   transform t (x,y,z) = ( transform t x
                         , transform t y
                         , transform t z
