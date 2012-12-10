@@ -57,17 +57,39 @@
       outputs from non-empty envelopes).  The new functions have their
       return type wrapped in Maybe for this purpose.
 
+    - New functions envelopeS and envelopeSMay
+
+      Like envelope[VP](May), but returning a scalar multiple of the
+      input vector.
+
     - The Graphics.Rendering.Diagrams.Util module has been removed,
       along with the 'withLength' function.  Calls to withLength can
       be replaced using
 
         withLength s v = s *^ normalized v
 
+    - Add needed constraints (InnerSpace v, OrderedField (Scalar v),
+      Monoid' m) to the type of the renderDias method in the
+      MultiBackend class.
+
+    - Generalized Transformable instances for pairs and tuples
+
+      Previously, the components of the tuples were required to have
+      the same type; but everything still works as long as they all
+      share the same vector space.  This is actually useful in
+      practice: say, if we wanted to pair a diagram with a path and
+      then apply the same transformation to both.
+
+  * Improvements
+
+    - More efficient implementation of 'diameter'
+
   * Dependency/version changes
 
     - Tested with GHC 7.6.1
     - allow base-4.6
     - allow containers-0.5.*
+    - allow MemoTrie-0.6.1
 
   * Bug fixes
 
