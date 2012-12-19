@@ -213,6 +213,18 @@ instance (Transformable a, Transformable b, Transformable c, V a ~ V b, V a ~ V 
                         , transform t z
                         )
 
+-- Transform functions by conjugation. That is, reverse-transform argument and
+-- forward-transform result. Intuition: If someone shrinks you, you see your
+-- environment enlarged. If you rotate right, you see your environment
+-- rotating left. Etc. This technique was used extensively in Pan for modular
+-- construction of image filters. Works well for curried functions, since all
+-- arguments get inversely transformed.
+
+instance ( HasBasis (V b), HasTrie (Basis (V b))
+         , Transformable a, Transformable b, V b ~ V a) =>
+         Transformable (a -> b) where
+  transform tr f = transform tr . f . transform (inv tr)
+
 instance Transformable t => Transformable [t] where
   transform = map . transform
 
