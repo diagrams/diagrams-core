@@ -216,7 +216,7 @@ instance (Transformable a, Transformable b, Transformable c, V a ~ V b, V a ~ V 
 -- Transform functions by conjugation. That is, reverse-transform argument and
 -- forward-transform result. Intuition: If someone shrinks you, you see your
 -- environment enlarged. If you rotate right, you see your environment
--- rotating right. Etc. This technique was used extensively in Pan for modular
+-- rotating left. Etc. This technique was used extensively in Pan for modular
 -- construction of image filters. Works well for curried functions, since all
 -- arguments get inversely transformed.
 
