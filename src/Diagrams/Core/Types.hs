@@ -65,6 +65,7 @@ module Diagrams.Core.Types
        , withName
        , withNameAll
        , withNames
+       , localize
 
          -- *** Other
        , freeze
@@ -160,7 +161,7 @@ import           Diagrams.Core.V
 --   * query functions (see "Diagrams.Core.Query")
 type UpAnnots b v m = Deletable (Envelope v)
                   ::: Deletable (Trace v)
-                  ::: SubMap b v m
+                  ::: Deletable (SubMap b v m)
                   ::: Query v m
                   ::: ()
 
@@ -265,7 +266,7 @@ setTrace t = over QD ( D.applyUpre (inj . toDeletable $ t)
 -- | Get the subdiagram map (/i.e./ an association from names to
 --   subdiagrams) of a diagram.
 subMap :: QDiagram b v m -> SubMap b v m
-subMap = getU' . unQD
+subMap = unDelete . getU' . unQD
 
 -- | Get a list of names of subdiagrams and their locations.
 names :: HasLinearMap v => QDiagram b v m -> [(Name, [Point v])]
@@ -290,7 +291,7 @@ namePoint p = nameSub (subPoint . p)
 nameSub :: ( IsName n
            , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
         => (QDiagram b v m -> Subdiagram b v m) -> n -> QDiagram b v m -> QDiagram b v m
-nameSub s n d = over QD (D.applyUpre . inj $ fromNames [(n,s d)]) d
+nameSub s n d = over QD (D.applyUpre . inj . toDeletable $ fromNames [(n,s d)]) d
 
 -- | Given a name and a diagram transformation indexed by a
 --   subdiagram, perform the transformation using the most recent
@@ -320,6 +321,17 @@ withNames :: IsName n
           -> QDiagram b v m -> QDiagram b v m
 withNames ns f d = maybe id f (T.sequence (map ((listToMaybe=<<) . ($nd) . lookupSub . toName) ns)) d
   where nd = subMap d
+
+-- | \"Localize\" a diagram by hiding all the names, so they are no
+--   longer visible to the outside.
+localize :: forall b v m. ( HasLinearMap v, InnerSpace v, OrderedField (Scalar v)
+                          , Semigroup m
+                          )
+         => QDiagram b v m -> QDiagram b v m
+localize = over QD ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v m)))
+                   . D.applyUpost (inj (deleteR :: Deletable (SubMap b v m)))
+                   )
+
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v m -> Query v m
@@ -351,7 +363,8 @@ clearValue = fmap (const (Any False))
 -- | Create a diagram from a single primitive, along with an envelope,
 --   trace, subdiagram map, and query function.
 mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m -> Query v m -> QDiagram b v m
-mkQD p e t n q = QD $ D.leaf (toDeletable e *: toDeletable t *: n *: q *: ()) p
+mkQD p e t n q
+  = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) p
 
 ------------------------------------------------------------
 --  Instances
@@ -395,7 +408,7 @@ infixl 6 `atop`
 
 instance Functor (QDiagram b v) where
   fmap f = (over QD . D.mapU . second . second)
-             ( (first . fmap . fmap) f
+             ( (first . fmap . fmap . fmap) f
              . (second . first . fmap . fmap) f
              )
 
