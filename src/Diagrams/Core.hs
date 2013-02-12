@@ -120,6 +120,7 @@ module Diagrams.Core
        , withName
        , withNameAll
        , withNames
+       , localize
 
        , freeze, setEnvelope, setTrace
 
