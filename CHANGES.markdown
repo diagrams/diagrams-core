@@ -1,3 +1,8 @@
+0.6.0.2: 5 March 2013
+---------------------
+
+* bug fix: the 'diameter' and 'radius' functions now work correctly.
+
 0.6.0.1: 7 January 2013
 -----------------------
 
