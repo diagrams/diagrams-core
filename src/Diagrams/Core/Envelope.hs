@@ -251,7 +251,7 @@ envelopeS v = fromMaybe 0 . envelopeSMay v
 --   vector.  Returns zero for the empty envelope.
 diameter :: Enveloped a => V a -> a -> Scalar (V a)
 diameter v a = case appEnvelope $ getEnvelope a of
-  (Just env) -> (env v - env (negateV v)) * magnitude v
+  (Just env) -> (env v + env (negateV v)) * magnitude v
   Nothing -> 0
 
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
