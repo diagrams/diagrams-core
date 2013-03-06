@@ -1,11 +1,10 @@
-{-# LANGUAGE TypeFamilies
-           , FlexibleInstances
-           , FlexibleContexts
-           , UndecidableInstances
-           , GeneralizedNewtypeDeriving
-           , StandaloneDeriving
-           , MultiParamTypeClasses
-  #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Envelope
@@ -43,13 +42,13 @@ module Diagrams.Core.Envelope
        , OrderedField
        ) where
 
-import           Control.Applicative ((<$>))
-import qualified Data.Map as M
-import           Data.Maybe (fromMaybe)
+import           Control.Applicative     ((<$>))
+import qualified Data.Map                as M
+import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
-import qualified Data.Set as S
+import qualified Data.Set                as S
 
-import           Data.AffineSpace ((.+^), (.-^))
+import           Data.AffineSpace        ((.+^), (.-^))
 import           Data.VectorSpace
 
 import           Diagrams.Core.HasOrigin
