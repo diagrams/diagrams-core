@@ -6,6 +6,7 @@
            , MultiParamTypeClasses
            , GeneralizedNewtypeDeriving
            , TypeSynonymInstances
+           , ScopedTypeVariables
   #-}
 
 -----------------------------------------------------------------------------
@@ -37,6 +38,7 @@ module Diagrams.Core.Transform
        , apply
        , papply
        , fromLinear
+       , onBasis
 
          -- * The Transformable class
 
@@ -178,6 +180,20 @@ papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 --   assumed to be zero.
 fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
 fromLinear l1 l2 = Transformation l1 l2 zeroV
+
+-- | Get the matrix equivalent of the linear transform,
+--   (as a list of columns) and the translation vector.  This
+--   is mostly useful for implementing backends.
+onBasis :: forall v. HasLinearMap v => Transformation v -> ([v], v)
+onBasis t = (vmat, tr)
+  where tr :: v
+        tr    = transl t
+        basis :: [Basis v]
+        basis = map fst (decompose tr)
+        es :: [v]
+        es    = map basisValue basis
+        vmat :: [v]
+        vmat = map (apply t) es
 
 ------------------------------------------------------------
 --  The Transformable class  -------------------------------
