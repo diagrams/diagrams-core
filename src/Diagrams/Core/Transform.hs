@@ -182,7 +182,7 @@ fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
 fromLinear l1 l2 = Transformation l1 l2 zeroV
 
 -- | Get the matrix equivalent of the linear transform,
---   (as a list of rows) and the translation vector.  This
+--   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
 onBasis :: forall v. HasLinearMap v => Transformation v -> ([v], v)
 onBasis t = (vmat, tr)
