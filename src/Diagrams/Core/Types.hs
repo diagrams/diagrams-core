@@ -664,10 +664,15 @@ lookupSub a (SubMap m)
 -- the collection of primitives a given backend knows how to render is
 -- determined by instances of 'Renderable'.
 
+-- | XXX comment me
+class Transformable p => IsPrim p where
+  transformWithFreeze :: Transformation (V p) -> Transformation (V p) -> p -> p
+  transformWithFreeze t1 t2 = transform (t1 <> t2)
+
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: Renderable p b => p -> Prim b (V p)
+  Prim :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
 
@@ -685,6 +690,8 @@ instance HasLinearMap v => Renderable (Prim b v) b where
 data NullPrim v = NullPrim
 
 type instance (V (NullPrim v)) = v
+
+instance HasLinearMap v => IsPrim (NullPrim v)
 
 instance HasLinearMap v => Transformable (NullPrim v) where
   transform _ _ = NullPrim
