@@ -676,6 +676,9 @@ data Prim b v where
 
 type instance V (Prim b v) = v
 
+instance HasLinearMap v => IsPrim (Prim b v) where
+  transformWithFreeze t1 t2 (Prim p) = Prim $ transformWithFreeze t1 t2 p
+
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
 instance HasLinearMap v => Transformable (Prim b v) where
