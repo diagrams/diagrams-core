@@ -774,7 +774,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
               = withStyle b s mempty (render b (transform t p))
 
             renderOne (p, (t1 :| t2, s))
-              = withStyle b s t1 (render b (transform (t1 <> t2) p))
+              = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
 
   -- See Note [backend token]
 
