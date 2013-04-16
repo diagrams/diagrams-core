@@ -88,7 +88,7 @@ module Diagrams.Core.Types
          -- * Primtives
          -- $prim
 
-       , Prim(..), nullPrim
+       , Prim(..), IsPrim(..), nullPrim
 
          -- * Backends
 
