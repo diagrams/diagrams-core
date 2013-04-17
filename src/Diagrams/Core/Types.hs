@@ -88,7 +88,7 @@ module Diagrams.Core.Types
          -- * Primtives
          -- $prim
 
-       , Prim(..), nullPrim
+       , Prim(..), IsPrim(..), nullPrim
 
          -- * Backends
 
@@ -664,12 +664,24 @@ lookupSub a (SubMap m)
 -- the collection of primitives a given backend knows how to render is
 -- determined by instances of 'Renderable'.
 
+-- | A type class for primitive things which know how to handle being
+--   transformed by both a normal transformation and a \"frozen\"
+--   transformation.  The default implementation simply applies both.
+--   At the moment, 'ScaleInv' is the only type with a non-default
+--   instance of 'IsPrim'.
+class Transformable p => IsPrim p where
+  transformWithFreeze :: Transformation (V p) -> Transformation (V p) -> p -> p
+  transformWithFreeze t1 t2 = transform (t1 <> t2)
+
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: Renderable p b => p -> Prim b (V p)
+  Prim :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
+
+instance HasLinearMap v => IsPrim (Prim b v) where
+  transformWithFreeze t1 t2 (Prim p) = Prim $ transformWithFreeze t1 t2 p
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
@@ -685,6 +697,8 @@ instance HasLinearMap v => Renderable (Prim b v) b where
 data NullPrim v = NullPrim
 
 type instance (V (NullPrim v)) = v
+
+instance HasLinearMap v => IsPrim (NullPrim v)
 
 instance HasLinearMap v => Transformable (NullPrim v) where
   transform _ _ = NullPrim
@@ -764,7 +778,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
               = withStyle b s mempty (render b (transform t p))
 
             renderOne (p, (t1 :| t2, s))
-              = withStyle b s t1 (render b (transform (t1 <> t2) p))
+              = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
 
   -- See Note [backend token]
 
