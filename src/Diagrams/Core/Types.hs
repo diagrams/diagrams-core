@@ -664,7 +664,11 @@ lookupSub a (SubMap m)
 -- the collection of primitives a given backend knows how to render is
 -- determined by instances of 'Renderable'.
 
--- | XXX comment me
+-- | A type class for primitive things which know how to handle being
+--   transformed by both a normal transformation and a \"frozen\"
+--   transformation.  The default implementation simply applies both.
+--   At the moment, 'ScaleInv' is the only type with a non-default
+--   instance of 'IsPrim'.
 class Transformable p => IsPrim p where
   transformWithFreeze :: Transformation (V p) -> Transformation (V p) -> p -> p
   transformWithFreeze t1 t2 = transform (t1 <> t2)
