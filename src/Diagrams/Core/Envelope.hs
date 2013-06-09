@@ -184,6 +184,9 @@ instance (InnerSpace v, OrderedField (Scalar v)) => Enveloped (Envelope v) where
 instance (OrderedField (Scalar v), InnerSpace v) => Enveloped (Point v) where
   getEnvelope p = moveTo p . mkEnvelope $ const zeroV
 
+instance Enveloped t => Enveloped (TransInv t) where
+  getEnvelope = getEnvelope . unTransInv
+
 instance (Enveloped a, Enveloped b, V a ~ V b) => Enveloped (a,b) where
   getEnvelope (x,y) = getEnvelope x <> getEnvelope y
 

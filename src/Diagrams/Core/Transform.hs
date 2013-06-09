@@ -271,7 +271,7 @@ instance Transformable Rational where
 --   transformations will no longer affect things wrapped in
 --   @TransInv@.
 newtype TransInv t = TransInv { unTransInv :: t }
-  deriving (Show, Semigroup, Monoid)
+  deriving (Eq, Ord, Show, Semigroup, Monoid)
 
 type instance V (TransInv t) = V t
 
