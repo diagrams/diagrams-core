@@ -33,6 +33,8 @@ import Data.List      ( intercalate )
 import Data.Semigroup
 import Data.Typeable
 
+import Diagrams.Core.Transform
+
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
 ------------------------------------------------------------
@@ -106,6 +108,9 @@ class Qualifiable q where
 -- | Of course, names can be qualified using @(.>)@.
 instance Qualifiable Name where
   (|>) = (.>)
+
+instance Qualifiable a => Qualifiable (TransInv a) where
+  (|>) n = TransInv . (|>) n . unTransInv
 
 infixr 5 |>
 infixr 5 .>
