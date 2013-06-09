@@ -279,7 +279,8 @@ instance VectorSpace (V t) => HasOrigin (TransInv t) where
   moveOriginTo = const id
 
 instance Transformable t => Transformable (TransInv t) where
-  transform tr (TransInv t) = TransInv (translate (negateV (transl tr)) . transform tr $ t)
+  transform (Transformation a a' _) (TransInv t)
+    = TransInv (transform (Transformation a a' zeroV) t)
 
 ------------------------------------------------------------
 --  Generic transformations  -------------------------------
