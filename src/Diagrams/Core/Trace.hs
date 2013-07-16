@@ -45,7 +45,7 @@ import           Data.Semigroup
 import qualified Data.Set as S
 
 import           Data.AffineSpace
-import           Data.Monoid.PosInf
+import           Data.Monoid.Inf
 import           Data.VectorSpace
 
 import           Diagrams.Core.HasOrigin
@@ -156,7 +156,7 @@ instance (Traced b) => Traced (S.Set b) where
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
 traceV p v a = case appTrace (getTrace a) p v of
                  Finite s -> Just (s *^ v)
-                 PosInfty -> Nothing
+                 Infinity -> Nothing
 
 -- | Given a base point and direction, compute the closest point on
 --   the boundary of the given object, or @Nothing@ if there is no
