@@ -116,7 +116,7 @@ module Diagrams.Core
        , envelope, trace, subMap, names, query, sample
        , value, resetValue, clearValue
 
-       , named, nameSub, namePoint
+       , nameSub
        , withName
        , withNameAll
        , withNames

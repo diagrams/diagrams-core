@@ -59,9 +59,7 @@ module Diagrams.Core.Types
 
          -- ** Modifying diagrams
          -- *** Names
-       , named
        , nameSub
-       , namePoint
        , withName
        , withNameAll
        , withNames
@@ -271,20 +269,6 @@ subMap = unDelete . getU' . unQD
 -- | Get a list of names of subdiagrams and their locations.
 names :: HasLinearMap v => QDiagram b v m -> [(Name, [Point v])]
 names = (map . second . map) location . M.assocs . unpack . subMap
-
--- | Attach an atomic name to a diagram.
-named :: ( IsName n
-         , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
-      => n -> QDiagram b v m -> QDiagram b v m
-named = nameSub mkSubdiagram
-
--- | Attach an atomic name to a certain point (which may be computed
---   from the given diagram), treated as a subdiagram with no content
---   and a point envelope.
-namePoint :: ( IsName n
-             , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
-          => (QDiagram b v m -> Point v) -> n -> QDiagram b v m -> QDiagram b v m
-namePoint p = nameSub (subPoint . p)
 
 -- | Attach an atomic name to a certain subdiagram, computed from the
 --   given diagram.
