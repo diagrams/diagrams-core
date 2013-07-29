@@ -1,8 +1,8 @@
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -40,9 +40,9 @@ module Diagrams.Core.Trace
        ) where
 
 import           Control.Applicative
-import qualified Data.Map as M
+import qualified Data.Map                as M
 import           Data.Semigroup
-import qualified Data.Set as S
+import qualified Data.Set                as S
 
 import           Data.AffineSpace
 import           Data.Monoid.Inf
