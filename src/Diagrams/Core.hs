@@ -151,16 +151,16 @@ module Diagrams.Core
 
        ) where
 
-import Diagrams.Core.Types
-import Diagrams.Core.Envelope
-import Diagrams.Core.HasOrigin
-import Diagrams.Core.Juxtapose
-import Diagrams.Core.Names
-import Diagrams.Core.Points
-import Diagrams.Core.Query
-import Diagrams.Core.Style
-import Diagrams.Core.Trace
-import Diagrams.Core.Transform
-import Diagrams.Core.V
+import           Diagrams.Core.Envelope
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Juxtapose
+import           Diagrams.Core.Names
+import           Diagrams.Core.Points
+import           Diagrams.Core.Query
+import           Diagrams.Core.Style
+import           Diagrams.Core.Trace
+import           Diagrams.Core.Transform
+import           Diagrams.Core.Types
+import           Diagrams.Core.V
 
-import Data.Monoid.WithSemigroup (Monoid')
+import           Data.Monoid.WithSemigroup (Monoid')
