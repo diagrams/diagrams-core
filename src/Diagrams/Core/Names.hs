@@ -1,9 +1,9 @@
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE OverlappingInstances       #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Names
@@ -12,7 +12,7 @@
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
 -- This module defines a type of names which can be used for referring
--- to locations within diagrams, and related types.
+-- to subdiagrams, and related types.
 --
 -----------------------------------------------------------------------------
 
@@ -29,11 +29,11 @@ module Diagrams.Core.Names
 
        ) where
 
-import Data.List      ( intercalate )
-import Data.Semigroup
-import Data.Typeable
+import           Data.List               (intercalate)
+import           Data.Semigroup
+import           Data.Typeable
 
-import Diagrams.Core.Transform
+import           Diagrams.Core.Transform
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
