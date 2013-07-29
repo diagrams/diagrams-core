@@ -126,7 +126,7 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Trace v) where
 --   should return a finite distance for vectors aimed directly at the
 --   given point and infinity for everything else, but due to
 --   floating-point inaccuracy this is problematic.  Note that the
---   envelope for a single point is *not* the empty envelope (see
+--   envelope for a single point is /not/ the empty envelope (see
 --   "Diagrams.Core.Envelope").
 instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
   getTrace p = mempty
