@@ -11,7 +11,7 @@
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- "Diagrams" defines the core library of primitives
+-- @diagrams-core@ defines the core library of primitives
 -- forming the basis of an embedded domain-specific language for
 -- describing and rendering diagrams.
 --
@@ -57,22 +57,22 @@ import           Diagrams.Core.V
 --  Trace  -------------------------------------------------
 ------------------------------------------------------------
 
--- | Every diagram comes equipped with a *trace*.  Intuitively, the
+-- | Every diagram comes equipped with a /trace/.  Intuitively, the
 --   trace for a diagram is like a raytracer: given a line
---   (represented as a base point + direction), the trace computes the
---   distance from the base point along the line to the first
+--   (represented as a base point and a direction), the trace computes
+--   the distance from the base point along the line to the first
 --   intersection with the diagram.  The distance can be negative if
 --   the intersection is in the opposite direction from the base
 --   point, or infinite if the ray never intersects the diagram.
---   Note: to obtain the distance to the *furthest* intersection
---   instead of the *closest*, just negate the direction vector and
+--   Note: to obtain the distance to the /furthest/ intersection
+--   instead of the /closest/, just negate the direction vector and
 --   then negate the result.
 --
 --   Note that the output should actually be interpreted not as an
 --   absolute distance, but as a multiplier relative to the input
 --   vector.  That is, if the input vector is @v@ and the returned
 --   scalar is @s@, the distance from the base point to the
---   intersection is given by @s *^ magnitude v@.
+--   intersection is given by @s * magnitude v@.
 
 newtype Trace v = Trace { appTrace :: Point v -> v -> PosInf (Scalar v) }
 
