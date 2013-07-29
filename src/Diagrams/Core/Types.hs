@@ -1,17 +1,17 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE OverlappingInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverlappingInstances       #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -105,16 +105,16 @@ module Diagrams.Core.Types
 
        ) where
 
-import           Control.Applicative ((<$>), (<*>))
-import           Control.Arrow (first, second, (***))
-import           Control.Monad (mplus)
+import           Control.Applicative       ((<$>), (<*>))
+import           Control.Arrow             (first, second, (***))
+import           Control.Monad             (mplus)
 import           Control.Newtype
-import           Data.AffineSpace ((.-.))
-import           Data.List (isSuffixOf)
-import qualified Data.Map as M
-import           Data.Maybe (listToMaybe, fromMaybe)
+import           Data.AffineSpace          ((.-.))
+import           Data.List                 (isSuffixOf)
+import qualified Data.Map                  as M
+import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
-import qualified Data.Traversable as T
+import qualified Data.Traversable          as T
 import           Data.Typeable
 import           Data.VectorSpace
 
@@ -124,7 +124,7 @@ import           Data.Monoid.Deletable
 import           Data.Monoid.MList
 import           Data.Monoid.Split
 import           Data.Monoid.WithSemigroup
-import qualified Data.Tree.DUAL as D
+import qualified Data.Tree.DUAL            as D
 
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
