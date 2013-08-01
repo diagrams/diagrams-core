@@ -6,7 +6,6 @@
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverlappingInstances       #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -621,8 +620,14 @@ rememberAs n b = over SubMap $ M.insertWith (++) (toName n) [mkSubdiagram b]
 instance Action Name (SubMap b v m) where
   act = (|>)
 
--- | Names don't act on anything else.
-instance Action Name a
+instance Action Name a => Action Name (Deletable a) where
+  act n (Deletable l a r) = Deletable l (act n a) r
+
+-- Names do not act on other things.
+
+instance Action Name (Query v m)
+instance Action Name (Envelope v)
+instance Action Name (Trace v)
 
 -- | Look for the given name in a name map, returning a list of
 --   subdiagrams associated with that name.  If no names match the
