@@ -4,18 +4,13 @@
 * **New features**
 
     - new function `onBasis`, to extract the matrix equivalent of a `Transformation`
-
     - `SubMap`s are now `Deletable`
     - new function `localize` for hiding/deleting names from scope
-
     - new `IsPrim` class, containing `transformWithFreeze` function.
-
         This is primarily intended to support scale-invariant primitives
         (*e.g.* arrowheads) but may be useful for other stuff as well.
-
 	The default implementation of `renderDia` now uses
 	`transformWithFreeze`.
-
     - optimized `Transformable` instance for `TransInv`
 
 * **New instances**
