@@ -1,3 +1,39 @@
+0.7: XXX
+--------
+
+* **New features**
+
+    - new function `onBasis`, to extract the matrix equivalent of a `Transformation`
+
+    - `SubMap`s are now `Deletable`
+    - new function `localize` for hiding/deleting names from scope
+
+    - new `IsPrim` class, containing `transformWithFreeze` function.
+
+        This is primarily intended to support scale-invariant primitives
+        (*e.g.* arrowheads) but may be useful for other stuff as well.
+
+	The default implementation of `renderDia` now uses
+	`transformWithFreeze`.
+
+    - optimized `Transformable` instance for `TransInv`
+
+* **New instances**
+
+    - `Eq`, `Ord`, `Enveloped`, `Traced`, and `Qualifiable` instances
+      for `TransInv`
+
+    - `Transformable` instance for functions, which acts by conjugation
+
+* **API changes**
+
+    - `named` and `namePoint` have moved to the `diagrams-lib` package.
+
+* **Dependency/version changes**
+
+    - allow `base-4.7`
+    - upgrade to `monoid-extras-0.3`
+
 0.6.0.2: 5 March 2013
 ---------------------
 
@@ -21,7 +57,7 @@
 
         See
         [`Diagrams.Core.Types`](https://github.com/diagrams/diagrams-core/blob/27b275f45cad514caefcd3035e4e261f1b4adf6f/src/Diagrams/Core/Types.hs#L493).
-	  
+
     - Traces: in addition to an envelope, each diagram now stores a
       "trace", which is like an embedded raytracer: given any ray
       (represented by a base point and a vector), the trace computes
@@ -37,8 +73,8 @@
       module naming scheme in the rest of the diagrams universe.  In
       particular:
 
-        `Graphics.Rendering.Diagrams`       -->  `Diagrams.Core`  
-        `Grahpics.Rendering.Diagrams.Core`  -->  `Diagrams.Core.Types`  
+        `Graphics.Rendering.Diagrams`       -->  `Diagrams.Core`
+        `Grahpics.Rendering.Diagrams.Core`  -->  `Diagrams.Core.Types`
         `Graphics.Rendering.Diagrams.*`     -->  `Diagrams.Core.*`
 
     - `Graphics.Rendering.Diagrams.UDTree` has been split out into a
