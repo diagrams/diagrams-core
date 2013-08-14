@@ -59,6 +59,7 @@ module Diagrams.Core.Types
          -- ** Modifying diagrams
          -- *** Names
        , nameSub
+       , lookupName
        , withName
        , withNameAll
        , withNames
@@ -276,6 +277,12 @@ nameSub :: ( IsName n
         => (QDiagram b v m -> Subdiagram b v m) -> n -> QDiagram b v m -> QDiagram b v m
 nameSub s n d = over QD (D.applyUpre . inj . toDeletable $ fromNames [(n,s d)]) d
 
+-- | Lookup the most recent diagram associated with (some
+--   qualification of) the given name.
+lookupName :: IsName n
+           => n -> QDiagram b v m -> Maybe (Subdiagram b v m)
+lookupName n d = lookupSub (toName n) (subMap d) >>= listToMaybe
+
 -- | Given a name and a diagram transformation indexed by a
 --   subdiagram, perform the transformation using the most recent
 --   subdiagram associated with (some qualification of) the name,
@@ -283,7 +290,7 @@ nameSub s n d = over QD (D.applyUpre . inj . toDeletable $ fromNames [(n,s d)]) 
 withName :: IsName n
          => n -> (Subdiagram b v m -> QDiagram b v m -> QDiagram b v m)
          -> QDiagram b v m -> QDiagram b v m
-withName n f d = maybe id f (lookupSub (toName n) (subMap d) >>= listToMaybe) d
+withName n f d = maybe id f (lookupName n d) d
 
 -- | Given a name and a diagram transformation indexed by a list of
 --   subdiagrams, perform the transformation using the
