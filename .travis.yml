@@ -1,6 +1,13 @@
 language: haskell
 
+before_install:
+  - git clone --quiet -b internal-d git://github.com/diagrams/dual-tree.git diagrams/dual-tree
+  - cd diagrams
+  - cabal install dual-tree/
+  - cd ..
+
 notifications:
+  email: false
   irc:
     channels:
       - "irc.freenode.org#diagrams"
