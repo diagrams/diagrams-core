@@ -10,12 +10,20 @@
 --
 -----------------------------------------------------------------------------
 
-module Diagrams.Core.Compile where
+module Diagrams.Core.Compile
+  ( DTree(..)
+  , DNode(..)
+  , toTree
+  , getPrims
+  )   where
 
+
+import           Data.Maybe (fromMaybe)
 import qualified Data.List.NonEmpty      as NEL
 import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
 import           Data.Monoid.Split
+import           Data.Monoid.Action
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
@@ -27,7 +35,6 @@ data DNode b v a = DStyle (Style v)
                  | DTransform (Split (Transformation v))
                  | DAnnot a
                  | DPrim (Prim b v)
-                 | DFreeze
                  | DEmpty
 
 {- for some quick and dirty testing
@@ -79,3 +86,21 @@ toTree (QD qd)
       -- Internal a-annotations.
       (\a t -> Node (DAnnot a) [t])
       qd
+
+primList :: HasLinearMap v
+       => DTree b v () -> [(Prim b v, (Split (Transformation v), Style v))]
+primList = primList' (mempty, mempty)
+  where
+    primList' dacc (Node (DPrim p) ts) =
+      (p, dacc) : concatMap (primList' dacc) ts
+    primList' (t, s) (Node (DStyle sty) ts) =
+      concatMap (primList' (t, s <> act t sty)) ts
+    primList' (t, s) (Node (DTransform tr) ts) =
+      concatMap (primList' (t <> tr, s)) ts
+    primList' dacc (Node (DAnnot ()) ts) = concatMap (primList' dacc) ts
+    primList' dacc (Node  DEmpty ts) = concatMap (primList' dacc) ts
+
+
+getPrims :: HasLinearMap v
+         => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
+getPrims d = primList $ fromMaybe (Node DEmpty []) (toTree d)
