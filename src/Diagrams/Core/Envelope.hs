@@ -48,7 +48,6 @@ import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
 import qualified Data.Set                as S
 
-import           Data.AffineSpace        ((.+^), (.-^))
 import           Data.VectorSpace
 
 import           Diagrams.Core.HasOrigin

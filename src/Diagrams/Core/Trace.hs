@@ -129,7 +129,7 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Trace v) where
 --   envelope for a single point is /not/ the empty envelope (see
 --   "Diagrams.Core.Envelope").
 instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
-  getTrace p = mempty
+  getTrace = const mempty
 
 instance Traced t => Traced (TransInv t) where
   getTrace = getTrace . unTransInv

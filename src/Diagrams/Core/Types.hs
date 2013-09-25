@@ -12,6 +12,10 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans       #-}
+-- We have some orphan Action instances here, but since Action is a multi-param
+-- class there is really no better place to put them.
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Types
@@ -103,7 +107,6 @@ module Diagrams.Core.Types
 
        ) where
 
-import           Control.Applicative       ((<$>), (<*>))
 import           Control.Arrow             (first, second, (***))
 import           Control.Monad             (mplus)
 import           Control.Newtype
