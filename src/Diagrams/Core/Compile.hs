@@ -13,8 +13,10 @@
 module Diagrams.Core.Compile
   ( DTree(..)
   , DNode(..)
+  , RTree(..)
+  , RNode(..)
+  , fromDTree
   , toTree
-  , getPrims
   )   where
 
 
@@ -37,7 +39,18 @@ data DNode b v a = DStyle (Style v)
                  | DPrim (Prim b v)
                  | DEmpty
 
-{- for some quick and dirty testing
+type DTree b v a = Tree (DNode b v a)
+
+data RNode b v a =  RStyle (Style v)
+                  | RFrozenTr (Transformation v)
+                  | RUnFrozenTr
+                  | RAnnot a
+                  | RPrim (Transformation v) (Prim b v)
+                  | REmpty
+
+type RTree b v a = Tree (RNode b v a )
+
+ {--for some quick and dirty testing
   deriving Show
 
 instance Show (Prim b v) where
@@ -47,10 +60,7 @@ instance Show (Transformation v) where
   show _ = "transform"
 
 instance Show (Style v) where
-  show _ = "style"
--}
-
-type DTree b v a = Tree (DNode b v a)
+  show _ = "style" -}
 
 toTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
 toTree (QD qd)
@@ -87,20 +97,29 @@ toTree (QD qd)
       (\a t -> Node (DAnnot a) [t])
       qd
 
-primList :: HasLinearMap v
-       => DTree b v () -> [(Prim b v, (Split (Transformation v), Style v))]
-primList = primList' (mempty, mempty)
-  where
-    primList' dacc (Node (DPrim p) ts) =
-      (p, dacc) : concatMap (primList' dacc) ts
-    primList' (t, s) (Node (DStyle sty) ts) =
-      concatMap (primList' (t, s <> act t sty)) ts
-    primList' (t, s) (Node (DTransform tr) ts) =
-      concatMap (primList' (t <> tr, s)) ts
-    primList' dacc (Node (DAnnot ()) ts) = concatMap (primList' dacc) ts
-    primList' dacc (Node  DEmpty ts) = concatMap (primList' dacc) ts
+-- | Convert a DTree to an RTree which has separate nodes for frozen and
+--   unforzen transormations. The unforzen transformations are accumulated.
+--   When a frozen transformation is reached the transform is put in the node
+--   for processsing by the backend and the accumulator is reset.
+fromDTree :: HasLinearMap v => Transformation v -> DTree b v () -> RTree b v ()
 
+-- Prims are left as is.
+fromDTree accTr (Node (DPrim p) _)
+  = Node (RPrim accTr p) []
 
-getPrims :: HasLinearMap v
-         => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-getPrims d = primList $ fromMaybe (Node DEmpty []) (toTree d)
+-- Styles are stored in the node
+fromDTree accTr (Node (DStyle s) ts)
+  = Node (RStyle s) (fmap (fromDTree accTr) ts)
+
+-- Unfrozen transformations are accumulated
+fromDTree accTr (Node (DTransform (M tr)) ts)
+  = Node RUnFrozenTr (fmap (fromDTree (accTr <> tr)) ts)
+
+-- Frozen transformations are stored in the node and the accumulator is reset.
+fromDTree accTr (Node (DTransform (tr1 :| tr2)) ts)
+  = Node (RFrozenTr (accTr <> tr1)) (fmap (fromDTree tr2) ts)
+
+-- DAnnot and DEmpty nodes become REmpties, in the future my want to
+-- handle DAnnots differently if they are used.
+fromDTree accTr (Node _ ts)
+  = Node REmpty (fmap (fromDTree accTr) ts)
