@@ -736,7 +736,16 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
                  -> Style v    -- ^ Style to use
-                 -> Transformation v  -- ^ Transformation to be applied to the style
+                 -> Transformation v
+                    -- ^ \"Frozen\" transformation; line width and
+                    --   other similar "scale invariant" attributes
+                    --   should be affected by this transformation.
+                    --   In the case of 2D, some backends may not
+                    --   support stroking in the context of an
+                    --   arbitrary transformation; such backends can
+                    --   instead use the 'avgScale' function from
+                    --   "Diagrams.TwoD.Transform" (from the
+                    --   @diagrams-lib@ package).
                  -> Render b v -- ^ Rendering operation to run
                  -> Render b v -- ^ Rendering operation using the style locally
 
