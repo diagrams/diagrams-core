@@ -43,7 +43,6 @@ type DTree b v a = Tree (DNode b v a)
 
 data RNode b v a =  RStyle (Style v)
                   | RFrozenTr (Transformation v)
-                  | RUnFrozenTr
                   | RAnnot a
                   | RPrim (Transformation v) (Prim b v)
                   | REmpty
@@ -97,29 +96,34 @@ toTree (QD qd)
       (\a t -> Node (DAnnot a) [t])
       qd
 
--- | Convert a DTree to an RTree which has separate nodes for frozen and
---   unforzen transormations. The unforzen transformations are accumulated.
---   When a frozen transformation is reached the transform is put in the node
---   for processsing by the backend and the accumulator is reset.
-fromDTree :: HasLinearMap v => Transformation v -> DTree b v () -> RTree b v ()
+-- | Convert a DTree to an RTree which will be used dirctly by the backends.
+--   A DTree includes nodes of type @DTransform (Split (Transformation v))@.
+--   In the RTree the frozen part of the transform is put in a node of type
+--   @RFrozenTr (Transformation v)@ and the unfrozen part is pushed down until
+--   it is either frozen or gets to a primitive node.
+fromDTree :: HasLinearMap v => DTree b v () -> RTree b v ()
+fromDTree = fromDTree' mempty
+  where
+    fromDTree' :: HasLinearMap v => Transformation v -> DTree b v () -> RTree b v ()
+    -- We put the accumulated unforzen transformation (accTr) and the prim
+    -- into an RPrim node.
+    fromDTree' accTr (Node (DPrim p) _)
+      = Node (RPrim accTr p) []
 
--- Prims are left as is.
-fromDTree accTr (Node (DPrim p) _)
-  = Node (RPrim accTr p) []
+    -- Styles are stored in a node and accTr is push down the tree.
+    fromDTree' accTr (Node (DStyle s) ts)
+      = Node (RStyle s) (fmap (fromDTree' accTr) ts)
 
--- Styles are stored in the node
-fromDTree accTr (Node (DStyle s) ts)
-  = Node (RStyle s) (fmap (fromDTree accTr) ts)
+    -- Unfrozen transformations are accumulated and pushed down as well.
+    fromDTree' accTr (Node (DTransform (M tr)) ts)
+      = Node REmpty (fmap (fromDTree' (accTr <> tr)) ts)
 
--- Unfrozen transformations are accumulated
-fromDTree accTr (Node (DTransform (M tr)) ts)
-  = Node RUnFrozenTr (fmap (fromDTree (accTr <> tr)) ts)
+    -- Frozen transformations are stored in the RFrozenTr node
+    -- and accTr is reset to the unfrozen part of the transform.
+    fromDTree' accTr (Node (DTransform (tr1 :| tr2)) ts)
+      = Node (RFrozenTr (accTr <> tr1)) (fmap (fromDTree' tr2) ts)
 
--- Frozen transformations are stored in the node and the accumulator is reset.
-fromDTree accTr (Node (DTransform (tr1 :| tr2)) ts)
-  = Node (RFrozenTr (accTr <> tr1)) (fmap (fromDTree tr2) ts)
-
--- DAnnot and DEmpty nodes become REmpties, in the future my want to
--- handle DAnnots differently if they are used.
-fromDTree accTr (Node _ ts)
-  = Node REmpty (fmap (fromDTree accTr) ts)
+    -- DAnnot and DEmpty nodes become REmpties, in the future my want to
+    -- handle DAnnots separately if they are used, again accTr flows through.
+    fromDTree' accTr (Node _ ts)
+      = Node REmpty (fmap (fromDTree' accTr) ts)
