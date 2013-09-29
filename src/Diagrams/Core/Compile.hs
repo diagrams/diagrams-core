@@ -112,7 +112,7 @@ fromDTree = fromDTree' mempty
 
     -- Styles are stored in a node and accTr is push down the tree.
     fromDTree' accTr (Node (DStyle s) ts)
-      = Node (RStyle s) (fmap (fromDTree' accTr) ts)
+      = Node (RStyle (transform accTr s)) (fmap (fromDTree' accTr) ts)
 
     -- Unfrozen transformations are accumulated and pushed down as well.
     fromDTree' accTr (Node (DTransform (M tr)) ts)
