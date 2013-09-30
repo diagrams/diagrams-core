@@ -92,6 +92,10 @@ module Diagrams.Core.Types
 
        , Backend(..)
        , MultiBackend(..)
+       , DNode(..)
+       , DTree(..)
+       , RNode(..)
+       , RTree(..)
 
          -- ** Null backend
 
@@ -115,6 +119,7 @@ import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Typeable
 import           Data.VectorSpace
+import           Data.Tree
 
 import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
@@ -714,9 +719,27 @@ nullPrim = Prim NullPrim
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
 --   instance of the 'Backend' class. A minimal complete definition
---   consists of the three associated types and implementations for
---   'withStyle' and 'doRender'.
---
+--   consists of the three associated types and an implementation for
+--   'doRender'. Additionally, an the default implementation for either
+--   'withStyle' or 'renderRTree' MUST be overidden depending on whether
+--   the specific back end uses an 'RTree' of a flat list.
+
+data DNode b v a = DStyle (Style v)
+                 | DTransform (Split (Transformation v))
+                 | DAnnot a
+                 | DPrim (Prim b v)
+                 | DEmpty
+
+type DTree b v a = Tree (DNode b v a)
+
+data RNode b v a =  RStyle (Style v)
+                  | RFrozenTr (Transformation v)
+                  | RAnnot a
+                  | RPrim (Transformation v) (Prim b v)
+                  | REmpty
+
+type RTree b v a = Tree (RNode b v a )
+
 class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   -- | The type of rendering operations used by this backend, which
   --   must be a monoid. For example, if @Render b v = M ()@ for some
@@ -730,12 +753,18 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   -- | Backend-specific rendering options.
   data Options b v :: *
 
+  -- | Render an RTree
+  renderRTree :: RTree b v a -> Render b v
+  renderRTree _ = undefined
+
+
   -- | Perform a rendering operation with a local style.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
                  -> Style v    -- ^ Style to use
                  -> Transformation v  -- ^ Transformation to be applied to the style
                  -> Render b v -- ^ Rendering operation to run
                  -> Render b v -- ^ Rendering operation using the style locally
+  withStyle _ _ _ r = r
 
   -- | 'doRender' is used to interpret rendering operations.
   doRender       :: b           -- ^ Backend token (needed only for type inference)

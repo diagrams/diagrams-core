@@ -138,6 +138,10 @@ module Diagrams.Core
        , Backend(..)
        , MultiBackend(..)
        , Renderable(..)
+       , DNode(..)
+       , DTree(..)
+       , RNode(..)
+       , RTree(..)
 
          -- ** The null backend
 

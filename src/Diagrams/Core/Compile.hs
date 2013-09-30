@@ -11,11 +11,11 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Compile
-  ( DTree(..)
-  , DNode(..)
-  , RTree(..)
-  , RNode(..)
-  , fromDTree
+  ( --DTree(..)
+  --, DNode(..)
+  --, RTree(..)
+  --, RNode(..)
+    fromDTree
   , toTree
   )   where
 
@@ -33,33 +33,21 @@ import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
-data DNode b v a = DStyle (Style v)
-                 | DTransform (Split (Transformation v))
-                 | DAnnot a
-                 | DPrim (Prim b v)
-                 | DEmpty
+--data DNode b v a = DStyle (Style v)
+--                 | DTransform (Split (Transformation v))
+--                 | DAnnot a
+--                 | DPrim (Prim b v)
+--                 | DEmpty
 
-type DTree b v a = Tree (DNode b v a)
+--type DTree b v a = Tree (DNode b v a)
 
-data RNode b v a =  RStyle (Style v)
-                  | RFrozenTr (Transformation v)
-                  | RAnnot a
-                  | RPrim (Transformation v) (Prim b v)
-                  | REmpty
+--data RNode b v a =  RStyle (Style v)
+--                  | RFrozenTr (Transformation v)
+--                  | RAnnot a
+--                  | RPrim (Transformation v) (Prim b v)
+--                  | REmpty
 
-type RTree b v a = Tree (RNode b v a )
-
- {--for some quick and dirty testing
-  deriving Show
-
-instance Show (Prim b v) where
-  show _ = "prim"
-
-instance Show (Transformation v) where
-  show _ = "transform"
-
-instance Show (Style v) where
-  show _ = "style" -}
+--type RTree b v a = Tree (RNode b v a )
 
 toTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
 toTree (QD qd)
@@ -96,11 +84,11 @@ toTree (QD qd)
       (\a t -> Node (DAnnot a) [t])
       qd
 
--- | Convert a DTree to an RTree which will be used dirctly by the backends.
+-- | Convert a DTree to an RTree which can be used dirctly by the backends.
 --   A DTree includes nodes of type @DTransform (Split (Transformation v))@.
 --   In the RTree the frozen part of the transform is put in a node of type
 --   @RFrozenTr (Transformation v)@ and the unfrozen part is pushed down until
---   it is either frozen or gets to a primitive node.
+--   it is either frozen or reaches a primitive node.
 fromDTree :: HasLinearMap v => DTree b v () -> RTree b v ()
 fromDTree = fromDTree' mempty
   where
@@ -110,7 +98,8 @@ fromDTree = fromDTree' mempty
     fromDTree' accTr (Node (DPrim p) _)
       = Node (RPrim accTr p) []
 
-    -- Styles are stored in a node and accTr is push down the tree.
+    -- Styles are transformed then stored in their own node
+    -- and accTr is push down the tree.
     fromDTree' accTr (Node (DStyle s) ts)
       = Node (RStyle (transform accTr s)) (fmap (fromDTree' accTr) ts)
 
