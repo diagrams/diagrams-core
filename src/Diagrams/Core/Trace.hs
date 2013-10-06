@@ -24,7 +24,7 @@
 
 module Diagrams.Core.Trace
        ( -- * Traces
-         Trace()
+         Trace(Trace)
 
        , appTrace
        , mkTrace
