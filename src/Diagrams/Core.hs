@@ -87,8 +87,8 @@ module Diagrams.Core
 
          -- * Traces
 
-       , Trace(..)
-       , inTrace, mkTrace
+       , Trace()
+       , appTrace, mkTrace
        , Traced(..)
        , traceV, traceP
        , maxTraceV, maxTraceP

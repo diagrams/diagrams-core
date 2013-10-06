@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -23,9 +24,9 @@
 
 module Diagrams.Core.Trace
        ( -- * Traces
-         Trace(..)
+         Trace()
 
-       , inTrace
+       , appTrace
        , mkTrace
 
          -- * Traced class
@@ -40,6 +41,7 @@ module Diagrams.Core.Trace
        ) where
 
 import           Control.Applicative
+import           Control.Lens
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
@@ -74,11 +76,9 @@ import           Diagrams.Core.V
 --   scalar is @s@, the distance from the base point to the
 --   intersection is given by @s * magnitude v@.
 
-newtype Trace v = Trace { appTrace :: Point v -> v -> PosInf (Scalar v) }
+newtype Trace v = Trace { _appTrace :: Point v -> v -> PosInf (Scalar v) }
 
-inTrace :: ((Point v -> v -> PosInf (Scalar v)) -> (Point v -> v -> PosInf (Scalar v)))
-        -> Trace v -> Trace v
-inTrace f = Trace . f . appTrace
+makeLenses ''Trace
 
 mkTrace :: (Point v -> v -> PosInf (Scalar v)) -> Trace v
 mkTrace = Trace
@@ -96,7 +96,7 @@ deriving instance Ord (Scalar v) => Monoid (Trace v)
 type instance V (Trace v) = v
 
 instance (VectorSpace v) => HasOrigin (Trace v) where
-  moveOriginTo (P u) = inTrace $ \f p -> f (p .+^ u)
+  moveOriginTo (P u) = over appTrace $ \f p -> f (p .+^ u)
 
 instance Show (Trace v) where
   show _ = "<trace>"
@@ -106,7 +106,7 @@ instance Show (Trace v) where
 ------------------------------------------------------------
 
 instance HasLinearMap v => Transformable (Trace v) where
-  transform t = inTrace $ \f p v -> f (papply (inv t) p) (apply (inv t) v)
+  transform t = (over appTrace) $ \f p v -> f (papply (inv t) p) (apply (inv t) v)
 
 ------------------------------------------------------------
 --  Traced class  ------------------------------------------
@@ -154,7 +154,7 @@ instance (Traced b) => Traced (S.Set b) where
 --   given object in the given direction, or @Nothing@ if there is no
 --   intersection.
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
-traceV p v a = case appTrace (getTrace a) p v of
+traceV p v a = case ((getTrace a)^.appTrace) p v of
                  Finite s -> Just (s *^ v)
                  Infinity -> Nothing
 
