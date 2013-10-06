@@ -52,7 +52,7 @@ module Diagrams.Core
 
          -- ** Translational invariance
 
-       , TransInv(..)
+       , TransInv, unTransInv
 
          -- * Names
 

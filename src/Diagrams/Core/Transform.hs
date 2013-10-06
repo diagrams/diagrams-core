@@ -47,7 +47,7 @@ module Diagrams.Core.Transform
 
          -- * Translational invariance
 
-       , TransInv(..)
+       , TransInv(), unTransInv
 
          -- * Vector space independent transformations
          -- | Most transformations are specific to a particular vector
@@ -59,6 +59,7 @@ module Diagrams.Core.Transform
 
        ) where
 
+import           Control.Lens                 hiding (Action, transform)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -270,8 +271,11 @@ instance Transformable Rational where
 --   translationally invariant; the translational component of
 --   transformations will no longer affect things wrapped in
 --   @TransInv@.
-newtype TransInv t = TransInv { unTransInv :: t }
+newtype TransInv t = TransInv { _unTransInv :: t }
   deriving (Eq, Ord, Show, Semigroup, Monoid)
+
+unTransInv :: Iso (TransInv t) (TransInv t') t t'
+unTransInv = iso _unTransInv TransInv
 
 type instance V (TransInv t) = V t
 

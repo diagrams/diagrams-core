@@ -29,6 +29,7 @@ module Diagrams.Core.Names
 
        ) where
 
+import           Control.Lens            (over)
 import           Data.List               (intercalate)
 import           Data.Semigroup
 import           Data.Typeable
@@ -110,7 +111,7 @@ instance Qualifiable Name where
   (|>) = (.>)
 
 instance Qualifiable a => Qualifiable (TransInv a) where
-  (|>) n = TransInv . (|>) n . unTransInv
+  (|>) n = over unTransInv (n |>)
 
 infixr 5 |>
 infixr 5 .>

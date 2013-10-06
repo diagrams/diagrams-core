@@ -132,7 +132,7 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
   getTrace = const mempty
 
 instance Traced t => Traced (TransInv t) where
-  getTrace = getTrace . unTransInv
+  getTrace = getTrace . view unTransInv
 
 instance (Traced a, Traced b, V a ~ V b) => Traced (a,b) where
   getTrace (x,y) = getTrace x <> getTrace y

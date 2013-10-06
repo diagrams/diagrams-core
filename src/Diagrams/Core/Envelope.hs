@@ -43,6 +43,7 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
+import           Control.Lens (view)
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
@@ -184,7 +185,7 @@ instance (OrderedField (Scalar v), InnerSpace v) => Enveloped (Point v) where
   getEnvelope p = moveTo p . mkEnvelope $ const zeroV
 
 instance Enveloped t => Enveloped (TransInv t) where
-  getEnvelope = getEnvelope . unTransInv
+  getEnvelope = getEnvelope . view unTransInv
 
 instance (Enveloped a, Enveloped b, V a ~ V b) => Enveloped (a,b) where
   getEnvelope (x,y) = getEnvelope x <> getEnvelope y
