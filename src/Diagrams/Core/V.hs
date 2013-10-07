@@ -3,7 +3,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Diagrams.Core.MList
+-- Module      :  Diagrams.Core.V
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
