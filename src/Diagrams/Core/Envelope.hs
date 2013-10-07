@@ -5,6 +5,7 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE TemplateHaskell            #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Envelope
@@ -43,7 +44,7 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
-import           Control.Lens (view, Iso, iso, over, mapped)
+import           Control.Lens (makeLenses, view, over, mapped)
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
@@ -94,12 +95,9 @@ import           Diagrams.Core.V
 --   The idea for envelopes came from
 --   Sebastian Setzer; see
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://www.cis.upenn.edu/~byorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
-newtype Envelope v = Envelope { _unEnvelope :: Option (v -> Max (Scalar v)) }
+newtype Envelope v = Envelope { _inEnvelope :: Option (v -> Max (Scalar v)) }
 
-inEnvelope :: Iso (Envelope v) (Envelope v')
-                  (Option (v -> Max (Scalar v)))
-                  (Option (v' -> Max (Scalar v')))
-inEnvelope = iso _unEnvelope Envelope
+makeLenses ''Envelope
 
 appEnvelope :: Envelope v -> Maybe (v -> Scalar v)
 appEnvelope (Envelope (Option e)) = (getMax .) <$> e

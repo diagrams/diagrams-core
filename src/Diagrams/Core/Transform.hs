@@ -5,6 +5,7 @@
            , TypeFamilies
            , MultiParamTypeClasses
            , GeneralizedNewtypeDeriving
+           , TemplateHaskell
            , TypeSynonymInstances
            , ScopedTypeVariables
   #-}
@@ -59,7 +60,7 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens                 hiding (Action, transform)
+import           Control.Lens                 (makeLenses)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -274,9 +275,6 @@ instance Transformable Rational where
 newtype TransInv t = TransInv { _unTransInv :: t }
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
-unTransInv :: Iso (TransInv t) (TransInv t') t t'
-unTransInv = iso _unTransInv TransInv
-
 type instance V (TransInv t) = V t
 
 instance VectorSpace (V t) => HasOrigin (TransInv t) where
@@ -309,3 +307,7 @@ scale :: (Transformable t, Fractional (Scalar (V t)), Eq (Scalar (V t)))
       => Scalar (V t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
+
+-- This file will not compile if the following line is moved adjacent
+-- the definition of TransInv
+makeLenses ''TransInv

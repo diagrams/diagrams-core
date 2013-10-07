@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies
            , GeneralizedNewtypeDeriving
+           , TemplateHaskell
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -18,7 +19,7 @@ module Diagrams.Core.Query
        ) where
 
 import Control.Applicative
-import Control.Lens (Iso, iso)
+import Control.Lens (makeLenses)
 import Data.Semigroup
 
 import Data.AffineSpace
@@ -42,8 +43,7 @@ import Diagrams.Core.V
 newtype Query v m = Query { _runQuery :: Point v -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
 
-runQuery :: Iso (Query v m) (Query v m') (Point v -> m) (Point v -> m')
-runQuery = iso _runQuery Query
+makeLenses ''Query
 
 type instance V (Query v m) = v
 
