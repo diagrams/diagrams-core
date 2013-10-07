@@ -23,7 +23,7 @@
 
 module Diagrams.Core.Envelope
        ( -- * Envelopes
-         Envelope(..)
+         Envelope(Envelope)
 
        , inEnvelope
        , appEnvelope
@@ -43,7 +43,7 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
-import           Control.Lens (view)
+import           Control.Lens (view, Iso, iso, over, mapped)
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
@@ -94,17 +94,18 @@ import           Diagrams.Core.V
 --   The idea for envelopes came from
 --   Sebastian Setzer; see
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://www.cis.upenn.edu/~byorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
-newtype Envelope v = Envelope { unEnvelope :: Option (v -> Max (Scalar v)) }
+newtype Envelope v = Envelope { _unEnvelope :: Option (v -> Max (Scalar v)) }
 
-inEnvelope :: (Option (v -> Max (Scalar v)) -> Option (v -> Max (Scalar v)))
-           -> Envelope v -> Envelope v
-inEnvelope f = Envelope . f . unEnvelope
+inEnvelope :: Iso (Envelope v) (Envelope v')
+                  (Option (v -> Max (Scalar v)))
+                  (Option (v' -> Max (Scalar v')))
+inEnvelope = iso _unEnvelope Envelope
 
 appEnvelope :: Envelope v -> Maybe (v -> Scalar v)
 appEnvelope (Envelope (Option e)) = (getMax .) <$> e
 
 onEnvelope :: ((v -> Scalar v) -> (v -> Scalar v)) -> Envelope v -> Envelope v
-onEnvelope t = (inEnvelope . fmap) ((Max .) . t . (getMax .))
+onEnvelope t = over (inEnvelope . mapped) ((Max .) . t . (getMax .))
 
 mkEnvelope :: (v -> Scalar v) -> Envelope v
 mkEnvelope = Envelope . Option . Just . (Max .)
