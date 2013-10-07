@@ -45,7 +45,7 @@ module Diagrams.Core.Types
 
          -- ** Annotations
          UpAnnots, DownAnnots
-       , QDiagram(QDiagram), mkQD, Diagram
+       , QDiagram(QD), mkQD, Diagram
 
          -- * Operations on diagrams
          -- ** Extracting information
