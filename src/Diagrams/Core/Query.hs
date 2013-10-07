@@ -14,10 +14,11 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Query
-       ( Query(..)
+       ( Query(Query), runQuery
        ) where
 
 import Control.Applicative
+import Control.Lens (Iso, iso)
 import Data.Semigroup
 
 import Data.AffineSpace
@@ -38,8 +39,11 @@ import Diagrams.Core.V
 --
 --   The idea for annotating diagrams with monoidal queries came from
 --   the graphics-drawingcombinators package, <http://hackage.haskell.org/package/graphics-drawingcombinators>.
-newtype Query v m = Query { runQuery :: Point v -> m }
+newtype Query v m = Query { _runQuery :: Point v -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
+
+runQuery :: Iso (Query v m) (Query v m') (Point v -> m) (Point v -> m')
+runQuery = iso _runQuery Query
 
 type instance V (Query v m) = v
 

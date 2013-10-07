@@ -334,7 +334,7 @@ query = getU' . view unQD
 
 -- | Sample a diagram's query function at a given point.
 sample :: Monoid m => QDiagram b v m -> Point v -> m
-sample = runQuery . query
+sample = view runQuery . query
 
 -- | Set the query value for 'True' points in a diagram (/i.e./ points
 --   \"inside\" the diagram); 'False' points will be set to 'mempty'.
