@@ -52,7 +52,7 @@ module Diagrams.Core
 
          -- ** Translational invariance
 
-       , TransInv, unTransInv
+       , TransInv(TransInv), unTransInv
 
          -- * Names
 
@@ -87,7 +87,7 @@ module Diagrams.Core
 
          -- * Traces
 
-       , Trace()
+       , Trace(Trace)
        , appTrace, mkTrace
        , Traced(..)
        , traceV, traceP

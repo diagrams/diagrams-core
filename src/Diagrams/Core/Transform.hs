@@ -48,7 +48,7 @@ module Diagrams.Core.Transform
 
          -- * Translational invariance
 
-       , TransInv(), unTransInv
+       , TransInv(TransInv), unTransInv
 
          -- * Vector space independent transformations
          -- | Most transformations are specific to a particular vector
