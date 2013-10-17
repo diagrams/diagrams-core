@@ -753,12 +753,10 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   -- | Backend-specific rendering options.
   data Options b v :: *
 
-  -- | Render an RTree
-  renderRTree :: RTree b v a -> Render b v
-  renderRTree _ = undefined
-
-
-  -- | Perform a rendering operation with a local style.
+  -- | Perform a rendering operation with a local style. The default
+  --   implementation should be overidden by backends that use `withStyle`
+  --   it is provided so that backends that override renderData do not need
+  --   to implement `withStyle`.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
                  -> Style v    -- ^ Style to use
                  -> Transformation v  -- ^ Transformation to be applied to the style
@@ -783,27 +781,17 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
             -> QDiagram b v m -> (Options b v, QDiagram b v m)
   adjustDia _ o d = (o,d)
 
-  -- XXX expand this comment.  Explain about freeze, split
-  -- transformations, etc.
-  -- | Render a diagram.  This has a default implementation in terms
-  --   of 'adjustDia', 'withStyle', 'doRender', and the 'render'
-  --   operation from the 'Renderable' class (first 'adjustDia' is
-  --   used, then 'withStyle' and 'render' are used to render each
-  --   primitive, the resulting operations are combined with
-  --   'mconcat', and the final operation run with 'doRender') but
-  --   backends may override it if desired.
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
             => b -> Options b v -> QDiagram b v m -> Result b v
-  renderDia b opts d =
-    doRender b opts' . mconcat . map renderOne . prims $ d'
-      where (opts', d') = adjustDia b opts d
-            renderOne :: (Prim b v, (Split (Transformation v), Style v))
-                      -> Render b v
-            renderOne (p, (M t,      s))
-              = withStyle b s mempty (render b (transform t p))
+  renderDia b opts d = doRender b opts' . renderData b $ d'
+    where (opts', d') = adjustDia b opts d
 
-            renderOne (p, (t1 :| t2, s))
-              = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
+  renderData :: Monoid' m => b -> QDiagram b v m -> Render b v
+  renderData b = mconcat . map renderOne . prims
+    where
+      renderOne :: (Prim b v, (Split (Transformation v), Style v)) -> Render b v
+      renderOne (p, (M t,      s)) = withStyle b s mempty (render b (transform t p))
+      renderOne (p, (t1 :| t2, s)) = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
 
   -- See Note [backend token]
 
