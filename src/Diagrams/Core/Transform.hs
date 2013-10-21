@@ -308,6 +308,7 @@ scale :: (Transformable t, Fractional (Scalar (V t)), Eq (Scalar (V t)))
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
 
--- This file will not compile if the following line is moved adjacent
--- the definition of TransInv
+-- If this Template Haskell splice is moved adjacent to TransInv, it
+-- prevents `translate` from being in scope earlier in the file, such
+-- that the file does not compile.
 makeLenses ''TransInv
