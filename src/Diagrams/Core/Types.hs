@@ -111,11 +111,9 @@ import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Iso, iso, view, over, lens, Lens', (^.))
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
-import           Data.Basis
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
-import           Data.MemoTrie             (HasTrie)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Typeable
