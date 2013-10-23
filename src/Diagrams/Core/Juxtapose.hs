@@ -66,3 +66,6 @@ instance (Enveloped b, HasOrigin b) => Juxtaposable (M.Map k b) where
 
 instance (Enveloped b, HasOrigin b, Ord b) => Juxtaposable (S.Set b) where
   juxtapose = juxtaposeDefault
+
+instance Juxtaposable a => Juxtaposable (b -> a) where
+  juxtapose v f1 f2 b = juxtapose v (f1 b) (f2 b)
