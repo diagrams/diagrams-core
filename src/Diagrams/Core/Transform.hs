@@ -48,7 +48,7 @@ module Diagrams.Core.Transform
 
          -- * Translational invariance
 
-       , TransInv(TransInv), unTransInv
+       , TransInv(TransInv)
 
          -- * Vector space independent transformations
          -- | Most transformations are specific to a particular vector
@@ -60,7 +60,7 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens                 (makeLenses)
+import           Control.Lens                 (makeWrapped)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -272,7 +272,7 @@ instance Transformable Rational where
 --   translationally invariant; the translational component of
 --   transformations will no longer affect things wrapped in
 --   @TransInv@.
-newtype TransInv t = TransInv { _unTransInv :: t }
+newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
 type instance V (TransInv t) = V t
@@ -311,4 +311,4 @@ scale s = transform $ scaling s
 -- If this Template Haskell splice is moved adjacent to TransInv, it
 -- prevents `translate` from being in scope earlier in the file, such
 -- that the file does not compile.
-makeLenses ''TransInv
+makeWrapped ''TransInv

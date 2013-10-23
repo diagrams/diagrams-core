@@ -1,6 +1,8 @@
-{-# LANGUAGE TypeFamilies
+{-# LANGUAGE FlexibleInstances
            , GeneralizedNewtypeDeriving
+           , MultiParamTypeClasses
            , TemplateHaskell
+           , TypeFamilies
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -19,7 +21,7 @@ module Diagrams.Core.Query
        ) where
 
 import Control.Applicative
-import Control.Lens (makeLenses)
+import Control.Lens (makeWrapped)
 import Data.Semigroup
 
 import Data.AffineSpace
@@ -40,10 +42,10 @@ import Diagrams.Core.V
 --
 --   The idea for annotating diagrams with monoidal queries came from
 --   the graphics-drawingcombinators package, <http://hackage.haskell.org/package/graphics-drawingcombinators>.
-newtype Query v m = Query { _runQuery :: Point v -> m }
+newtype Query v m = Query { runQuery :: Point v -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
 
-makeLenses ''Query
+makeWrapped ''Query
 
 type instance V (Query v m) = v
 

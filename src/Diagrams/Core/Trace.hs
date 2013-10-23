@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -76,9 +78,14 @@ import           Diagrams.Core.V
 --   scalar is @s@, the distance from the base point to the
 --   intersection is given by @s * magnitude v@.
 
-newtype Trace v = Trace { _appTrace :: Point v -> v -> PosInf (Scalar v) }
+newtype Trace v = Trace { appTrace :: Point v -> v -> PosInf (Scalar v) }
 
-makeLenses ''Trace
+instance (Scalar v ~ s, Scalar v' ~ s', s ~ s') =>
+         Wrapped
+         (Point v -> v -> PosInf s)
+         (Point v' -> v' -> PosInf s')
+         (Trace v) (Trace v')
+         where wrapped = iso Trace appTrace
 
 mkTrace :: (Point v -> v -> PosInf (Scalar v)) -> Trace v
 mkTrace = Trace
@@ -96,7 +103,7 @@ deriving instance Ord (Scalar v) => Monoid (Trace v)
 type instance V (Trace v) = v
 
 instance (VectorSpace v) => HasOrigin (Trace v) where
-  moveOriginTo (P u) = over appTrace $ \f p -> f (p .+^ u)
+  moveOriginTo (P u) = unwrapping Trace %~ \f p -> f (p .+^ u)
 
 instance Show (Trace v) where
   show _ = "<trace>"
@@ -106,7 +113,7 @@ instance Show (Trace v) where
 ------------------------------------------------------------
 
 instance HasLinearMap v => Transformable (Trace v) where
-  transform t = (over appTrace) $ \f p v -> f (papply (inv t) p) (apply (inv t) v)
+  transform t = unwrapped %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
 
 ------------------------------------------------------------
 --  Traced class  ------------------------------------------
@@ -132,7 +139,7 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
   getTrace = const mempty
 
 instance Traced t => Traced (TransInv t) where
-  getTrace = getTrace . view unTransInv
+  getTrace = getTrace . view unwrapped
 
 instance (Traced a, Traced b, V a ~ V b) => Traced (a,b) where
   getTrace (x,y) = getTrace x <> getTrace y
@@ -154,7 +161,7 @@ instance (Traced b) => Traced (S.Set b) where
 --   given object in the given direction, or @Nothing@ if there is no
 --   intersection.
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
-traceV p v a = case ((getTrace a)^.appTrace) p v of
+traceV p v a = case ((getTrace a)^.unwrapping Trace) p v of
                  Finite s -> Just (s *^ v)
                  Infinity -> Nothing
 

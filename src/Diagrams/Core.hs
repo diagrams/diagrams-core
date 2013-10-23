@@ -52,7 +52,7 @@ module Diagrams.Core
 
          -- ** Translational invariance
 
-       , TransInv(TransInv), unTransInv
+       , TransInv(TransInv)
 
          -- * Names
 
@@ -79,8 +79,8 @@ module Diagrams.Core
 
          -- * Envelopes
 
-       , Envelope
-       , inEnvelope, appEnvelope, onEnvelope, mkEnvelope
+       , Envelope(..)
+       , appEnvelope, onEnvelope, mkEnvelope
        , Enveloped(..)
        , envelopeVMay, envelopeV, envelopePMay, envelopeP
        , diameter, radius

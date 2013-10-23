@@ -2,7 +2,9 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverlappingInstances       #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 -----------------------------------------------------------------------------
 -- |
@@ -29,7 +31,7 @@ module Diagrams.Core.Names
 
        ) where
 
-import           Control.Lens            (over)
+import           Control.Lens            (over, unwrapped, makeWrapped)
 import           Data.List               (intercalate)
 import           Data.Semigroup
 import           Data.Typeable
@@ -88,6 +90,8 @@ instance Show AName where
 newtype Name = Name [AName]
   deriving (Eq, Ord, Semigroup, Monoid, Typeable)
 
+makeWrapped ''Name
+
 instance Show Name where
   show (Name ns) = intercalate " .> " $ map show ns
 
@@ -111,7 +115,7 @@ instance Qualifiable Name where
   (|>) = (.>)
 
 instance Qualifiable a => Qualifiable (TransInv a) where
-  (|>) n = over unTransInv (n |>)
+  (|>) n = over unwrapped (n |>)
 
 infixr 5 |>
 infixr 5 .>
