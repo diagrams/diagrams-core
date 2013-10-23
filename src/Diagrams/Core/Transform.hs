@@ -60,7 +60,7 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens                 (makeWrapped)
+import           Control.Lens                 (Wrapped(..), iso)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -275,6 +275,9 @@ instance Transformable Rational where
 newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
+instance Wrapped t t' (TransInv t) (TransInv t')
+         where wrapped = iso TransInv (\(TransInv t) -> t)
+
 type instance V (TransInv t) = V t
 
 instance VectorSpace (V t) => HasOrigin (TransInv t) where
@@ -307,8 +310,3 @@ scale :: (Transformable t, Fractional (Scalar (V t)), Eq (Scalar (V t)))
       => Scalar (V t) -> t -> t
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
-
--- If this Template Haskell splice is moved adjacent to TransInv, it
--- prevents `translate` from being in scope earlier in the file, such
--- that the file does not compile.
-makeWrapped ''TransInv

@@ -31,7 +31,7 @@ module Diagrams.Core.Names
 
        ) where
 
-import           Control.Lens            (over, unwrapped, makeWrapped)
+import           Control.Lens            (over, unwrapped, Wrapped(..), iso)
 import           Data.List               (intercalate)
 import           Data.Semigroup
 import           Data.Typeable
@@ -90,7 +90,8 @@ instance Show AName where
 newtype Name = Name [AName]
   deriving (Eq, Ord, Semigroup, Monoid, Typeable)
 
-makeWrapped ''Name
+instance Wrapped [AName] [AName] Name Name
+  where wrapped = iso Name (\(Name ans) -> ans)
 
 instance Show Name where
   show (Name ns) = intercalate " .> " $ map show ns

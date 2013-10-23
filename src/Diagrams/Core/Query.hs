@@ -21,7 +21,7 @@ module Diagrams.Core.Query
        ) where
 
 import Control.Applicative
-import Control.Lens (makeWrapped)
+import Control.Lens (Wrapped(..), iso)
 import Data.Semigroup
 
 import Data.AffineSpace
@@ -45,7 +45,8 @@ import Diagrams.Core.V
 newtype Query v m = Query { runQuery :: Point v -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
 
-makeWrapped ''Query
+instance Wrapped (Point v -> m) (Point v' -> m') (Query v m) (Query v' m')
+    where wrapped = iso Query runQuery
 
 type instance V (Query v m) = v
 
