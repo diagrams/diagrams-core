@@ -3,6 +3,7 @@
            , KindSignatures
            , FlexibleInstances
            , MultiParamTypeClasses
+           , TemplateHaskell
            , TypeFamilies
            , UndecidableInstances
   #-}
@@ -43,6 +44,7 @@ module Diagrams.Core.Style
        ) where
 
 import           Control.Arrow ((***))
+import           Control.Lens (Wrapped(..), iso)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -137,6 +139,13 @@ instance HasLinearMap v => Transformable (Attribute v) where
 newtype Style v = Style (M.Map String (Attribute v))
   -- The String keys are serialized TypeRep values, corresponding to
   -- the type of the stored attribute.
+
+instance Wrapped
+         (M.Map String (Attribute v))
+         (M.Map String (Attribute v'))
+         (Style v)
+         (Style v')
+     where wrapped = iso Style (\(Style m) -> m)
 
 type instance V (Style v) = v
 
