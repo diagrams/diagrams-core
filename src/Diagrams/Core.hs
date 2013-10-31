@@ -100,6 +100,7 @@ module Diagrams.Core
          -- * Juxtaposable things
 
        , Juxtaposable(..), juxtaposeDefault
+       , HasEmpty(..)
 
          -- * Queries
 
