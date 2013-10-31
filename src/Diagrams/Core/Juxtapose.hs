@@ -16,10 +16,14 @@
 
 module Diagrams.Core.Juxtapose
        ( Juxtaposable(..), juxtaposeDefault
+       , HasEmpty(..)
        ) where
 
+import           Control.Lens (view, unwrapped)
 import           Data.Functor ((<$>))
 import qualified Data.Map as M
+import           Data.Maybe
+import           Data.Semigroup
 import qualified Data.Set as S
 
 import           Data.VectorSpace
@@ -27,6 +31,11 @@ import           Data.VectorSpace
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.V
+
+-- | Class of things which can be determined to be "empty", such that
+-- they are the identity for some suitable notion of composition.
+class HasEmpty a where
+    isEmpty :: a -> Bool
 
 -- | Class of things which can be placed \"next to\" other things, for some
 --   appropriate notion of \"next to\".
@@ -51,18 +60,33 @@ juxtaposeDefault v a1 a2 =
   where mv1 = negateV <$> envelopeVMay v a1
         mv2 = envelopeVMay (negateV v) a2
 
+instance HasEmpty (Envelope v) where
+    isEmpty = isNothing . getOption . view unwrapped
+
 instance (InnerSpace v, OrderedField (Scalar v)) => Juxtaposable (Envelope v) where
   juxtapose = juxtaposeDefault
+
+instance (HasEmpty a, HasEmpty b) => HasEmpty (a,b) where
+    isEmpty (a,b) = isEmpty a && isEmpty b
 
 instance (Enveloped a, HasOrigin a, Enveloped b, HasOrigin b, V a ~ V b)
          => Juxtaposable (a,b) where
   juxtapose = juxtaposeDefault
 
+instance HasEmpty b => HasEmpty [b] where
+    isEmpty = all isEmpty
+
 instance (Enveloped b, HasOrigin b) => Juxtaposable [b] where
   juxtapose = juxtaposeDefault
 
+instance HasEmpty b => HasEmpty (M.Map k b) where
+    isEmpty = isEmpty . M.elems
+
 instance (Enveloped b, HasOrigin b) => Juxtaposable (M.Map k b) where
   juxtapose = juxtaposeDefault
+
+instance HasEmpty b => HasEmpty (S.Set b) where
+    isEmpty = isEmpty . S.elems
 
 instance (Enveloped b, HasOrigin b, Ord b) => Juxtaposable (S.Set b) where
   juxtapose = juxtaposeDefault
