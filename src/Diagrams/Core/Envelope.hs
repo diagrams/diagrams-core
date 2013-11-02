@@ -5,6 +5,7 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE TemplateHaskell            #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Envelope
@@ -25,7 +26,6 @@ module Diagrams.Core.Envelope
        ( -- * Envelopes
          Envelope(..)
 
-       , inEnvelope
        , appEnvelope
        , onEnvelope
        , mkEnvelope
@@ -43,12 +43,12 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
+import           Control.Lens (Wrapped(..), iso, view, over, mapped, unwrapped)
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
 import qualified Data.Set                as S
 
-import           Data.AffineSpace        ((.+^), (.-^))
 import           Data.VectorSpace
 
 import           Diagrams.Core.HasOrigin
@@ -94,17 +94,20 @@ import           Diagrams.Core.V
 --   The idea for envelopes came from
 --   Sebastian Setzer; see
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://www.cis.upenn.edu/~byorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
-newtype Envelope v = Envelope { unEnvelope :: Option (v -> Max (Scalar v)) }
+newtype Envelope v = Envelope (Option (v -> Max (Scalar v)))
 
-inEnvelope :: (Option (v -> Max (Scalar v)) -> Option (v -> Max (Scalar v)))
-           -> Envelope v -> Envelope v
-inEnvelope f = Envelope . f . unEnvelope
+instance (Scalar v ~ s, Scalar v' ~ s', s ~ s')
+                                        => Wrapped
+                                        (Option (v -> Max s))
+                                        (Option (v' -> Max s'))
+                                        (Envelope v) (Envelope v')
+         where wrapped = iso Envelope (\(Envelope e) -> e)
 
 appEnvelope :: Envelope v -> Maybe (v -> Scalar v)
 appEnvelope (Envelope (Option e)) = (getMax .) <$> e
 
 onEnvelope :: ((v -> Scalar v) -> (v -> Scalar v)) -> Envelope v -> Envelope v
-onEnvelope t = (inEnvelope . fmap) ((Max .) . t . (getMax .))
+onEnvelope t = over (unwrapped . mapped) ((Max .) . t . (getMax .))
 
 mkEnvelope :: (v -> Scalar v) -> Envelope v
 mkEnvelope = Envelope . Option . Just . (Max .)
@@ -185,7 +188,7 @@ instance (OrderedField (Scalar v), InnerSpace v) => Enveloped (Point v) where
   getEnvelope p = moveTo p . mkEnvelope $ const zeroV
 
 instance Enveloped t => Enveloped (TransInv t) where
-  getEnvelope = getEnvelope . unTransInv
+  getEnvelope = getEnvelope . view unwrapped
 
 instance (Enveloped a, Enveloped b, V a ~ V b) => Enveloped (a,b) where
   getEnvelope (x,y) = getEnvelope x <> getEnvelope y

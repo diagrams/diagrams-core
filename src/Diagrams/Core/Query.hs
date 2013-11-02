@@ -1,5 +1,8 @@
-{-# LANGUAGE TypeFamilies
+{-# LANGUAGE FlexibleInstances
            , GeneralizedNewtypeDeriving
+           , MultiParamTypeClasses
+           , TemplateHaskell
+           , TypeFamilies
   #-}
 -----------------------------------------------------------------------------
 -- |
@@ -14,10 +17,11 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Query
-       ( Query(..)
+       ( Query(Query), runQuery
        ) where
 
 import Control.Applicative
+import Control.Lens (Wrapped(..), iso)
 import Data.Semigroup
 
 import Data.AffineSpace
@@ -40,6 +44,9 @@ import Diagrams.Core.V
 --   the graphics-drawingcombinators package, <http://hackage.haskell.org/package/graphics-drawingcombinators>.
 newtype Query v m = Query { runQuery :: Point v -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
+
+instance Wrapped (Point v -> m) (Point v' -> m') (Query v m) (Query v' m')
+    where wrapped = iso Query runQuery
 
 type instance V (Query v m) = v
 

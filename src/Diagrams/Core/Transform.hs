@@ -5,6 +5,7 @@
            , TypeFamilies
            , MultiParamTypeClasses
            , GeneralizedNewtypeDeriving
+           , TemplateHaskell
            , TypeSynonymInstances
            , ScopedTypeVariables
   #-}
@@ -47,7 +48,7 @@ module Diagrams.Core.Transform
 
          -- * Translational invariance
 
-       , TransInv(..)
+       , TransInv(TransInv)
 
          -- * Vector space independent transformations
          -- | Most transformations are specific to a particular vector
@@ -59,6 +60,7 @@ module Diagrams.Core.Transform
 
        ) where
 
+import           Control.Lens                 (Wrapped(..), iso)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -270,8 +272,11 @@ instance Transformable Rational where
 --   translationally invariant; the translational component of
 --   transformations will no longer affect things wrapped in
 --   @TransInv@.
-newtype TransInv t = TransInv { unTransInv :: t }
+newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
+
+instance Wrapped t t' (TransInv t) (TransInv t')
+         where wrapped = iso TransInv (\(TransInv t) -> t)
 
 type instance V (TransInv t) = V t
 

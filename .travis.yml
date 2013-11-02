@@ -5,7 +5,8 @@ before_install:
   - cd diagrams
   - cabal install dual-tree/
   - cd ..
-
+script:
+  - cabal configure --enable-tests && cabal build --ghc-options='-Wall -Werror' && cabal test && cabal haddock
 notifications:
   email: false
   irc:
