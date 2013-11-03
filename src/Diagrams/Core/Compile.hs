@@ -69,7 +69,7 @@ toDTree (QD qd)
 
       -- Internal d-annotations.  We untangle the interleaved
       -- transformations and style, and carefully place the style
-      -- *above* the transform in the tree (since by calling
+      -- /above/ the transform in the tree (since by calling
       -- 'untangle' we have already performed the action of the
       -- transform on the style).
       (\d t -> case get d of
