@@ -15,8 +15,9 @@ module Diagrams.Core.Compile
   --, DNode(..)
   --, RTree(..)
   --, RNode(..)
-    fromDTree
-  , toTree
+    toDTree
+  , fromDTree
+  , toRTree
   )   where
 
 
@@ -47,8 +48,8 @@ import           Diagrams.Core.Types
 
 --type RTree b v a = Tree (RNode b v a )
 
-toTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
-toTree (QD qd)
+toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
+toDTree (QD qd)
   = foldDUAL
 
       -- Prims at the leaves.  We ignore the accumulated
@@ -114,3 +115,6 @@ fromDTree = fromDTree' mempty
     -- handle DAnnots separately if they are used, again accTr flows through.
     fromDTree' accTr (Node _ ts)
       = Node REmpty (fmap (fromDTree' accTr) ts)
+
+toRTree :: HasLinearMap v => QDiagram b v m -> RTree b v ()
+toRTree = fromDTree . fromMaybe (Node DEmpty []) . toDTree
