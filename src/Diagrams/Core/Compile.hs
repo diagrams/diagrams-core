@@ -25,11 +25,9 @@ import qualified Data.List.NonEmpty      as NEL
 import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
 import           Data.Monoid.Split
-import           Data.Monoid.Action
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
-import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
