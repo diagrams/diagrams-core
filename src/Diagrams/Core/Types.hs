@@ -97,9 +97,9 @@ module Diagrams.Core.Types
        , Backend(..)
        , MultiBackend(..)
        , DNode(..)
-       , DTree(..)
+       , DTree
        , RNode(..)
-       , RTree(..)
+       , RTree
 
          -- ** Null backend
 
@@ -675,10 +675,10 @@ instance Action Name (Trace v)
 lookupSub :: IsName n => n -> SubMap b v m -> Maybe [Subdiagram b v m]
 lookupSub a (SubMap m)
   = M.lookup n m `mplus`
-    (flatten . filter ((n `nameSuffixOf`) . fst) . M.assocs $ m)
+    (flattenNames . filter ((n `nameSuffixOf`) . fst) . M.assocs $ m)
   where (Name n1) `nameSuffixOf` (Name n2) = n1 `isSuffixOf` n2
-        flatten [] = Nothing
-        flatten xs = Just . concatMap snd $ xs
+        flattenNames [] = Nothing
+        flattenNames xs = Just . concatMap snd $ xs
         n = toName a
 
 ------------------------------------------------------------
