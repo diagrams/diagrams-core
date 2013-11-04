@@ -33,7 +33,9 @@ module Diagrams.Core.Names
 
 import           Control.Lens            (over, unwrapped, Wrapped(..), iso)
 import           Data.List               (intercalate)
+import qualified Data.Map                as M
 import           Data.Semigroup
+import qualified Data.Set                as S
 import           Data.Typeable
 
 import           Diagrams.Core.Transform
@@ -117,6 +119,24 @@ instance Qualifiable Name where
 
 instance Qualifiable a => Qualifiable (TransInv a) where
   (|>) n = over unwrapped (n |>)
+
+instance (Qualifiable a, Qualifiable b) => Qualifiable (a,b) where
+  n |> (a,b) = (n |> a, n |> b)
+
+instance (Qualifiable a, Qualifiable b, Qualifiable c) => Qualifiable (a,b,c) where
+  n |> (a,b,c) = (n |> a, n |> b, n |> c)
+
+instance Qualifiable a => Qualifiable [a] where
+  n |> as = map (n |>) as
+
+instance (Ord a, Qualifiable a) => Qualifiable (S.Set a) where
+  n |> s = S.map (n |>) s
+
+instance Qualifiable a => Qualifiable (M.Map k a) where
+  n |> m = fmap (n |>) m
+
+instance Qualifiable a => Qualifiable (b -> a) where
+ n |> f = (n |>) . f
 
 infixr 5 |>
 infixr 5 .>
