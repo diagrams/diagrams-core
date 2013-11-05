@@ -6,23 +6,26 @@
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- XXX comment me
+-- This module provides tools for compiling @QDiagrams@ into a more
+-- convenient and optimized tree form, suitable for use by backends.
 --
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Compile
-  ( --DTree(..)
-  --, DNode(..)
-  --, RTree(..)
-  --, RNode(..)
-    toDTree
-  , fromDTree
+  ( -- * Tools for backends
+    RNode(..)
+  , RTree
   , toRTree
-  )   where
 
+  -- * Internals
 
-import           Data.Maybe (fromMaybe)
+  , toDTree
+  , fromDTree
+  )
+  where
+
 import qualified Data.List.NonEmpty      as NEL
+import           Data.Maybe              (fromMaybe)
 import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
 import           Data.Monoid.Split
@@ -32,22 +35,7 @@ import           Data.Tree.DUAL
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
---data DNode b v a = DStyle (Style v)
---                 | DTransform (Split (Transformation v))
---                 | DAnnot a
---                 | DPrim (Prim b v)
---                 | DEmpty
-
---type DTree b v a = Tree (DNode b v a)
-
---data RNode b v a =  RStyle (Style v)
---                  | RFrozenTr (Transformation v)
---                  | RAnnot a
---                  | RPrim (Transformation v) (Prim b v)
---                  | REmpty
-
---type RTree b v a = Tree (RNode b v a )
-
+-- | Convert a @QDiagram@ into a raw tree.
 toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
 toDTree (QD qd)
   = foldDUAL
@@ -83,9 +71,9 @@ toDTree (QD qd)
       (\a t -> Node (DAnnot a) [t])
       qd
 
--- | Convert a DTree to an RTree which can be used dirctly by the backends.
---   A DTree includes nodes of type @DTransform (Split (Transformation v))@.
---   In the RTree the frozen part of the transform is put in a node of type
+-- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
+--   A @DTree@ includes nodes of type @DTransform (Split (Transformation v))@;
+--   in the @RTree@ the frozen part of the transform is put in a node of type
 --   @RFrozenTr (Transformation v)@ and the unfrozen part is pushed down until
 --   it is either frozen or reaches a primitive node.
 fromDTree :: HasLinearMap v => DTree b v () -> RTree b v ()
@@ -116,5 +104,7 @@ fromDTree = fromDTree' mempty
     fromDTree' accTr (Node _ ts)
       = Node REmpty (fmap (fromDTree' accTr) ts)
 
+-- | Compile a @QDiagram@ into an 'RTree'.  Suitable for use by
+--   backends when implementing 'renderData'.
 toRTree :: HasLinearMap v => QDiagram b v m -> RTree b v ()
 toRTree = fromDTree . fromMaybe (Node DEmpty []) . toDTree
