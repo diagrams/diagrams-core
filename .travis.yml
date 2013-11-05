@@ -32,20 +32,20 @@ before_install:
 
  - sudo add-apt-repository -y ppa:hvr/ghc
  - sudo apt-get update
- - sudo apt-get install cabal-install-1.16 ghc-$GHCVER
+ - sudo apt-get install cabal-install-1.18 ghc-$GHCVER
  - export PATH=/opt/ghc/$GHCVER/bin:$PATH
 
 install:
-  - cabal-1.16 update
-  - cabal-1.16 install --enable-tests --enable-benchmarks --only-dependencies
+  - cabal-1.18 update
+  - cabal-1.18 install --enable-tests --enable-benchmarks --only-dependencies
 
 script:
-  - cabal-1.16 configure --enable-tests --enable-benchmarks -v2
-  - cabal-1.16 build --ghc-options='-Wall -Werror'
-  - cabal-1.16 test
-  - cabal-1.16 haddock
-  - cabal-1.16 check
-  - cabal-1.16 sdist
+  - cabal-1.18 configure --enable-tests --enable-benchmarks -v2
+  - cabal-1.18 build --ghc-options='-Wall -Werror'
+  - cabal-1.18 test
+  - cabal-1.18 haddock
+  - cabal-1.18 check
+  - cabal-1.18 sdist
 
 notifications:
   email: false
