@@ -789,10 +789,8 @@ type RTree b v a = Tree (RNode b v a )
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
 --   instance of the 'Backend' class. A minimal complete definition
---   consists of the three associated types and an implementation for
---   'doRender'. Additionally, an the default implementation for either
---   'withStyle' or 'renderRTree' MUST be overidden depending on whether
---   the specific back end uses an 'RTree' or a flat list.
+--   consists of the three associated types, an implementation for
+--   'doRender', and /one of/ either 'withStyle' or 'renderData'.
 class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- | The type of rendering operations used by this backend, which
@@ -809,7 +807,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- | Perform a rendering operation with a local style. The default
   --   implementation does nothing, and must be overridden by backends
-  --   that do not overried 'renderData'.
+  --   that do not override 'renderData'.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
                  -> Style v    -- ^ Style to use
                  -> Transformation v
@@ -855,7 +853,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --
   --   where @renderRTree :: RTree b v () -> Render b v@ is
   --   implemented by the backend (with appropriate types filled in
-  --   for @b@ and @v@, and 'toRTree' is from "Diagrams.Core.Compile".
+  --   for @b@ and @v@), and 'toRTree' is from "Diagrams.Core.Compile".
   renderData :: Monoid' m => b -> QDiagram b v m -> Render b v
   renderData b = mconcat . map renderOne . prims
     where
