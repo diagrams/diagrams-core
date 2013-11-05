@@ -19,7 +19,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Types
--- Copyright   :  (c) 2011-2012 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2013 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -112,9 +112,8 @@ module Diagrams.Core.Types
        ) where
 
 import           Control.Arrow             (first, second, (***))
-import           Control.Lens              ( iso, view, over, lens, Lens'
-                                           , (^.)
-                                           , unwrapped, Wrapped(..))
+import           Control.Lens              (Lens', Wrapped (..), iso, lens,
+                                            over, unwrapped, view, (^.))
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.List                 (isSuffixOf)
@@ -122,9 +121,9 @@ import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
+import           Data.Tree
 import           Data.Typeable
 import           Data.VectorSpace
-import           Data.Tree
 
 import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
@@ -743,31 +742,59 @@ nullPrim = Prim NullPrim
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
 
--- | Abstract diagrams are rendered to particular formats by
---   /backends/.  Each backend/vector space combination must be an
---   instance of the 'Backend' class. A minimal complete definition
---   consists of the three associated types and an implementation for
---   'doRender'. Additionally, an the default implementation for either
---   'withStyle' or 'renderRTree' MUST be overidden depending on whether
---   the specific back end uses an 'RTree' of a flat list.
-
 data DNode b v a = DStyle (Style v)
                  | DTransform (Split (Transformation v))
                  | DAnnot a
                  | DPrim (Prim b v)
                  | DEmpty
 
+-- | A 'DTree' is a raw tree representation of a 'QDiagram', with all
+--   the @u@-annotations removed.  It is used as an intermediate type
+--   by diagrams-core; backends should not need to make use of it.
+--   Instead, backends can make use of 'RTree', which 'DTree' gets
+--   compiled and optimized to.
 type DTree b v a = Tree (DNode b v a)
 
 data RNode b v a =  RStyle (Style v)
+                    -- ^ A style node.
                   | RFrozenTr (Transformation v)
+                    -- ^ A \"frozen\" transformation, /i.e./ one which
+                    --   was applied after a call to 'freeze'.  It
+                    --   applies to everything below it in the tree.
+                    --   Note that line width and other similar
+                    --   \"scale invariant\" attributes should be
+                    --   affected by this transformation.  In the case
+                    --   of 2D, some backends may not support stroking
+                    --   in the context of an arbitrary
+                    --   transformation; such backends can instead use
+                    --   the 'avgScale' function from
+                    --   "Diagrams.TwoD.Transform" (from the
+                    --   @diagrams-lib@ package).
                   | RAnnot a
                   | RPrim (Transformation v) (Prim b v)
+                    -- ^ A primitive, along with the (non-frozen)
+                    --   transformation which applies to it.
                   | REmpty
 
+-- | An 'RTree' is a compiled and optimized representation of a
+--   'QDiagram', which can be used by backends.  They have several
+--   invariants which backends may rely upon:
+--
+--   * All non-frozen transformations have been pushed all the way to
+--     the leaves.
+--
+--   * @RPrim@ nodes never have any children.
 type RTree b v a = Tree (RNode b v a )
 
+-- | Abstract diagrams are rendered to particular formats by
+--   /backends/.  Each backend/vector space combination must be an
+--   instance of the 'Backend' class. A minimal complete definition
+--   consists of the three associated types and an implementation for
+--   'doRender'. Additionally, an the default implementation for either
+--   'withStyle' or 'renderRTree' MUST be overidden depending on whether
+--   the specific back end uses an 'RTree' or a flat list.
 class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
+
   -- | The type of rendering operations used by this backend, which
   --   must be a monoid. For example, if @Render b v = M ()@ for some
   --   monad @M@, a monoid instance can be made with @mempty = return
@@ -781,14 +808,13 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   data Options b v :: *
 
   -- | Perform a rendering operation with a local style. The default
-  --   implementation should be overidden by backends that use `withStyle`
-  --   it is provided so that backends that override renderData do not need
-  --   to implement `withStyle`.
+  --   implementation does nothing, and must be overridden by backends
+  --   that do not overried 'renderData'.
   withStyle      :: b          -- ^ Backend token (needed only for type inference)
                  -> Style v    -- ^ Style to use
                  -> Transformation v
                     -- ^ \"Frozen\" transformation; line width and
-                    --   other similar "scale invariant" attributes
+                    --   other similar \"scale invariant\" attributes
                     --   should be affected by this transformation.
                     --   In the case of 2D, some backends may not
                     --   support stroking in the context of an
@@ -822,6 +848,14 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   renderDia b opts d = doRender b opts' . renderData b $ d'
     where (opts', d') = adjustDia b opts d
 
+  -- | Backends may override 'renderData' to gain more control over
+  --   the way that rendering happens.  A typical implementation might be something like
+  --
+  --   > renderData = renderRTree . toRTree
+  --
+  --   where @renderRTree :: RTree b v () -> Render b v@ is
+  --   implemented by the backend (with appropriate types filled in
+  --   for @b@ and @v@, and 'toRTree' is from "Diagrams.Core.Compile".
   renderData :: Monoid' m => b -> QDiagram b v m -> Render b v
   renderData b = mconcat . map renderOne . prims
     where
