@@ -1,10 +1,5 @@
 language: haskell
 
-before_install:
-  - git clone --quiet -b internal-d git://github.com/diagrams/dual-tree.git diagrams/dual-tree
-  - cd diagrams
-  - cabal install dual-tree/
-  - cd ..
 script:
   - cabal configure --enable-tests && cabal build --ghc-options='-Wall -Werror' && cabal test && cabal haddock
 notifications:
