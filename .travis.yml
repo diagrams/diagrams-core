@@ -19,6 +19,7 @@ before_install:
   - ./travis/scripts/before_install.sh
 
 install:
+  - echo $NUM_CPU
   - cabal-1.18 update
   - cabal-1.18 install 'haddock >= 2.13' -j$NUM_CPU
   - cabal-1.18 install --enable-tests --enable-benchmarks --only-dependencies -j$NUM_CPU
