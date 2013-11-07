@@ -16,6 +16,7 @@ matrix:
 
 before_install:
   - git clone http://github.com/diagrams/diagrams-travis travis
+  - source travis/scripts/set_env.sh
   - ./travis/scripts/before_install.sh
 
 install:
