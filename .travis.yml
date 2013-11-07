@@ -20,7 +20,7 @@ before_install:
 
 install:
   - cabal-1.18 update
-  - cabal-1.18 install haddock -j$NUM_CPU
+  - cabal-1.18 install 'haddock >= 2.13' -j$NUM_CPU
   - cabal-1.18 install --enable-tests --enable-benchmarks --only-dependencies -j$NUM_CPU
 
 script:
