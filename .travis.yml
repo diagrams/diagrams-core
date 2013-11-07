@@ -20,25 +20,16 @@ before_install:
   - ./travis/scripts/before_install.sh
 
 install:
-  - echo $NUM_CPU
-  - cabal-1.18 update
-  - cabal-1.18 install 'haddock >= 2.13' -j$NUM_CPU
-  - cabal-1.18 install --enable-tests --enable-benchmarks --only-dependencies -j$NUM_CPU
+  - ./travis/scripts/install.sh
 
 script:
-  - cabal-1.18 configure --enable-tests --enable-benchmarks -v2
-  - cabal-1.18 build --ghc-options='-Wall -Werror'
-  - cabal-1.18 test
-  - cabal-1.18 haddock
-  - cabal-1.18 check
-  - cabal-1.18 sdist
+  - ./travis/scripts/script.sh
 
 notifications:
   email: false
-
-#  irc:
-#    channels:
-#      - "irc.freenode.org#diagrams"
-#    skip_join: true
-#    template:
-#      - "\x0313diagrams-core\x03/\x0306%{branch}\x03 \x0314%{commit}\x03 %{build_url} %{message}"
+  irc:
+    channels:
+      - "irc.freenode.org#diagrams"
+    skip_join: true
+    template:
+      - "\x0313diagrams-core\x03/\x0306%{branch}\x03 \x0314%{commit}\x03 %{build_url} %{message}"
