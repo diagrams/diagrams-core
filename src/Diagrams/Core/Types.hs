@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -45,6 +46,7 @@ module Diagrams.Core.Types
 
          -- ** Annotations
          UpAnnots, DownAnnots
+       , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), mkQD, Diagram
 
          -- * Operations on diagrams
@@ -203,18 +205,28 @@ transfToAnnot
 transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
 transfFromAnnot = option mempty (unsplit . killR) . fst
 
+-- XXX comment me
+data QDiaLeaf b v m
+  = PrimLeaf (Prim b v)
+  | DelayedLeaf (DownAnnots v -> QDiagram b v m)
+  deriving (Functor)
+
+withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (QDiaLeaf b v m -> r)
+withQDiaLeaf f _ (PrimLeaf p)    = f p
+withQDiaLeaf _ g (DelayedLeaf d) = g d
+
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
 newtype QDiagram b v m
-  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (Prim b v))
+  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
   deriving (Typeable)
 
 instance Wrapped
-         (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (Prim b v))
-         (D.DUALTree (DownAnnots v') (UpAnnots b' v' m') () (Prim b' v'))
+         (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
+         (D.DUALTree (DownAnnots v') (UpAnnots b' v' m') () (QDiaLeaf b' v' m'))
          (QDiagram b v m) (QDiagram b' v' m')
          where wrapped = iso QD (\(QD d) -> d)
 
@@ -237,9 +249,12 @@ pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
 --   associated transformations and styles.
 prims :: HasLinearMap v
       => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = (map . second) (untangle . option mempty id . fst)
+prims = concatMap processLeaf
       . D.flatten
       . view unwrapped
+  where
+    processLeaf (PrimLeaf p, (trSty,_)) = [(p, untangle . option mempty id $ trSty)]
+    processLeaf (DelayedLeaf k, d)      = prims (k d)
 
 -- | A useful variant of 'getU' which projects out a certain
 --   component.
@@ -378,10 +393,10 @@ clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with an envelope,
 --   trace, subdiagram map, and query function.
-mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m
+mkQD :: QDiaLeaf b v m -> Envelope v -> Trace v -> SubMap b v m
         -> Query v m -> QDiagram b v m
-mkQD p e t n q
-  = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) p
+mkQD l e t n q
+  = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
 
 ------------------------------------------------------------
 --  Instances
@@ -424,10 +439,13 @@ infixl 6 `atop`
 ---- Functor
 
 instance Functor (QDiagram b v) where
-  fmap f = (over unwrapped . D.mapU . second . second)
-             ( (first . fmap . fmap . fmap) f
+  fmap f = over unwrapped
+           ( (D.mapU . second . second)
+             ( (first . fmap . fmap . fmap)   f
              . (second . first . fmap . fmap) f
              )
+           . (fmap . fmap) f
+           )
 
 ---- Applicative
 
@@ -703,7 +721,7 @@ class Transformable p => IsPrim p where
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
+  Prim    :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
 
