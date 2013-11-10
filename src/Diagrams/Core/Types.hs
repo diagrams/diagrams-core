@@ -47,7 +47,7 @@ module Diagrams.Core.Types
          -- ** Annotations
          UpAnnots, DownAnnots
        , QDiaLeaf(..), withQDiaLeaf
-       , QDiagram(..), mkQD, Diagram
+       , QDiagram(..), mkQD, mkQD', Diagram
 
          -- * Operations on diagrams
          -- ** Extracting information
@@ -393,9 +393,15 @@ clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with an envelope,
 --   trace, subdiagram map, and query function.
-mkQD :: QDiaLeaf b v m -> Envelope v -> Trace v -> SubMap b v m
-        -> Query v m -> QDiagram b v m
-mkQD l e t n q
+mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m -> Query v m
+     -> QDiagram b v m
+mkQD p = mkQD' (PrimLeaf p)
+
+-- | Create a diagram from a generic QDiaLeaf, along with an envelope,
+--   trace, subdiagram map, and query function.
+mkQD' :: QDiaLeaf b v m -> Envelope v -> Trace v -> SubMap b v m -> Query v m
+      -> QDiagram b v m
+mkQD' l e t n q
   = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
 
 ------------------------------------------------------------
