@@ -45,7 +45,7 @@ module Diagrams.Core.Types
          -- * Diagrams
 
          -- ** Annotations
-         UpAnnots, DownAnnots
+         UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
        , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), mkQD, mkQD', Diagram
 
