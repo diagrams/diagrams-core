@@ -54,8 +54,9 @@ toDTree (QD qd)
 
                -- Delayed tree: pass the accumulated d-annotations to
                -- the continuation, convert the result to a DTree, and
-               -- splice it in.
-               (fromMaybe emptyDTree . toDTree . ($d))
+               -- splice it in, adding a DDelay node to mark the point
+               -- of the splice.
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree . ($d))
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
@@ -111,6 +112,12 @@ fromDTree = fromDTree' mempty
     -- and accTr is reset to the unfrozen part of the transform.
     fromDTree' accTr (Node (DTransform (tr1 :| tr2)) ts)
       = Node (RFrozenTr (accTr <> tr1)) (fmap (fromDTree' tr2) ts)
+
+    -- Drop accumulated transformations upon encountering a DDelay
+    -- node --- the tree unfolded beneath it already took into account
+    -- any non-frozen transformation at this point.
+    fromDTree' _ (Node DDelay ts)
+      = Node REmpty (fmap (fromDTree' mempty) ts)
 
     -- DAnnot and DEmpty nodes become REmpties, in the future my want to
     -- handle DAnnots separately if they are used, again accTr flows through.

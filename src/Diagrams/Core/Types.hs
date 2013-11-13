@@ -214,6 +214,12 @@ transfFromAnnot = option mempty (unsplit . killR) . fst
 data QDiaLeaf b v m
   = PrimLeaf (Prim b v)
   | DelayedLeaf (DownAnnots v -> QDiagram b v m)
+    -- ^ The @QDiagram@ produced by a @DelayedLeaf@ function /must/
+    --   already apply any non-frozen transformation in the given
+    --   @DownAnnots@ (that is, the non-frozen transformation will not
+    --   be applied by the context). On the other hand, it must assume
+    --   that any frozen transformation or attributes will be applied
+    --   by the context.
   deriving (Functor)
 
 withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (QDiaLeaf b v m -> r)
@@ -774,6 +780,13 @@ nullPrim = Prim NullPrim
 data DNode b v a = DStyle (Style v)
                  | DTransform (Split (Transformation v))
                  | DAnnot a
+                 | DDelay
+                   -- ^ @DDelay@ marks a point where a delayed subtree
+                   --   was expanded.  Such subtrees already take all
+                   --   non-frozen transforms above them into account,
+                   --   so when later processing the tree, upon
+                   --   encountering a @DDelay@ node we must drop any
+                   --   accumulated non-frozen transformation.
                  | DPrim (Prim b v)
                  | DEmpty
 
