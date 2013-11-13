@@ -205,7 +205,12 @@ transfToAnnot
 transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
 transfFromAnnot = option mempty (unsplit . killR) . fst
 
--- XXX comment me
+-- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
+--   @QDiagram@ which expands to a real @QDiagram@ once it learns the
+--   \"final context\" in which it will be rendered.  For example, in
+--   order to decide how to draw an arrow, we must know the precise
+--   transformation applied to it (since the arrow head and tail are
+--   scale-invariant).
 data QDiaLeaf b v m
   = PrimLeaf (Prim b v)
   | DelayedLeaf (DownAnnots v -> QDiagram b v m)
@@ -727,7 +732,7 @@ class Transformable p => IsPrim p where
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim    :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
+  Prim :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
 
