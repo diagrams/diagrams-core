@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -44,8 +45,9 @@ module Diagrams.Core.Types
          -- * Diagrams
 
          -- ** Annotations
-         UpAnnots, DownAnnots
-       , QDiagram(..), mkQD, Diagram
+         UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+       , QDiaLeaf(..), withQDiaLeaf
+       , QDiagram(..), mkQD, mkQD', Diagram
 
          -- * Operations on diagrams
          -- ** Extracting information
@@ -203,18 +205,39 @@ transfToAnnot
 transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
 transfFromAnnot = option mempty (unsplit . killR) . fst
 
+-- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
+--   @QDiagram@ which expands to a real @QDiagram@ once it learns the
+--   \"final context\" in which it will be rendered.  For example, in
+--   order to decide how to draw an arrow, we must know the precise
+--   transformation applied to it (since the arrow head and tail are
+--   scale-invariant).
+data QDiaLeaf b v m
+  = PrimLeaf (Prim b v)
+  | DelayedLeaf (DownAnnots v -> QDiagram b v m)
+    -- ^ The @QDiagram@ produced by a @DelayedLeaf@ function /must/
+    --   already apply any non-frozen transformation in the given
+    --   @DownAnnots@ (that is, the non-frozen transformation will not
+    --   be applied by the context). On the other hand, it must assume
+    --   that any frozen transformation or attributes will be applied
+    --   by the context.
+  deriving (Functor)
+
+withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (QDiaLeaf b v m -> r)
+withQDiaLeaf f _ (PrimLeaf p)    = f p
+withQDiaLeaf _ g (DelayedLeaf d) = g d
+
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
 newtype QDiagram b v m
-  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (Prim b v))
+  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
   deriving (Typeable)
 
 instance Wrapped
-         (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (Prim b v))
-         (D.DUALTree (DownAnnots v') (UpAnnots b' v' m') () (Prim b' v'))
+         (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
+         (D.DUALTree (DownAnnots v') (UpAnnots b' v' m') () (QDiaLeaf b' v' m'))
          (QDiagram b v m) (QDiagram b' v' m')
          where wrapped = iso QD (\(QD d) -> d)
 
@@ -237,9 +260,12 @@ pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
 --   associated transformations and styles.
 prims :: HasLinearMap v
       => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = (map . second) (untangle . option mempty id . fst)
+prims = concatMap processLeaf
       . D.flatten
       . view unwrapped
+  where
+    processLeaf (PrimLeaf p, (trSty,_)) = [(p, untangle . option mempty id $ trSty)]
+    processLeaf (DelayedLeaf k, d)      = prims (k d)
 
 -- | A useful variant of 'getU' which projects out a certain
 --   component.
@@ -378,10 +404,16 @@ clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with an envelope,
 --   trace, subdiagram map, and query function.
-mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m
-        -> Query v m -> QDiagram b v m
-mkQD p e t n q
-  = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) p
+mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m -> Query v m
+     -> QDiagram b v m
+mkQD p = mkQD' (PrimLeaf p)
+
+-- | Create a diagram from a generic QDiaLeaf, along with an envelope,
+--   trace, subdiagram map, and query function.
+mkQD' :: QDiaLeaf b v m -> Envelope v -> Trace v -> SubMap b v m -> Query v m
+      -> QDiagram b v m
+mkQD' l e t n q
+  = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
 
 ------------------------------------------------------------
 --  Instances
@@ -424,10 +456,13 @@ infixl 6 `atop`
 ---- Functor
 
 instance Functor (QDiagram b v) where
-  fmap f = (over unwrapped . D.mapU . second . second)
-             ( (first . fmap . fmap . fmap) f
+  fmap f = over unwrapped
+           ( (D.mapU . second . second)
+             ( (first . fmap . fmap . fmap)   f
              . (second . first . fmap . fmap) f
              )
+           . (fmap . fmap) f
+           )
 
 ---- Applicative
 
@@ -745,6 +780,13 @@ nullPrim = Prim NullPrim
 data DNode b v a = DStyle (Style v)
                  | DTransform (Split (Transformation v))
                  | DAnnot a
+                 | DDelay
+                   -- ^ @DDelay@ marks a point where a delayed subtree
+                   --   was expanded.  Such subtrees already take all
+                   --   non-frozen transforms above them into account,
+                   --   so when later processing the tree, upon
+                   --   encountering a @DDelay@ node we must drop any
+                   --   accumulated non-frozen transformation.
                  | DPrim (Prim b v)
                  | DEmpty
 

@@ -35,19 +35,33 @@ import           Data.Tree.DUAL
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
+emptyDTree :: Tree (DNode b v a)
+emptyDTree = Node DEmpty []
+
 -- | Convert a @QDiagram@ into a raw tree.
 toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
 toDTree (QD qd)
   = foldDUAL
 
-      -- Prims at the leaves.  We ignore the accumulated
-      -- d-annotations, since we will instead distribute them
-      -- incrementally throughout the tree as they occur.
-      (\_ p -> Node (DPrim p) [])
+      -- Prims at the leaves.  We ignore the accumulated d-annotations
+      -- for prims (since we instead distribute them incrementally
+      -- throughout the tree as they occur), or pass them to the
+      -- continuation in the case of a delayed node.
+      (\d -> withQDiaLeaf
+
+               -- Prim: make a leaf node
+               (\p -> Node (DPrim p) [])
+
+               -- Delayed tree: pass the accumulated d-annotations to
+               -- the continuation, convert the result to a DTree, and
+               -- splice it in, adding a DDelay node to mark the point
+               -- of the splice.
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree . ($d))
+      )
 
       -- u-only leaves --> empty DTree. We don't care about the
       -- u-annotations.
-      (Node DEmpty [])
+      emptyDTree
 
       -- a non-empty list of child trees.
       (\ts -> case NEL.toList ts of
@@ -98,6 +112,12 @@ fromDTree = fromDTree' mempty
     -- and accTr is reset to the unfrozen part of the transform.
     fromDTree' accTr (Node (DTransform (tr1 :| tr2)) ts)
       = Node (RFrozenTr (accTr <> tr1)) (fmap (fromDTree' tr2) ts)
+
+    -- Drop accumulated transformations upon encountering a DDelay
+    -- node --- the tree unfolded beneath it already took into account
+    -- any non-frozen transformation at this point.
+    fromDTree' _ (Node DDelay ts)
+      = Node REmpty (fmap (fromDTree' mempty) ts)
 
     -- DAnnot and DEmpty nodes become REmpties, in the future my want to
     -- handle DAnnots separately if they are used, again accTr flows through.
