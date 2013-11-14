@@ -46,10 +46,14 @@ module Diagrams.Core.Types
 
          -- ** Annotations
          UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+         -- ** Basic type definitions
        , QDiaLeaf(..), withQDiaLeaf
-       , QDiagram(..), mkQD, mkQD', Diagram
+       , QDiagram(..), Diagram
 
          -- * Operations on diagrams
+         -- ** Creating diagrams
+       , mkQD, mkQD', pointDiagram
+
          -- ** Extracting information
        , prims
        , envelope, trace, subMap, names, query, sample
