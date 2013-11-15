@@ -9,12 +9,14 @@ env:
     - GHCVER=head
   global:
     - CABALVER=1.18
+    - secure: "n2kMXZFnvArz8nFjzTGqoOiD+TA5sdKz75GnfgBeVGFxMy7uHgdCvmSAMG2xZr57fdZs+qaJLw7e4Ra0XZzFCo0Taz3+b0O4z1kmNizX3CJ0nVEQYhosGwRqBGrLWRQ7t052b52qh7XYGwpaV751A6+VQv4zo5hxUuVmtuJWjck="
 
 matrix:
   allow_failures:
     - env: GHCVER=head
 
 before_install:
+  - echo $SECURE
   - git clone http://github.com/diagrams/diagrams-travis travis
   - source travis/scripts/set_env.sh
   - ./travis/scripts/before_install.sh
