@@ -94,7 +94,7 @@ fromDTree :: HasLinearMap v => DTree b v () -> RTree b v ()
 fromDTree = fromDTree' mempty
   where
     fromDTree' :: HasLinearMap v => Transformation v -> DTree b v () -> RTree b v ()
-    -- We put the accumulated unforzen transformation (accTr) and the prim
+    -- We put the accumulated unfrozen transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
       = Node (RPrim accTr p) []
