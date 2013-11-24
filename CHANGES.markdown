@@ -1,3 +1,51 @@
+1.0 (25 November 2013)
+----------------------
+
+* **New features**
+
+    * Delayed subtrees: instead of a primitive, one can now also have
+      a delayed subtree at a leaf, containing a continuation which
+      generates a `QDiagram` when given the accumulated d-annotation
+      at that point in the tree.  Useful for things which need to know
+      the final transformation applied to them before deciding what
+      diagram to generate.  The prototypical use case is arrows: see
+      https://github.com/diagrams/diagrams-lib/issues/112 .  However,
+      this may be useful for other things as well: for example,
+      diagrams which scale normally until hitting some maximum or
+      minimum size, at which point they refuse to scale any further
+      (or more generally diagrams which scale as some non-linear
+      function of the transformation applied to them).
+
+      The only downside is that the u-annotation must be fixed ahead
+      of time---doing otherwise requires a more general solution for
+      constraint solving.
+
+    * New function `lookupName` for doing a simple lookup of a named
+      subdiagram
+
+    * New module `Diagrams.Core.Compile`, containing a framework for
+      compiling `QDiagrams` into a simpler tree type `RTree`, which
+      may be used by backends for rendering.
+
+* **New instances**
+
+    * `Qualifiable` instances for `(,)`, `(,,)`, `[]`, `Set`, `Map k`,
+      and `(->) e`.
+
+    * `(->) e` instance for `Juxtaposable` (thanks to Carlos Scheidegger)
+
+* **API changes**
+
+    * Export `pointDiagram` function, which creates an otherwise empty
+      diagram with a point (not empty) envelope
+
+    * A bunch of stuff now uses machinery from the `lens` library.
+	    * `envelope`, `trace`, and `subMap` are now `Lens'`es
+        * `Wrapped` instances for `Trace`, `TransInv`, `QDiagram`,
+          `SubMap`, `Envelope`, `Style`, `Query`, and `Name` (replaces
+          `Newtype` instances)
+	    * `Iso`s for `Query`, `Envelope`, `QDiagram`, `SubMap`, `TransInv`
+
 0.7.0.1 (26 September 2013)
 ---------------------------
 
