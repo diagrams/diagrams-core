@@ -28,7 +28,6 @@ import qualified Data.List.NonEmpty      as NEL
 import           Data.Maybe              (fromMaybe)
 import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
-import           Data.Monoid.Split
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
@@ -104,14 +103,9 @@ fromDTree = fromDTree' mempty
     fromDTree' accTr (Node (DStyle s) ts)
       = Node (RStyle (transform accTr s)) (fmap (fromDTree' accTr) ts)
 
-    -- Unfrozen transformations are accumulated and pushed down as well.
-    fromDTree' accTr (Node (DTransform (M tr)) ts)
+    -- Transformations are accumulated and pushed down as well.
+    fromDTree' accTr (Node (DTransform tr) ts)
       = Node REmpty (fmap (fromDTree' (accTr <> tr)) ts)
-
-    -- Frozen transformations are stored in the RFrozenTr node
-    -- and accTr is reset to the unfrozen part of the transform.
-    fromDTree' accTr (Node (DTransform (tr1 :| tr2)) ts)
-      = Node (RFrozenTr (accTr <> tr1)) (fmap (fromDTree' tr2) ts)
 
     -- Drop accumulated transformations upon encountering a DDelay
     -- node --- the tree unfolded beneath it already took into account

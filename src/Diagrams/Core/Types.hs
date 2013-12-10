@@ -76,7 +76,6 @@ module Diagrams.Core.Types
        , localize
 
          -- *** Other
-       , freeze
        , setEnvelope
        , setTrace
 
@@ -135,7 +134,6 @@ import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
 import           Data.Monoid.Deletable
 import           Data.Monoid.MList
-import           Data.Monoid.Split
 import           Data.Monoid.WithSemigroup
 import qualified Data.Tree.DUAL            as D
 
@@ -188,7 +186,7 @@ type UpAnnots b v m = Deletable (Envelope v)
 --   * styles (see "Diagrams.Core.Style")
 --
 --   * names (see "Diagrams.Core.Names")
-type DownAnnots v = (Split (Transformation v) :+: Style v)
+type DownAnnots v = (Transformation v :+: Style v)
                 ::: Name
                 ::: ()
 
@@ -201,13 +199,12 @@ type DownAnnots v = (Split (Transformation v) :+: Style v)
 transfToAnnot :: Transformation v -> DownAnnots v
 transfToAnnot
   = inj
-  . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
-  . M
+  . (inL :: Transformation v -> Transformation v :+: Style v)
 
 -- | Extract the (total) transformation from a downwards annotation
 --   value.
 transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
-transfFromAnnot = option mempty (unsplit . killR) . fst
+transfFromAnnot = option mempty killR . fst
 
 -- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
 --   @QDiagram@ which expands to a real @QDiagram@ once it learns the
@@ -263,7 +260,7 @@ pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
 -- | Extract a list of primitives from a diagram, together with their
 --   associated transformations and styles.
 prims :: HasLinearMap v
-      => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
+      => QDiagram b v m -> [(Prim b v, (Transformation v, Style v))]
 prims = concatMap processLeaf
       . D.flatten
       . view unwrapped
@@ -490,7 +487,7 @@ instance Functor (QDiagram b v) where
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => HasStyle (QDiagram b v m) where
   applyStyle = over unwrapped . D.applyD . inj
-             . (inR :: Style v -> Split (Transformation v) :+: Style v)
+             . (inR :: Style v -> Transformation v :+: Style v)
 
 -- | By default, diagram attributes are not affected by
 --   transformations.  This means, for example, that @lw 0.01 circle@
@@ -508,12 +505,12 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
 --   produce a concrete drawing of the diagram, and it is this visual
 --   representation itself which is acted upon by subsequent
 --   transformations.
-freeze :: forall v b m. (HasLinearMap v, InnerSpace v
-                        , OrderedField (Scalar v), Semigroup m)
-       => QDiagram b v m -> QDiagram b v m
-freeze = over unwrapped . D.applyD . inj
-       . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
-       $ split
+--freeze :: forall v b m. (HasLinearMap v, InnerSpace v
+--                        , OrderedField (Scalar v), Semigroup m)
+--       => QDiagram b v m -> QDiagram b v m
+--freeze = over unwrapped . D.applyD . inj
+--       . (inL :: Split (Transformation v) -> Split (Transformation v :+: Style v)
+--       $ split
 
 ---- Juxtaposable
 
@@ -782,7 +779,7 @@ nullPrim = Prim NullPrim
 ------------------------------------------------------------
 
 data DNode b v a = DStyle (Style v)
-                 | DTransform (Split (Transformation v))
+                 | DTransform (Transformation v)
                  | DAnnot a
                  | DDelay
                    -- ^ @DDelay@ marks a point where a delayed subtree
@@ -803,19 +800,6 @@ type DTree b v a = Tree (DNode b v a)
 
 data RNode b v a =  RStyle (Style v)
                     -- ^ A style node.
-                  | RFrozenTr (Transformation v)
-                    -- ^ A \"frozen\" transformation, /i.e./ one which
-                    --   was applied after a call to 'freeze'.  It
-                    --   applies to everything below it in the tree.
-                    --   Note that line width and other similar
-                    --   \"scale invariant\" attributes should be
-                    --   affected by this transformation.  In the case
-                    --   of 2D, some backends may not support stroking
-                    --   in the context of an arbitrary
-                    --   transformation; such backends can instead use
-                    --   the 'avgScale' function from
-                    --   "Diagrams.TwoD.Transform" (from the
-                    --   @diagrams-lib@ package).
                   | RAnnot a
                   | RPrim (Transformation v) (Prim b v)
                     -- ^ A primitive, along with the (non-frozen)
@@ -903,9 +887,9 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   renderData :: Monoid' m => b -> QDiagram b v m -> Render b v
   renderData b = mconcat . map renderOne . prims
     where
-      renderOne :: (Prim b v, (Split (Transformation v), Style v)) -> Render b v
-      renderOne (p, (M t,      s)) = withStyle b s mempty (render b (transform t p))
-      renderOne (p, (t1 :| t2, s)) = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
+      renderOne :: (Prim b v, (Transformation v, Style v)) -> Render b v
+      renderOne (p, (t, s)) = withStyle b s mempty (render b (transform t p))
+      --renderOne (p, (t1 :| t2, s)) = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
 
   -- See Note [backend token]
 

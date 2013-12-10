@@ -122,7 +122,7 @@ module Diagrams.Core
        , withNames
        , localize
 
-       , freeze, setEnvelope, setTrace
+       , setEnvelope, setTrace
 
        , atop
 
