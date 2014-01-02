@@ -39,11 +39,15 @@ module Diagrams.Core.Trace
 
        , traceV, traceP
        , maxTraceV, maxTraceP
+       , getRayTrace
+       , rayTraceV, rayTraceP
+       , maxRayTraceV, maxRayTraceP
 
        ) where
 
 import           Control.Applicative
 import           Control.Lens
+import           Data.List               (insert)
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
@@ -78,27 +82,32 @@ import           Diagrams.Core.V
 --   scalar is @s@, the distance from the base point to the
 --   intersection is given by @s * magnitude v@.
 
-newtype Trace v = Trace { appTrace :: Point v -> v -> PosInf (Scalar v) }
+newtype Trace v = Trace { appTrace :: Point v -> v -> [PosInf (Scalar v)] }
 
 instance (Scalar v ~ s, Scalar v' ~ s', s ~ s') =>
          Wrapped
-         (Point v -> v -> PosInf s)
-         (Point v' -> v' -> PosInf s')
+         (Point v -> v -> [PosInf s])
+         (Point v' -> v' -> [PosInf s'])
          (Trace v) (Trace v')
          where wrapped = iso Trace appTrace
 
-mkTrace :: (Point v -> v -> PosInf (Scalar v)) -> Trace v
+mkTrace :: (Point v -> v -> [PosInf (Scalar v)]) -> Trace v
 mkTrace = Trace
 
 -- | Traces form a semigroup with pointwise minimum as composition.
 --   Hence, if @t1@ is the trace for diagram @d1@, and
 --   @e2@ is the trace for @d2@, then @e1 \`mappend\` e2@
 --   is the trace for @d1 \`atop\` d2@.
-deriving instance Ord (Scalar v) => Semigroup (Trace v)
+instance Ord (Scalar v) => Semigroup (Trace v) where
+  ts1 <> ts2 = mkTrace tr
+    where
+      tr p v = foldr insert (appTrace ts1 p v) (appTrace ts2 p v)
 
 -- | The identity for the 'Monoid' instance is the constantly infinite
 --   trace.
-deriving instance Ord (Scalar v) => Monoid (Trace v)
+instance Ord (Scalar v) => Monoid (Trace v) where
+  mappend = (<>)
+  mempty = mkTrace $ \_ _ -> [mempty]
 
 type instance V (Trace v) = v
 
@@ -158,16 +167,16 @@ instance (Traced b) => Traced (S.Set b) where
 ------------------------------------------------------------
 
 -- | Compute the vector from the given point to the boundary of the
---   given object in the given direction, or @Nothing@ if there is no
---   intersection.
+--   given object in either the given direction or the opposite direction.
+--   Return @Nothing@ if there is no intersection.
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
-traceV p v a = case ((getTrace a)^.unwrapping Trace) p v of
+traceV p v a = case head $ ((getTrace a)^.unwrapping Trace) p v of
                  Finite s -> Just (s *^ v)
                  Infinity -> Nothing
 
 -- | Given a base point and direction, compute the closest point on
---   the boundary of the given object, or @Nothing@ if there is no
---   intersection in the given direction.
+--   the boundary of the given object in the direction or its opposite.
+--   Return @Nothing@ if there is no intersection in either direction.
 traceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 traceP p v a = (p .+^) <$> traceV p v a
 
@@ -180,3 +189,50 @@ maxTraceV p = traceV p . negateV
 --   instead of the closest.
 maxTraceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 maxTraceP p v a = (p .+^) <$> maxTraceV p v a
+
+-- | Get the trace of an object along in the direction of the given vector
+--   but not in the opposite direction like `getTrace`. I.e. only return
+--   positive traces.
+getRayTrace :: (Traced a, Num (Scalar (V a))) => a -> Trace (V a)
+getRayTrace a = Trace tr
+  where
+    scalars [] = []
+    scalars (Infinity : xs) = scalars xs
+    scalars (Finite x : xs) = x : scalars xs
+    tr p v = let
+               ts = ((getTrace a)^.unwrapping Trace) p v
+               ps = filter (>= 0) (scalars ts)
+             in case ps of
+              [] -> [Infinity]
+              qs -> map Finite qs
+
+-- | Compute the vector from the given point to the boundary of the
+--   given object in the given direction, or @Nothing@ if there is no
+--   intersection. Only positive scale muliples of the direction are returned
+rayTraceV :: (Traced a, Num (Scalar (V a)))
+           => Point (V a) -> V a -> a -> Maybe (V a)
+rayTraceV p v a = case head $ ((getRayTrace a)^.unwrapping Trace) p v of
+                 Finite s -> Just (s *^ v)
+                 Infinity -> Nothing
+
+-- | Given a base point and direction, compute the closest point on
+--   the boundary of the given object, or @Nothing@ if there is no
+--   intersection in the given direction.
+rayTraceP :: (Traced a, Num (Scalar (V a)))
+           => Point (V a) -> V a -> a -> Maybe (Point (V a))
+rayTraceP p v a = (p .+^) <$> rayTraceV p v a
+
+-- | Like 'rayTraceV', but computes a vector to the *furthest* point on
+--   the boundary instead of the closest.
+maxRayTraceV :: (Traced a, Num (Scalar (V a)))
+              => Point (V a) -> V a -> a -> Maybe (V a)
+maxRayTraceV p v a =
+  case last $ ((getRayTrace a)^.unwrapping Trace) p v of
+    Finite s -> Just (s *^ v)
+    Infinity -> Nothing
+
+-- | Like 'rayTraceP', but computes the *furthest* point on the boundary
+--   instead of the closest.
+maxRayTraceP :: (Traced a, Num (Scalar (V a)))
+              => Point (V a) -> V a -> a -> Maybe (Point (V a))
+maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a

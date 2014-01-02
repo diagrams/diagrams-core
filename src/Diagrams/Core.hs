@@ -92,6 +92,9 @@ module Diagrams.Core
        , Traced(..)
        , traceV, traceP
        , maxTraceV, maxTraceP
+       , getRayTrace
+       , rayTraceV, rayTraceP
+       , maxRayTraceV, maxRayTraceP
 
          -- * Things with local origins
 
