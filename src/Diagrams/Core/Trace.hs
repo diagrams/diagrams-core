@@ -66,11 +66,15 @@ import           Diagrams.Core.V
 --  SortedList  -------------------------------------------------
 ------------------------------------------------------------
 
+-- | A trace returns a sorted list of intersections with the object in
+--   increasing order of distanct from the point to the object. We maintain
+--   the invariant the the list is sorted in increasing order.
 newtype SortedList a = SortedList [a]
 
 instance Wrapped [a] [a] (SortedList a) (SortedList a)
   where wrapped = iso SortedList $ \(SortedList x) -> x
 
+-- | SortedLists form a semigroup with merge as composition.
 instance Ord a => Semigroup (SortedList a) where
   sl0 <> sl1 = SortedList $ merge (view unwrapped sl0) (view unwrapped sl1)
     where
@@ -166,7 +170,7 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
   getTrace = const mempty
 
 instance Traced t => Traced (TransInv t) where
-  getTrace = getTrace . view unwrapped
+  getTrace = getTrace . op TransInv
 
 instance (Traced a, Traced b, V a ~ V b) => Traced (a,b) where
   getTrace (x,y) = getTrace x <> getTrace y
@@ -188,7 +192,7 @@ instance (Traced b) => Traced (S.Set b) where
 --   given object in either the given direction or the opposite direction.
 --   Return @Nothing@ if there is no intersection.
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
-traceV p v a = case view unwrapped $ ((getTrace a)^.unwrapping Trace) p v of
+traceV p v a = case op SortedList $ op Trace (getTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
 
@@ -213,15 +217,15 @@ maxTraceP p v a = (p .+^) <$> maxTraceV p v a
 --   positive traces.
 getRayTrace :: (Traced a, Num (Scalar (V a))) => a -> Trace (V a)
 getRayTrace a = Trace $ \p v ->
-                  SortedList $ filter (>= 0) (view unwrapped
-                             $ (((getTrace a)^.unwrapping Trace) p v))
+                  SortedList $ filter (>= 0) (op SortedList
+                             $ (op Trace (getTrace a) p v))
 
 -- | Compute the vector from the given point to the boundary of the
 --   given object in the given direction, or @Nothing@ if there is no
 --   intersection. Only positive scale muliples of the direction are returned
 rayTraceV :: (Traced a, Num (Scalar (V a)))
            => Point (V a) -> V a -> a -> Maybe (V a)
-rayTraceV p v a = case view unwrapped $ ((getRayTrace a)^.unwrapping Trace) p v of
+rayTraceV p v a = case op SortedList $ op Trace (getRayTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
 
@@ -237,7 +241,7 @@ rayTraceP p v a = (p .+^) <$> rayTraceV p v a
 maxRayTraceV :: (Traced a, Num (Scalar (V a)))
               => Point (V a) -> V a -> a -> Maybe (V a)
 maxRayTraceV p v a =
-  case view unwrapped $ ((getRayTrace a)^.unwrapping Trace) p v of
+  case op SortedList $ op Trace (getRayTrace a) p v of
     [] -> Nothing
     xs -> Just ((last xs) *^ v)
 
