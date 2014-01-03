@@ -123,20 +123,9 @@ mkTrace = Trace
 --   @e2@ is the trace for @d2@, then @e1 \`mappend\` e2@
 --   is the trace for @d1 \`atop\` d2@.
 
---instance Ord (Scalar v) => Semigroup (Trace v) where
---  ts1 <> ts2 = mkTrace tr
---    where
---      tr p v = foldr insert (appTrace ts1 p v) (appTrace ts2 p v)
+deriving instance (Ord (Scalar v)) => Semigroup (Trace v)
 
-deriving instance (Ord (Scalar v)) =>Semigroup (Trace v)
-
-
--- | The identity for the 'Monoid' instance is the constantly infinite
---   trace.
 deriving instance (Ord (Scalar v)) => Monoid (Trace v)
---instance Ord (Scalar v) => Monoid (Trace v) where
---  mappend = (<>)
---  mempty = mkTrace $ \_ _ -> []
 
 type instance V (Trace v) = v
 
