@@ -88,6 +88,7 @@ module Diagrams.Core
          -- * Traces
 
        , Trace(Trace)
+       , SortedList(SortedList)
        , appTrace, mkTrace
        , Traced(..)
        , traceV, traceP
