@@ -74,11 +74,12 @@ instance Wrapped [a] [a] (SortedList a) (SortedList a)
 instance Ord a => Semigroup (SortedList a) where
   sl0 <> sl1 = SortedList $ merge (view unwrapped sl0) (view unwrapped sl1)
     where
-      merge xList@(x:xs) yList@(y:ys) =
-        if x <= y then x : merge xs yList else y : merge xList ys
-      merge xList@(_:_) []          = xList
-      merge []          yList@(_:_) = yList
-      merge []          []          = []
+      merge xs []         = xs
+      merge [] ys         = ys
+      merge (x:xs) (y:ys) =
+        if x <= y
+          then x : merge xs (y:ys)
+          else y : merge (x:xs) ys
 
 instance Ord a => Monoid (SortedList a) where
   mappend = (<>)
