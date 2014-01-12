@@ -26,7 +26,8 @@
 
 module Diagrams.Core.Trace
        ( -- * SortedList
-         SortedList(SortedList)
+         SortedList
+       , mkSortedList, getSortedList, onSortedList, unsafeOnSortedList
 
          -- * Traces
        , Trace(Trace)
@@ -50,6 +51,7 @@ module Diagrams.Core.Trace
 
 import           Control.Applicative
 import           Control.Lens
+import           Data.List               (sort)
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
@@ -63,28 +65,53 @@ import           Diagrams.Core.Transform
 import           Diagrams.Core.V
 
 ------------------------------------------------------------
---  SortedList  -------------------------------------------------
+--  SortedList  --------------------------------------------
 ------------------------------------------------------------
 
--- | A trace returns a sorted list of intersections with the object in
---   increasing order of distanct from the point to the object. We maintain
---   the invariant the the list is sorted in increasing order.
+-- | A newtype wrapper around a list which maintains the invariant
+--   that the list is sorted.  The constructor is not exported; use
+--   the smart constructor 'mkSortedList' (which sorts the given list)
+--   instead.
 newtype SortedList a = SortedList [a]
 
-instance Wrapped [a] [a] (SortedList a) (SortedList a)
-  where wrapped = iso SortedList $ \(SortedList x) -> x
+-- | A smart constructor for the 'SortedList' type, which sorts the
+--   input to ensure the 'SortedList' invariant.
+mkSortedList :: Ord a => [a] -> SortedList a
+mkSortedList = SortedList . sort
 
--- | SortedLists form a semigroup with merge as composition.
+-- | Project the (guaranteed sorted) list out of a 'SortedList'
+--   wrapper.
+getSortedList :: SortedList a -> [a]
+getSortedList (SortedList as) = as
+
+-- | Apply a list function to a 'SortedList'.  The function need not
+--   result in a sorted list; the result will be sorted before being
+--   rewrapped as a 'SortedList'.
+onSortedList :: Ord b => ([a] -> [b]) -> (SortedList a -> SortedList b)
+onSortedList f = unsafeOnSortedList (sort . f)
+
+-- | Apply an /order-preserving/ list function to a 'SortedList'.  No
+--   sorts or checks are done.
+unsafeOnSortedList :: ([a] -> [b]) -> (SortedList a -> SortedList b)
+unsafeOnSortedList f (SortedList as) = SortedList (f as)
+
+-- | Merge two sorted lists.  The result is the sorted list containing
+--   all the elements of both input lists (with duplicates).
+merge :: Ord a => SortedList a -> SortedList a -> SortedList a
+merge (SortedList as) (SortedList bs) = SortedList (merge' as bs)
+  where
+    merge' xs []         = xs
+    merge' [] ys         = ys
+    merge' (x:xs) (y:ys) =
+      if x <= y
+        then x : merge' xs (y:ys)
+        else y : merge' (x:xs) ys
+
+-- | 'SortedList' forms a semigroup with 'merge' as composition.
 instance Ord a => Semigroup (SortedList a) where
-  sl0 <> sl1 = SortedList $ merge (view unwrapped sl0) (view unwrapped sl1)
-    where
-      merge xs []         = xs
-      merge [] ys         = ys
-      merge (x:xs) (y:ys) =
-        if x <= y
-          then x : merge xs (y:ys)
-          else y : merge (x:xs) ys
+  (<>) = merge
 
+-- | 'SortedList' forms a monoid with 'merge' and the empty list.
 instance Ord a => Monoid (SortedList a) where
   mappend = (<>)
   mempty = SortedList []
@@ -192,7 +219,7 @@ instance (Traced b) => Traced (S.Set b) where
 --   given object in either the given direction or the opposite direction.
 --   Return @Nothing@ if there is no intersection.
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
-traceV p v a = case op SortedList $ op Trace (getTrace a) p v of
+traceV p v a = case getSortedList $ op Trace (getTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
 
@@ -216,16 +243,14 @@ maxTraceP p v a = (p .+^) <$> maxTraceV p v a
 --   but not in the opposite direction like `getTrace`. I.e. only return
 --   positive traces.
 getRayTrace :: (Traced a, Num (Scalar (V a))) => a -> Trace (V a)
-getRayTrace a = Trace $ \p v ->
-                  SortedList $ filter (>= 0) (op SortedList
-                             $ (op Trace (getTrace a) p v))
+getRayTrace a = Trace $ \p v -> unsafeOnSortedList (dropWhile (<0)) $ appTrace (getTrace a) p v
 
 -- | Compute the vector from the given point to the boundary of the
 --   given object in the given direction, or @Nothing@ if there is no
 --   intersection. Only positive scale muliples of the direction are returned
 rayTraceV :: (Traced a, Num (Scalar (V a)))
            => Point (V a) -> V a -> a -> Maybe (V a)
-rayTraceV p v a = case op SortedList $ op Trace (getRayTrace a) p v of
+rayTraceV p v a = case getSortedList $ op Trace (getRayTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
 
@@ -241,7 +266,7 @@ rayTraceP p v a = (p .+^) <$> rayTraceV p v a
 maxRayTraceV :: (Traced a, Num (Scalar (V a)))
               => Point (V a) -> V a -> a -> Maybe (V a)
 maxRayTraceV p v a =
-  case op SortedList $ op Trace (getRayTrace a) p v of
+  case getSortedList $ op Trace (getRayTrace a) p v of
     [] -> Nothing
     xs -> Just ((last xs) *^ v)
 
