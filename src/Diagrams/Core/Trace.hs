@@ -256,9 +256,10 @@ maxTraceV p = traceV p . negateV
 maxTraceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 maxTraceP p v a = (p .+^) <$> maxTraceV p v a
 
--- | Get the trace of an object along in the direction of the given vector
---   but not in the opposite direction like `getTrace`. I.e. only return
---   positive traces.
+-- | Get a modified 'Trace' for an object which only returns positive
+--   intersections, /i.e./ those intersections given by a positive
+--   scalar multiple of the direction vector.  Note, this property
+--   will be destroyed if the resulting 'Trace' is translated at all.
 getRayTrace :: (Traced a, Num (Scalar (V a))) => a -> Trace (V a)
 getRayTrace a = Trace $ \p v -> unsafeOnSortedList (dropWhile (<0)) $ appTrace (getTrace a) p v
 
