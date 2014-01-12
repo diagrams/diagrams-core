@@ -212,27 +212,47 @@ instance (Traced b) => Traced (S.Set b) where
 --  Computing with traces  ---------------------------------
 ------------------------------------------------------------
 
--- | Compute the vector from the given point to the boundary of the
---   given object in either the given direction or the opposite direction.
---   Return @Nothing@ if there is no intersection.
+-- | Compute the vector from the given point @p@ to the \"smallest\"
+--   boundary intersection along the given vector @v@.  The
+--   \"smallest\" boundary intersection is defined as the one given by
+--   @p .+^ (s *^ v)@ for the smallest (most negative) value of
+--   @s@. Return @Nothing@ if there is no intersection.  See also
+--   'traceP'.
+--
+--   See also 'rayTraceV' which uses the smallest /positive/
+--   intersection, which is often more intuitive behavior.
+--
+--   XXX add diagrams-haddock illustration
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
 traceV p v a = case getSortedList $ op Trace (getTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
 
--- | Given a base point and direction, compute the closest point on
---   the boundary of the given object in the direction or its opposite.
---   Return @Nothing@ if there is no intersection in either direction.
+-- | Compute the \"smallest\" boundary intersection point along the
+--   line determined by the given point @p@ and vector @v@.  The
+--   \"smallest\" boundary intersection is defined as the one given by
+--   @p .+^ (s *^ v)@ for the smallest (most negative) value of
+--   @s@. Return @Nothing@ if there is no intersection.  See also
+--   'traceV'.
+--
+--   See also 'rayTraceP' which uses the smallest /positive/
+--   intersection, which is often more intuitive behavior.
+--
+--   XXX add diagrams-haddock illustration
 traceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 traceP p v a = (p .+^) <$> traceV p v a
 
--- | Like 'traceV', but computes a vector to the *furthest* point on
---   the boundary instead of the closest.
+-- | Like 'traceV', but computes a vector to the \"largest\" boundary
+--   point instead of the smallest.
+--
+--   XXX add diagrams-haddock illustration
 maxTraceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
 maxTraceV p = traceV p . negateV
 
--- | Like 'traceP', but computes the *furthest* point on the boundary
---   instead of the closest.
+-- | Like 'traceP', but computes the \"largest\" boundary point
+--   instead of the smallest.
+--
+--   XXX add diagrams-haddock
 maxTraceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 maxTraceP p v a = (p .+^) <$> maxTraceV p v a
 
