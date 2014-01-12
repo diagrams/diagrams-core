@@ -68,6 +68,9 @@ import           Diagrams.Core.V
 --  SortedList  --------------------------------------------
 ------------------------------------------------------------
 
+-- Traces return sorted lists of intersections, so we define a newtype
+-- wrapper to represent sorted lists.
+
 -- | A newtype wrapper around a list which maintains the invariant
 --   that the list is sorted.  The constructor is not exported; use
 --   the smart constructor 'mkSortedList' (which sorts the given list)
@@ -122,20 +125,15 @@ instance Ord a => Monoid (SortedList a) where
 
 -- | Every diagram comes equipped with a /trace/.  Intuitively, the
 --   trace for a diagram is like a raytracer: given a line
---   (represented as a base point and a direction), the trace computes
---   the distance from the base point along the line to the first
---   intersection with the diagram.  The distance can be negative if
---   the intersection is in the opposite direction from the base
---   point, or infinite if the ray never intersects the diagram.
---   Note: to obtain the distance to the /furthest/ intersection
---   instead of the /closest/, just negate the direction vector and
---   then negate the result.
+--   (represented as a base point and a direction vector), the trace
+--   computes a sorted list of signed distances from the base point to
+--   all intersections of the line with the boundary of the
+--   diagram.
 --
---   Note that the output should actually be interpreted not as an
---   absolute distance, but as a multiplier relative to the input
---   vector.  That is, if the input vector is @v@ and the returned
---   scalar is @s@, the distance from the base point to the
---   intersection is given by @s * magnitude v@.
+--   Note that the outputs are not absolute distances, but multipliers
+--   relative to the input vector.  That is, if the base point is @p@
+--   and direction vector is @v@, and one of the output scalars is
+--   @s@, then there is an intersection at the point @p .+^ (s *^ v)@.
 
 newtype Trace v = Trace { appTrace :: Point v -> v -> SortedList (Scalar v) }
 
@@ -187,12 +185,11 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Trace v) where
   getTrace = id
 
 -- | The trace of a single point is the empty trace, /i.e./ the one
---   which returns positive infinity for every query.  Arguably it
---   should return a finite distance for vectors aimed directly at the
---   given point and infinity for everything else, but due to
---   floating-point inaccuracy this is problematic.  Note that the
---   envelope for a single point is /not/ the empty envelope (see
---   "Diagrams.Core.Envelope").
+--   which returns no intersection points for every query.  Arguably
+--   it should return a single finite distance for vectors aimed
+--   directly at the given point, but due to floating-point inaccuracy
+--   this is problematic.  Note that the envelope for a single point
+--   is /not/ the empty envelope (see "Diagrams.Core.Envelope").
 instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
   getTrace = const mempty
 
