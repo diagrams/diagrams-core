@@ -228,12 +228,11 @@ traceV p v a = case getSortedList $ op Trace (getTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
 
--- | Compute the \"smallest\" boundary intersection point along the
---   line determined by the given point @p@ and vector @v@.  The
---   \"smallest\" boundary intersection is defined as the one given by
---   @p .+^ (s *^ v)@ for the smallest (most negative) value of
---   @s@. Return @Nothing@ if there is no intersection.  See also
---   'traceV'.
+-- | Compute the \"smallest\" boundary point along the line determined
+--   by the given point @p@ and vector @v@.  The \"smallest\" boundary
+--   point is defined as the one given by @p .+^ (s *^ v)@ for
+--   the smallest (most negative) value of @s@. Return @Nothing@ if
+--   there is no such boundary point.  See also 'traceV'.
 --
 --   See also 'rayTraceP' which uses the smallest /positive/
 --   intersection, which is often more intuitive behavior.
@@ -243,44 +242,65 @@ traceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 traceP p v a = (p .+^) <$> traceV p v a
 
 -- | Like 'traceV', but computes a vector to the \"largest\" boundary
---   point instead of the smallest.
+--   point instead of the smallest. (Note, however, the \"largest\"
+--   boundary point may still be in the opposite direction from the
+--   given vector, if all the boundary points are.)
 --
 --   XXX add diagrams-haddock illustration
 maxTraceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
 maxTraceV p = traceV p . negateV
 
 -- | Like 'traceP', but computes the \"largest\" boundary point
---   instead of the smallest.
+--   instead of the smallest. (Note, however, the \"largest\" boundary
+--   point may still be in the opposite direction from the given
+--   vector, if all the boundary points are.)
 --
 --   XXX add diagrams-haddock
 maxTraceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 maxTraceP p v a = (p .+^) <$> maxTraceV p v a
 
 -- | Get a modified 'Trace' for an object which only returns positive
---   intersections, /i.e./ those intersections given by a positive
+--   boundary points, /i.e./ those boundary points given by a positive
 --   scalar multiple of the direction vector.  Note, this property
 --   will be destroyed if the resulting 'Trace' is translated at all.
 getRayTrace :: (Traced a, Num (Scalar (V a))) => a -> Trace (V a)
 getRayTrace a = Trace $ \p v -> unsafeOnSortedList (dropWhile (<0)) $ appTrace (getTrace a) p v
 
--- | Compute the vector from the given point to the boundary of the
---   given object in the given direction, or @Nothing@ if there is no
---   intersection. Only positive scale muliples of the direction are returned
+-- | Compute the vector from the given point to the closest boundary
+--   point of the given object in the given direction, or @Nothing@ if
+--   there is no such boundary point. Note that unlike 'traceV', only
+--   /positive/ boundary points are considered, /i.e./ boundary points
+--   corresponding to a positive scalar multiple of the direction
+--   vector.  This is intuitively the \"usual\" behavior of a
+--   raytracer, which only considers intersections \"in front of\" the
+--   camera.
+--
+--   XXX diagrams-haddock
 rayTraceV :: (Traced a, Num (Scalar (V a)))
            => Point (V a) -> V a -> a -> Maybe (V a)
 rayTraceV p v a = case getSortedList $ op Trace (getRayTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
 
--- | Given a base point and direction, compute the closest point on
---   the boundary of the given object, or @Nothing@ if there is no
---   intersection in the given direction.
+-- | Compute the boundary point on an object which is closest to the
+--   given base point in the given direction, or @Nothing@ if there is
+--   no such boundary point. Note that unlike 'traceP', only /positive/
+--   boundary points are considered, /i.e./ boundary points
+--   corresponding to a positive scalar multiple of the direction
+--   vector.  This is intuitively the \"usual\" behavior of a raytracer,
+--   which only considers intersection points \"in front of\" the
+--   camera.
+--
+--   XXX diagrams-haddock
 rayTraceP :: (Traced a, Num (Scalar (V a)))
            => Point (V a) -> V a -> a -> Maybe (Point (V a))
 rayTraceP p v a = (p .+^) <$> rayTraceV p v a
 
--- | Like 'rayTraceV', but computes a vector to the *furthest* point on
---   the boundary instead of the closest.
+-- | Like 'rayTraceV', but computes a vector to the \"largest\"
+--   boundary point instead of the smallest.  Considers only
+--   /positive/ boundary points.
+--
+--   XXX diagrams-haddock
 maxRayTraceV :: (Traced a, Num (Scalar (V a)))
               => Point (V a) -> V a -> a -> Maybe (V a)
 maxRayTraceV p v a =
@@ -288,8 +308,11 @@ maxRayTraceV p v a =
     [] -> Nothing
     xs -> Just ((last xs) *^ v)
 
--- | Like 'rayTraceP', but computes the *furthest* point on the boundary
---   instead of the closest.
+-- | Like 'rayTraceP', but computes the \"largest\" boundary point
+--   instead of the smallest.  Considers only /positive/ boundary
+--   points.
+--
+--   XXX diagrams-haddock
 maxRayTraceP :: (Traced a, Num (Scalar (V a)))
               => Point (V a) -> V a -> a -> Maybe (Point (V a))
 maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
