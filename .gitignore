@@ -9,3 +9,4 @@ cabal-dev
 dist_*
 .hsenv_*
 TAGS
+.diagrams-cache
