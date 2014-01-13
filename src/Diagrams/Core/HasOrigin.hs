@@ -1,8 +1,7 @@
-{-# LANGUAGE FlexibleInstances
-           , FlexibleContexts
-           , TypeFamilies
-           , UndecidableInstances
-  #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- The UndecidableInstances flag is needed under 6.12.3 for the
 -- HasOrigin (a,b) instance.
@@ -23,10 +22,10 @@ module Diagrams.Core.HasOrigin
        ( HasOrigin(..), moveOriginBy, moveTo, place
        ) where
 
-import qualified Data.Map as M
-import qualified Data.Set as S
+import qualified Data.Map             as M
+import qualified Data.Set             as S
 
-import           Data.AffineSpace ((.-^), (.-.))
+import           Data.AffineSpace     ((.-.), (.-^))
 import           Data.VectorSpace
 
 import           Diagrams.Core.Points
@@ -40,7 +39,9 @@ import           Diagrams.Core.V
 --   having a separate class for 'HasOrigin'; indeed, for types which
 --   are instances of both we should have the identity
 --
---   > moveOriginTo (origin .^+ v) === translate (negateV v)
+--   @
+--   moveOriginTo (origin .^+ v) === translate (negateV v)
+--   @
 --
 --   The reason is that some things (e.g. vectors, 'Trail's) are
 --   transformable but are translationally invariant, i.e. have no
@@ -63,12 +64,16 @@ moveOriginBy = moveOriginTo . P
 --   the given point. Note that this is dual to 'moveOriginTo', i.e. we
 --   should have
 --
---   > moveTo (origin .^+ v) === moveOriginTo (origin .^- v)
+--   @
+--   moveTo (origin .^+ v) === moveOriginTo (origin .^- v)
+--   @
 --
 --   For types which are also 'Transformable', this is essentially the
 --   same as 'translate', i.e.
 --
---   > moveTo (origin .^+ v) === translate v
+--   @
+--   moveTo (origin .^+ v) === translate v
+--   @
 moveTo :: HasOrigin t => Point (V t) -> t -> t
 moveTo = moveOriginBy . (origin .-.)
 
