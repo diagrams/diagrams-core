@@ -25,8 +25,12 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Trace
-       ( -- * Traces
-         Trace(Trace)
+       ( -- * SortedList
+         SortedList
+       , mkSortedList, getSortedList, onSortedList, unsafeOnSortedList
+
+         -- * Traces
+       , Trace(Trace)
 
        , appTrace
        , mkTrace
@@ -39,17 +43,20 @@ module Diagrams.Core.Trace
 
        , traceV, traceP
        , maxTraceV, maxTraceP
+       , getRayTrace
+       , rayTraceV, rayTraceP
+       , maxRayTraceV, maxRayTraceP
 
        ) where
 
 import           Control.Applicative
 import           Control.Lens
+import           Data.List               (sort)
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
 
 import           Data.AffineSpace
-import           Data.Monoid.Inf
 import           Data.VectorSpace
 
 import           Diagrams.Core.HasOrigin
@@ -58,47 +65,100 @@ import           Diagrams.Core.Transform
 import           Diagrams.Core.V
 
 ------------------------------------------------------------
+--  SortedList  --------------------------------------------
+------------------------------------------------------------
+
+-- Traces return sorted lists of intersections, so we define a newtype
+-- wrapper to represent sorted lists.
+
+-- | A newtype wrapper around a list which maintains the invariant
+--   that the list is sorted.  The constructor is not exported; use
+--   the smart constructor 'mkSortedList' (which sorts the given list)
+--   instead.
+newtype SortedList a = SortedList [a]
+
+-- | A smart constructor for the 'SortedList' type, which sorts the
+--   input to ensure the 'SortedList' invariant.
+mkSortedList :: Ord a => [a] -> SortedList a
+mkSortedList = SortedList . sort
+
+-- | Project the (guaranteed sorted) list out of a 'SortedList'
+--   wrapper.
+getSortedList :: SortedList a -> [a]
+getSortedList (SortedList as) = as
+
+-- | Apply a list function to a 'SortedList'.  The function need not
+--   result in a sorted list; the result will be sorted before being
+--   rewrapped as a 'SortedList'.
+onSortedList :: Ord b => ([a] -> [b]) -> (SortedList a -> SortedList b)
+onSortedList f = unsafeOnSortedList (sort . f)
+
+-- | Apply an /order-preserving/ list function to a 'SortedList'.  No
+--   sorts or checks are done.
+unsafeOnSortedList :: ([a] -> [b]) -> (SortedList a -> SortedList b)
+unsafeOnSortedList f (SortedList as) = SortedList (f as)
+
+-- | Merge two sorted lists.  The result is the sorted list containing
+--   all the elements of both input lists (with duplicates).
+merge :: Ord a => SortedList a -> SortedList a -> SortedList a
+merge (SortedList as) (SortedList bs) = SortedList (merge' as bs)
+  where
+    merge' xs []         = xs
+    merge' [] ys         = ys
+    merge' (x:xs) (y:ys) =
+      if x <= y
+        then x : merge' xs (y:ys)
+        else y : merge' (x:xs) ys
+
+-- | 'SortedList' forms a semigroup with 'merge' as composition.
+instance Ord a => Semigroup (SortedList a) where
+  (<>) = merge
+
+-- | 'SortedList' forms a monoid with 'merge' and the empty list.
+instance Ord a => Monoid (SortedList a) where
+  mappend = (<>)
+  mempty = SortedList []
+
+------------------------------------------------------------
 --  Trace  -------------------------------------------------
 ------------------------------------------------------------
 
+-- > traceEx = mkTraceDia def
+
 -- | Every diagram comes equipped with a /trace/.  Intuitively, the
 --   trace for a diagram is like a raytracer: given a line
---   (represented as a base point and a direction), the trace computes
---   the distance from the base point along the line to the first
---   intersection with the diagram.  The distance can be negative if
---   the intersection is in the opposite direction from the base
---   point, or infinite if the ray never intersects the diagram.
---   Note: to obtain the distance to the /furthest/ intersection
---   instead of the /closest/, just negate the direction vector and
---   then negate the result.
+--   (represented as a base point and a direction vector), the trace
+--   computes a sorted list of signed distances from the base point to
+--   all intersections of the line with the boundary of the
+--   diagram.
 --
---   Note that the output should actually be interpreted not as an
---   absolute distance, but as a multiplier relative to the input
---   vector.  That is, if the input vector is @v@ and the returned
---   scalar is @s@, the distance from the base point to the
---   intersection is given by @s * magnitude v@.
+--   Note that the outputs are not absolute distances, but multipliers
+--   relative to the input vector.  That is, if the base point is @p@
+--   and direction vector is @v@, and one of the output scalars is
+--   @s@, then there is an intersection at the point @p .+^ (s *^ v)@.
+--
+--   <<diagrams/src_Diagrams_Core_Trace_traceEx.svg#diagram=traceEx&width=200>>
 
-newtype Trace v = Trace { appTrace :: Point v -> v -> PosInf (Scalar v) }
+newtype Trace v = Trace { appTrace :: Point v -> v -> SortedList (Scalar v) }
 
 instance (Scalar v ~ s, Scalar v' ~ s', s ~ s') =>
          Wrapped
-         (Point v -> v -> PosInf s)
-         (Point v' -> v' -> PosInf s')
+         (Point v -> v -> SortedList s)
+         (Point v' -> v' -> SortedList s')
          (Trace v) (Trace v')
          where wrapped = iso Trace appTrace
 
-mkTrace :: (Point v -> v -> PosInf (Scalar v)) -> Trace v
+mkTrace :: (Point v -> v -> SortedList (Scalar v)) -> Trace v
 mkTrace = Trace
 
 -- | Traces form a semigroup with pointwise minimum as composition.
 --   Hence, if @t1@ is the trace for diagram @d1@, and
 --   @e2@ is the trace for @d2@, then @e1 \`mappend\` e2@
 --   is the trace for @d1 \`atop\` d2@.
-deriving instance Ord (Scalar v) => Semigroup (Trace v)
 
--- | The identity for the 'Monoid' instance is the constantly infinite
---   trace.
-deriving instance Ord (Scalar v) => Monoid (Trace v)
+deriving instance (Ord (Scalar v)) => Semigroup (Trace v)
+
+deriving instance (Ord (Scalar v)) => Monoid (Trace v)
 
 type instance V (Trace v) = v
 
@@ -129,17 +189,16 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Trace v) where
   getTrace = id
 
 -- | The trace of a single point is the empty trace, /i.e./ the one
---   which returns positive infinity for every query.  Arguably it
---   should return a finite distance for vectors aimed directly at the
---   given point and infinity for everything else, but due to
---   floating-point inaccuracy this is problematic.  Note that the
---   envelope for a single point is /not/ the empty envelope (see
---   "Diagrams.Core.Envelope").
+--   which returns no intersection points for every query.  Arguably
+--   it should return a single finite distance for vectors aimed
+--   directly at the given point, but due to floating-point inaccuracy
+--   this is problematic.  Note that the envelope for a single point
+--   is /not/ the empty envelope (see "Diagrams.Core.Envelope").
 instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
   getTrace = const mempty
 
 instance Traced t => Traced (TransInv t) where
-  getTrace = getTrace . view unwrapped
+  getTrace = getTrace . op TransInv
 
 instance (Traced a, Traced b, V a ~ V b) => Traced (a,b) where
   getTrace (x,y) = getTrace x <> getTrace y
@@ -157,26 +216,211 @@ instance (Traced b) => Traced (S.Set b) where
 --  Computing with traces  ---------------------------------
 ------------------------------------------------------------
 
--- | Compute the vector from the given point to the boundary of the
---   given object in the given direction, or @Nothing@ if there is no
---   intersection.
+-- | Compute the vector from the given point @p@ to the \"smallest\"
+--   boundary intersection along the given vector @v@.  The
+--   \"smallest\" boundary intersection is defined as the one given by
+--   @p .+^ (s *^ v)@ for the smallest (most negative) value of
+--   @s@. Return @Nothing@ if there is no intersection.  See also
+--   'traceP'.
+--
+--   See also 'rayTraceV' which uses the smallest /positive/
+--   intersection, which is often more intuitive behavior.
+--
+--   <<diagrams/src_Diagrams_Core_Trace_traceVEx.svg#diagram=traceVEx&width=600>>
 traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
-traceV p v a = case ((getTrace a)^.unwrapping Trace) p v of
-                 Finite s -> Just (s *^ v)
-                 Infinity -> Nothing
+traceV p v a = case getSortedList $ op Trace (getTrace a) p v of
+                 (s:_) -> Just (s *^ v)
+                 []    -> Nothing
 
--- | Given a base point and direction, compute the closest point on
---   the boundary of the given object, or @Nothing@ if there is no
---   intersection in the given direction.
+-- > traceVEx = mkTraceDiasABC def { drawV = True, sFilter = take 1 }
+
+
+-- | Compute the \"smallest\" boundary point along the line determined
+--   by the given point @p@ and vector @v@.  The \"smallest\" boundary
+--   point is defined as the one given by @p .+^ (s *^ v)@ for
+--   the smallest (most negative) value of @s@. Return @Nothing@ if
+--   there is no such boundary point.  See also 'traceV'.
+--
+--   See also 'rayTraceP' which uses the smallest /positive/
+--   intersection, which is often more intuitive behavior.
+--
+--   <<diagrams/src_Diagrams_Core_Trace_tracePEx.svg#diagram=tracePEx&width=600>>
 traceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 traceP p v a = (p .+^) <$> traceV p v a
 
--- | Like 'traceV', but computes a vector to the *furthest* point on
---   the boundary instead of the closest.
+-- > tracePEx = mkTraceDiasABC def { sFilter = take 1 }
+
+
+-- | Like 'traceV', but computes a vector to the \"largest\" boundary
+--   point instead of the smallest. (Note, however, the \"largest\"
+--   boundary point may still be in the opposite direction from the
+--   given vector, if all the boundary points are, as in the third
+--   example shown below.)
+--
+--   <<diagrams/src_Diagrams_Core_Trace_maxTraceVEx.svg#diagram=maxTraceVEx&width=600>>
 maxTraceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
 maxTraceV p = traceV p . negateV
 
--- | Like 'traceP', but computes the *furthest* point on the boundary
---   instead of the closest.
+-- > maxTraceVEx = mkTraceDiasABC def { drawV = True, sFilter = dropAllBut1 }
+
+
+-- | Like 'traceP', but computes the \"largest\" boundary point
+--   instead of the smallest. (Note, however, the \"largest\" boundary
+--   point may still be in the opposite direction from the given
+--   vector, if all the boundary points are.)
+--
+--   <<diagrams/src_Diagrams_Core_Trace_maxTracePEx.svg#diagram=maxTracePEx&width=600>>
 maxTraceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
 maxTraceP p v a = (p .+^) <$> maxTraceV p v a
+
+-- > maxTracePEx = mkTraceDiasABC def { sFilter = dropAllBut1 }
+
+
+-- | Get a modified 'Trace' for an object which only returns positive
+--   boundary points, /i.e./ those boundary points given by a positive
+--   scalar multiple of the direction vector.  Note, this property
+--   will be destroyed if the resulting 'Trace' is translated at all.
+getRayTrace :: (Traced a, Num (Scalar (V a))) => a -> Trace (V a)
+getRayTrace a = Trace $ \p v -> unsafeOnSortedList (dropWhile (<0)) $ appTrace (getTrace a) p v
+
+-- | Compute the vector from the given point to the closest boundary
+--   point of the given object in the given direction, or @Nothing@ if
+--   there is no such boundary point (as in the third example
+--   below). Note that unlike 'traceV', only /positive/ boundary
+--   points are considered, /i.e./ boundary points corresponding to a
+--   positive scalar multiple of the direction vector.  This is
+--   intuitively the \"usual\" behavior of a raytracer, which only
+--   considers intersections \"in front of\" the camera.  Compare the
+--   second example diagram below with the second example shown for
+--   'traceV'.
+--
+--   <<diagrams/src_Diagrams_Core_Trace_rayTraceVEx.svg#diagram=rayTraceVEx&width=600>>
+rayTraceV :: (Traced a, Num (Scalar (V a)))
+           => Point (V a) -> V a -> a -> Maybe (V a)
+rayTraceV p v a = case getSortedList $ op Trace (getRayTrace a) p v of
+                 (s:_) -> Just (s *^ v)
+                 []    -> Nothing
+
+-- > rayTraceVEx = mkTraceDiasABC def { drawV = True, sFilter = take 1 . filter (>0) }
+
+
+-- | Compute the boundary point on an object which is closest to the
+--   given base point in the given direction, or @Nothing@ if there is
+--   no such boundary point. Note that unlike 'traceP', only /positive/
+--   boundary points are considered, /i.e./ boundary points
+--   corresponding to a positive scalar multiple of the direction
+--   vector.  This is intuitively the \"usual\" behavior of a raytracer,
+--   which only considers intersection points \"in front of\" the
+--   camera.
+--
+--   <<diagrams/src_Diagrams_Core_Trace_rayTracePEx.svg#diagram=rayTracePEx&width=600>>
+rayTraceP :: (Traced a, Num (Scalar (V a)))
+           => Point (V a) -> V a -> a -> Maybe (Point (V a))
+rayTraceP p v a = (p .+^) <$> rayTraceV p v a
+
+-- > rayTracePEx = mkTraceDiasABC def { sFilter = take 1 . filter (>0) }
+
+
+-- | Like 'rayTraceV', but computes a vector to the \"largest\"
+--   boundary point instead of the smallest.  Considers only
+--   /positive/ boundary points.
+--
+--   <<diagrams/src_Diagrams_Core_Trace_maxRayTraceVEx.svg#diagram=maxRayTraceVEx&width=600>>
+maxRayTraceV :: (Traced a, Num (Scalar (V a)))
+              => Point (V a) -> V a -> a -> Maybe (V a)
+maxRayTraceV p v a =
+  case getSortedList $ op Trace (getRayTrace a) p v of
+    [] -> Nothing
+    xs -> Just ((last xs) *^ v)
+
+-- > maxRayTraceVEx = mkTraceDiasABC def { drawV = True, sFilter = dropAllBut1 . filter (>0) }
+
+
+-- | Like 'rayTraceP', but computes the \"largest\" boundary point
+--   instead of the smallest.  Considers only /positive/ boundary
+--   points.
+--
+--   <<diagrams/src_Diagrams_Core_Trace_maxRayTracePEx.svg#diagram=maxRayTracePEx&width=600>>
+maxRayTraceP :: (Traced a, Num (Scalar (V a)))
+              => Point (V a) -> V a -> a -> Maybe (Point (V a))
+maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
+
+-- > maxRayTracePEx = mkTraceDiasABC def { sFilter = dropAllBut1 . filter (>0) }
+
+
+------------------------------------------------------------
+-- Drawing trace diagrams
+------------------------------------------------------------
+
+-- > import Data.Default.Class
+-- > import Control.Lens ((^.))
+-- > import Data.Maybe (fromMaybe)
+-- >
+-- > thingyT :: Trail R2
+-- > thingyT =
+-- >   fromOffsets
+-- >     [ 3 *^ unitX, 3 *^ unitY, 2 *^ unit_X, 1 *^ unit_Y
+-- >     , 1 *^ unitX, 1 *^ unit_Y, 2 *^ unit_X, 1 *^ unit_Y ]
+-- >
+-- > thingy = strokeTrail thingyT
+-- >
+-- > data TraceDiaOpts
+-- >   = TDO { traceShape :: Diagram B R2
+-- >         , basePt     :: P2
+-- >         , dirV       :: R2
+-- >         , sFilter    :: [Double] -> [Double]
+-- >         , drawV      :: Bool
+-- >         }
+-- >
+-- > instance Default TraceDiaOpts where
+-- >   def = TDO { traceShape = thingy
+-- >             , basePt     = pointB
+-- >             , dirV       = 0.3 ^& 0.5
+-- >             , sFilter    = id
+-- >             , drawV      = False
+-- >             }
+-- >
+-- > pointA = 1 ^& (-1.5)
+-- > pointB = 1 ^& 1.2
+-- > pointC = 2.5 ^& 3.5
+-- >
+-- > dot = circle 0.05 # lw 0
+-- >
+-- > mkTraceDia :: TraceDiaOpts -> Diagram B R2
+-- > mkTraceDia tdo = mconcat
+-- >   [ mconcat $ map (place (dot # fc red)) pts
+-- >   , if drawV tdo then resultArrow else mempty
+-- >   , arrowAt (basePt tdo) (dirV tdo) # lw 0.02 # lc blue
+-- >   , dot # fc blue # moveTo (basePt tdo)
+-- >   , traceLine (basePt tdo) maxPosPt
+-- >   , traceLine (basePt tdo) minNegPt
+-- >   , traceShape tdo
+-- >   ]
+-- >   # centerXY # pad 1.1
+-- >   where
+-- >     ss  = sFilter tdo . getSortedList
+-- >         $ appTrace (traceShape tdo ^. trace) (basePt tdo) (dirV tdo)
+-- >     pts = map mkPt ss
+-- >     mkPt s = basePt tdo .+^ (s *^ dirV tdo)
+-- >     maxPosPt = (mkPt <$>) . safeLast $ filter (>0) ss
+-- >     minNegPt = (mkPt <$>) . safeHead $ filter (<0) ss
+-- >     minPt = (mkPt <$>) . safeHead $ ss
+-- >     resultArrow = fromMaybe mempty (arrowBetween (basePt tdo) <$> minPt)
+-- >       # lw 0.03 # lc green
+-- >
+-- > safeLast [] = Nothing
+-- > safeLast xs = Just $ last xs
+-- > safeHead [] = Nothing
+-- > safeHead (x:_) = Just x
+-- > dropAllBut1 [] = []
+-- > dropAllBut1 xs = [last xs]
+-- >
+-- > traceLine _ Nothing = mempty
+-- > traceLine p (Just q) = (p ~~ q) # dashing [0.1,0.1] 0
+-- >
+-- > mkTraceDias :: [TraceDiaOpts] -> Diagram B R2
+-- > mkTraceDias = hcat' (with & sep .~ 1) . map mkTraceDia
+-- >
+-- > mkTraceDiasABC :: TraceDiaOpts -> Diagram B R2
+-- > mkTraceDiasABC tdo = mkTraceDias (map (\p -> tdo { basePt = p }) [pointA, pointB, pointC])
+

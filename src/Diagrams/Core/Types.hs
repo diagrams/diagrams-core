@@ -922,18 +922,19 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   For example, here is the error we get if we try to compute the
 --   width of an image (this example requires @diagrams-lib@):
 --
---   > ghci> width (image "foo.png" 200 200)
---   >
---   > <interactive>:8:8:
---   >     No instance for (Renderable Diagrams.TwoD.Image.Image b0)
---   >       arising from a use of `image'
---   >     Possible fix:
---   >       add an instance declaration for
---   >       (Renderable Diagrams.TwoD.Image.Image b0)
---   >     In the first argument of `width', namely
---   >       `(image "foo.png" 200 200)'
---   >     In the expression: width (image "foo.png" 200 200)
---   >     In an equation for `it': it = width (image "foo.png" 200 200)
+--   @
+--   ghci> width (image \"foo.png\" 200 200)
+--   \<interactive\>:8:8:
+--       No instance for (Renderable Diagrams.TwoD.Image.Image b0)
+--         arising from a use of `image'
+--       Possible fix:
+--         add an instance declaration for
+--         (Renderable Diagrams.TwoD.Image.Image b0)
+--       In the first argument of `width', namely
+--         `(image \"foo.png\" 200 200)'
+--       In the expression: width (image \"foo.png\" 200 200)
+--       In an equation for `it': it = width (image \"foo.png\" 200 200)
+--   @
 --
 --   GHC complains that there is no instance for @Renderable Image
 --   b0@; what is really going on is that it does not have enough
@@ -946,20 +947,23 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   The solution is to annotate the call to 'image' with the type
 --   @'D' 'R2'@, like so:
 --
---   > ghci> width (image "foo.png" 200 200 :: D R2)
---   > 200.00000000000006
+--   @
+--   ghci> width (image \"foo.png\" 200 200 :: D R2)
+--   200.00000000000006
+--   @
 --
 --   (It turns out the width wasn't 200 after all...)
 --
 --   As another example, here is the error we get if we try to compute
 --   the width of a radius-1 circle:
 --
---   > ghci> width (circle 1)
---   >
---   > <interactive>:4:1:
---   >     Couldn't match type `V a0' with `R2'
---   >     In the expression: width (circle 1)
---   >     In an equation for `it': it = width (circle 1)
+--   @
+--   ghci> width (circle 1)
+--   \<interactive\>:4:1:
+--       Couldn't match type `V a0' with `R2'
+--       In the expression: width (circle 1)
+--       In an equation for `it': it = width (circle 1)
+--   @
 --
 --   There's even more ambiguity here.  Whereas 'image' always returns
 --   a 'Diagram', the 'circle' function can produce any 'PathLike'
@@ -967,8 +971,10 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   so GHC has no idea what type to pick to go in the middle.
 --   However, the solution is the same:
 --
---  > ghci> width (circle 1 :: D R2)
---  > 1.9999999999999998
+--   @
+--   ghci> width (circle 1 :: D R2)
+--   1.9999999999999998
+--   @
 
 type D v = Diagram NullBackend v
 
