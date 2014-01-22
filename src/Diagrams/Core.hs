@@ -54,6 +54,13 @@ module Diagrams.Core
 
        , TransInv(TransInv)
 
+
+         -- ** Projections (projective transforms, not invertable)
+
+       , Projection(..)
+       , asProjection
+       , Projectable(..)
+
          -- * Names
 
        , AName
@@ -159,6 +166,7 @@ import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
 import           Diagrams.Core.Names
 import           Diagrams.Core.Points
+import           Diagrams.Core.Project
 import           Diagrams.Core.Query
 import           Diagrams.Core.Style
 import           Diagrams.Core.Trace
