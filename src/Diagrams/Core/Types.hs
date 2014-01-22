@@ -119,7 +119,8 @@ module Diagrams.Core.Types
 
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Wrapped (..), iso, lens,
-                                            over, unwrapped, view, (^.))
+                                            over, unwrapped, view, (^.)
+                                           , unwrapped')
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.List                 (isSuffixOf)
@@ -266,7 +267,7 @@ prims :: HasLinearMap v
       => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
 prims = concatMap processLeaf
       . D.flatten
-      . view unwrapped
+      . view unwrapped'
   where
     processLeaf (PrimLeaf p, (trSty,_)) = [(p, untangle . option mempty id $ trSty)]
     processLeaf (DelayedLeaf k, d)      = prims (k d)
@@ -280,7 +281,7 @@ getU' = maybe mempty (option mempty id . get) . D.getU
 envelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Monoid' m)
          => Lens' (QDiagram b v m) (Envelope v)
-envelope = lens (unDelete . getU' . view unwrapped) (flip setEnvelope)
+envelope = lens (unDelete . getU' . view unwrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
@@ -295,7 +296,7 @@ setEnvelope e =
 -- | Get the trace of a diagram.
 trace :: (InnerSpace v, HasLinearMap v, OrderedField (Scalar v), Semigroup m) =>
          Lens' (QDiagram b v m) (Trace v)
-trace = lens (unDelete . getU' . view unwrapped) (flip setTrace)
+trace = lens (unDelete . getU' . view unwrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
 setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
@@ -310,7 +311,7 @@ setTrace t = over unwrapped ( D.applyUpre (inj . toDeletable $ t)
 --   subdiagrams) of a diagram.
 subMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
           Lens' (QDiagram b v m) (SubMap b v m)
-subMap = lens (unDelete . getU' . view unwrapped) (flip setMap) where
+subMap = lens (unDelete . getU' . view unwrapped') (flip setMap) where
   setMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
             SubMap b v m -> QDiagram b v m -> QDiagram b v m
   setMap m = over unwrapped ( D.applyUpre . inj . toDeletable $ m)
@@ -381,7 +382,7 @@ localize = over unwrapped ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v 
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v m -> Query v m
-query = getU' . view unwrapped
+query = getU' . view unwrapped'
 
 -- | Sample a diagram's query function at a given point.
 sample :: Monoid m => QDiagram b v m -> Point v -> m
