@@ -1,3 +1,9 @@
+1.x
+---
+
+    - Trace functions now return a list of all interesecions of the ray.
+      New functions `rayTrace...` and friends only consider positive traces.
+
 1.0.0.1 (27 November 2013)
 --------------------------
 
