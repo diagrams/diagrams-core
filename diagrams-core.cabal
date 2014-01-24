@@ -36,8 +36,8 @@ Library
                        Diagrams.Core.Query
 
   Build-depends:       base >= 4.2 && < 4.8,
-                       containers >= 0.3 && < 0.6,
-                       semigroups >= 0.3.4 && < 0.13,
+                       containers >= 0.4.2 && < 0.6,
+                       semigroups >= 0.8.4 && < 0.13,
                        vector-space >= 0.8.4 && < 0.9,
                        vector-space-points >= 0.1 && < 0.2,
                        MemoTrie >= 0.4.7 && < 0.7,
