@@ -44,7 +44,7 @@ Library
                        newtype >= 0.2 && < 0.3,
                        monoid-extras >= 0.3 && < 0.4,
                        dual-tree >= 0.2 && < 0.3,
-                       lens >= 3.8 && < 4
+                       lens >= 4.0 && < 4.1
 
   hs-source-dirs:      src
 

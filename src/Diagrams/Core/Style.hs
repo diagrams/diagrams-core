@@ -140,12 +140,9 @@ newtype Style v = Style (M.Map String (Attribute v))
   -- The String keys are serialized TypeRep values, corresponding to
   -- the type of the stored attribute.
 
-instance Wrapped
-         (M.Map String (Attribute v))
-         (M.Map String (Attribute v'))
-         (Style v)
-         (Style v')
-     where wrapped = iso Style (\(Style m) -> m)
+instance Wrapped (Style v) where
+    type Unwrapped (Style v) = M.Map String (Attribute v)
+    _Wrapped' = iso (\(Style m) -> m) Style
 
 type instance V (Style v) = v
 

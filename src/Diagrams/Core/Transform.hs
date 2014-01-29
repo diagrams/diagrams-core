@@ -6,6 +6,7 @@
            , MultiParamTypeClasses
            , GeneralizedNewtypeDeriving
            , TemplateHaskell
+           , TypeFamilies
            , TypeSynonymInstances
            , ScopedTypeVariables
   #-}
@@ -275,8 +276,9 @@ instance Transformable Rational where
 newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
-instance Wrapped t t' (TransInv t) (TransInv t')
-         where wrapped = iso TransInv (\(TransInv t) -> t)
+instance Wrapped (TransInv t) where
+    type Unwrapped (TransInv t) = t
+    _Wrapped' = iso (\(TransInv t) -> t) TransInv
 
 type instance V (TransInv t) = V t
 

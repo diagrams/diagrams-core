@@ -45,8 +45,9 @@ import Diagrams.Core.V
 newtype Query v m = Query { runQuery :: Point v -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
 
-instance Wrapped (Point v -> m) (Point v' -> m') (Query v m) (Query v' m')
-    where wrapped = iso Query runQuery
+instance Wrapped (Query v m) where
+    type Unwrapped (Query v m) = (Point v -> m)
+    _Wrapped' = iso runQuery Query
 
 type instance V (Query v m) = v
 
