@@ -61,7 +61,7 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens                 (Wrapped(..), iso)
+import           Control.Lens                 (Wrapped(..), Rewrapped, iso)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -279,6 +279,8 @@ newtype TransInv t = TransInv t
 instance Wrapped (TransInv t) where
     type Unwrapped (TransInv t) = t
     _Wrapped' = iso (\(TransInv t) -> t) TransInv
+
+instance Rewrapped (TransInv t) (TransInv t')
 
 type instance V (TransInv t) = V t
 

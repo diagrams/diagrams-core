@@ -44,7 +44,7 @@ module Diagrams.Core.Style
        ) where
 
 import           Control.Arrow ((***))
-import           Control.Lens (Wrapped(..), iso)
+import           Control.Lens (Wrapped(..), Rewrapped, iso)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -143,6 +143,8 @@ newtype Style v = Style (M.Map String (Attribute v))
 instance Wrapped (Style v) where
     type Unwrapped (Style v) = M.Map String (Attribute v)
     _Wrapped' = iso (\(Style m) -> m) Style
+
+instance Rewrapped (Style v) (Style v')
 
 type instance V (Style v) = v
 

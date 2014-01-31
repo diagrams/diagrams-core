@@ -21,7 +21,7 @@ module Diagrams.Core.Query
        ) where
 
 import Control.Applicative
-import Control.Lens (Wrapped(..), iso)
+import Control.Lens (Wrapped(..), Rewrapped, iso)
 import Data.Semigroup
 
 import Data.AffineSpace
@@ -48,6 +48,8 @@ newtype Query v m = Query { runQuery :: Point v -> m }
 instance Wrapped (Query v m) where
     type Unwrapped (Query v m) = (Point v -> m)
     _Wrapped' = iso runQuery Query
+
+instance Rewrapped (Query v m) (Query v' m')
 
 type instance V (Query v m) = v
 

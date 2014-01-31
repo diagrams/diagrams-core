@@ -244,7 +244,7 @@ instance Wrapped (QDiagram b v m) where
         D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m)
     _Wrapped' = iso (\(QD d) -> d) QD
 
-instance Rewrapped (QDiagram b v m) (QDiagram b v m')
+instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
 
 type instance V (QDiagram b v m) = v
 
@@ -647,7 +647,7 @@ instance Wrapped (SubMap b v m) where
     type Unwrapped (SubMap b v m) = M.Map Name [Subdiagram b v m]
     _Wrapped' = iso (\(SubMap m) -> m) SubMap
 
-instance Rewrapped (SubMap b v m) (SubMap b v m')
+instance Rewrapped (SubMap b v m) (SubMap b' v' m')
 
 -- ~~~~ [SubMap Set vs list]
 -- In some sense it would be nicer to use

@@ -43,8 +43,8 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
-import           Control.Lens (Wrapped(..), iso, view, over, mapped, _Unwrapped'
-                              , _Unwrapped', _Wrapping', op)
+import           Control.Lens (Wrapped(..), Rewrapped, iso, view, over, mapped
+                              , _Unwrapped', _Unwrapped', _Wrapping', op)
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
@@ -100,6 +100,8 @@ newtype Envelope v = Envelope (Option (v -> Max (Scalar v)))
 instance Wrapped (Envelope v) where
     type Unwrapped (Envelope v) = Option (v -> Max (Scalar v))
     _Wrapped' = iso (\(Envelope e) -> e) Envelope
+
+instance Rewrapped (Envelope v) (Envelope v')
 
 appEnvelope :: Envelope v -> Maybe (v -> Scalar v)
 appEnvelope (Envelope (Option e)) = (getMax .) <$> e

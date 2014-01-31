@@ -32,7 +32,7 @@ module Diagrams.Core.Names
 
        ) where
 
-import           Control.Lens            (over, _Unwrapped', Wrapped(..), iso, _Unwrapping')
+import           Control.Lens            (over, _Unwrapped', Wrapped(..), Rewrapped, iso, _Unwrapping')
 import           Data.List               (intercalate)
 import qualified Data.Map                as M
 import           Data.Semigroup
@@ -96,6 +96,8 @@ newtype Name = Name [AName]
 instance Wrapped Name where
     type Unwrapped Name = [AName]
     _Wrapped' = iso (\(Name ans) -> ans) Name
+
+instance Rewrapped Name Name
 
 instance Show Name where
   show (Name ns) = intercalate " .> " $ map show ns

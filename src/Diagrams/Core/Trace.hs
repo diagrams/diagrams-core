@@ -145,6 +145,8 @@ instance Wrapped (Trace v) where
     type Unwrapped (Trace v) = Point v -> v -> SortedList (Scalar v)
     _Wrapped' = iso appTrace Trace
 
+instance Rewrapped (Trace v) (Trace v')
+
 mkTrace :: (Point v -> v -> SortedList (Scalar v)) -> Trace v
 mkTrace = Trace
 
