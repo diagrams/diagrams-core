@@ -32,7 +32,7 @@ module Diagrams.Core.Names
 
        ) where
 
-import           Control.Lens            (over, _Unwrapped', Wrapped(..), Rewrapped, iso, _Unwrapping')
+import           Control.Lens            (over, Wrapped(..), Rewrapped, iso, _Unwrapping')
 import           Data.List               (intercalate)
 import qualified Data.Map                as M
 import           Data.Semigroup

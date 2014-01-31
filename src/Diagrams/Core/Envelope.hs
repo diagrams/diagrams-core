@@ -43,8 +43,8 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
-import           Control.Lens (Wrapped(..), Rewrapped, iso, view, over, mapped
-                              , _Unwrapped', _Unwrapped', _Wrapping', op)
+import           Control.Lens (Wrapped(..), Rewrapped, iso, over, mapped
+                              , _Wrapping', op)
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup

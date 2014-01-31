@@ -118,8 +118,8 @@ module Diagrams.Core.Types
        ) where
 
 import           Control.Arrow             (first, second, (***))
-import           Control.Lens              (Lens', Wrapped (..), Rewrapped(..), iso, lens,
-                                            over, _Unwrapped', view, (^.), _Wrapping, _Wrapped)
+import           Control.Lens              (Lens', Wrapped (..), Rewrapped, iso, lens,
+                                            over, view, (^.), _Wrapping, _Wrapped)
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.List                 (isSuffixOf)
