@@ -118,7 +118,8 @@ module Diagrams.Core.Types
 
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Wrapped (..), iso, lens,
-                                            over, unwrapped, view, (^.))
+                                            over, unwrapped, view, (^.)
+                                           , unwrapped')
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.List                 (isSuffixOf)
@@ -263,7 +264,7 @@ prims :: HasLinearMap v
       => QDiagram b v m -> [(Prim b v, (Transformation v, Style v))]
 prims = concatMap processLeaf
       . D.flatten
-      . view unwrapped
+      . view unwrapped'
   where
     processLeaf (PrimLeaf p, (trSty,_)) = [(p, untangle . option mempty id $ trSty)]
     processLeaf (DelayedLeaf k, d)      = prims (k d)
@@ -277,7 +278,7 @@ getU' = maybe mempty (option mempty id . get) . D.getU
 envelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Monoid' m)
          => Lens' (QDiagram b v m) (Envelope v)
-envelope = lens (unDelete . getU' . view unwrapped) (flip setEnvelope)
+envelope = lens (unDelete . getU' . view unwrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
@@ -292,7 +293,7 @@ setEnvelope e =
 -- | Get the trace of a diagram.
 trace :: (InnerSpace v, HasLinearMap v, OrderedField (Scalar v), Semigroup m) =>
          Lens' (QDiagram b v m) (Trace v)
-trace = lens (unDelete . getU' . view unwrapped) (flip setTrace)
+trace = lens (unDelete . getU' . view unwrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
 setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
@@ -307,7 +308,7 @@ setTrace t = over unwrapped ( D.applyUpre (inj . toDeletable $ t)
 --   subdiagrams) of a diagram.
 subMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
           Lens' (QDiagram b v m) (SubMap b v m)
-subMap = lens (unDelete . getU' . view unwrapped) (flip setMap) where
+subMap = lens (unDelete . getU' . view unwrapped') (flip setMap) where
   setMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
             SubMap b v m -> QDiagram b v m -> QDiagram b v m
   setMap m = over unwrapped ( D.applyUpre . inj . toDeletable $ m)
@@ -378,7 +379,7 @@ localize = over unwrapped ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v 
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v m -> Query v m
-query = getU' . view unwrapped
+query = getU' . view unwrapped'
 
 -- | Sample a diagram's query function at a given point.
 sample :: Monoid m => QDiagram b v m -> Point v -> m
@@ -906,18 +907,19 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   For example, here is the error we get if we try to compute the
 --   width of an image (this example requires @diagrams-lib@):
 --
---   > ghci> width (image "foo.png" 200 200)
---   >
---   > <interactive>:8:8:
---   >     No instance for (Renderable Diagrams.TwoD.Image.Image b0)
---   >       arising from a use of `image'
---   >     Possible fix:
---   >       add an instance declaration for
---   >       (Renderable Diagrams.TwoD.Image.Image b0)
---   >     In the first argument of `width', namely
---   >       `(image "foo.png" 200 200)'
---   >     In the expression: width (image "foo.png" 200 200)
---   >     In an equation for `it': it = width (image "foo.png" 200 200)
+--   @
+--   ghci> width (image \"foo.png\" 200 200)
+--   \<interactive\>:8:8:
+--       No instance for (Renderable Diagrams.TwoD.Image.Image b0)
+--         arising from a use of `image'
+--       Possible fix:
+--         add an instance declaration for
+--         (Renderable Diagrams.TwoD.Image.Image b0)
+--       In the first argument of `width', namely
+--         `(image \"foo.png\" 200 200)'
+--       In the expression: width (image \"foo.png\" 200 200)
+--       In an equation for `it': it = width (image \"foo.png\" 200 200)
+--   @
 --
 --   GHC complains that there is no instance for @Renderable Image
 --   b0@; what is really going on is that it does not have enough
@@ -930,20 +932,23 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   The solution is to annotate the call to 'image' with the type
 --   @'D' 'R2'@, like so:
 --
---   > ghci> width (image "foo.png" 200 200 :: D R2)
---   > 200.00000000000006
+--   @
+--   ghci> width (image \"foo.png\" 200 200 :: D R2)
+--   200.00000000000006
+--   @
 --
 --   (It turns out the width wasn't 200 after all...)
 --
 --   As another example, here is the error we get if we try to compute
 --   the width of a radius-1 circle:
 --
---   > ghci> width (circle 1)
---   >
---   > <interactive>:4:1:
---   >     Couldn't match type `V a0' with `R2'
---   >     In the expression: width (circle 1)
---   >     In an equation for `it': it = width (circle 1)
+--   @
+--   ghci> width (circle 1)
+--   \<interactive\>:4:1:
+--       Couldn't match type `V a0' with `R2'
+--       In the expression: width (circle 1)
+--       In an equation for `it': it = width (circle 1)
+--   @
 --
 --   There's even more ambiguity here.  Whereas 'image' always returns
 --   a 'Diagram', the 'circle' function can produce any 'PathLike'
@@ -951,8 +956,10 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 --   so GHC has no idea what type to pick to go in the middle.
 --   However, the solution is the same:
 --
---  > ghci> width (circle 1 :: D R2)
---  > 1.9999999999999998
+--   @
+--   ghci> width (circle 1 :: D R2)
+--   1.9999999999999998
+--   @
 
 type D v = Diagram NullBackend v
 

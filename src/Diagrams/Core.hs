@@ -88,10 +88,13 @@ module Diagrams.Core
          -- * Traces
 
        , Trace(Trace)
+       , SortedList, mkSortedList, getSortedList
        , appTrace, mkTrace
        , Traced(..)
        , traceV, traceP
        , maxTraceV, maxTraceP
+       , rayTraceV, rayTraceP
+       , maxRayTraceV, maxRayTraceP
 
          -- * Things with local origins
 
