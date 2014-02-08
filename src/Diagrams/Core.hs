@@ -54,6 +54,13 @@ module Diagrams.Core
 
        , TransInv(TransInv)
 
+
+         -- ** Projections (projective transforms, not invertable)
+
+       , Deformation(..)
+       , asDeformation
+       , Deformable(..)
+
          -- * Names
 
        , AName
@@ -154,6 +161,7 @@ module Diagrams.Core
 
        ) where
 
+import           Diagrams.Core.Deform
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
