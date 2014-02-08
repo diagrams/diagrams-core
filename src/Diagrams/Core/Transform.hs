@@ -6,6 +6,7 @@
            , MultiParamTypeClasses
            , GeneralizedNewtypeDeriving
            , TemplateHaskell
+           , TypeFamilies
            , TypeSynonymInstances
            , ScopedTypeVariables
   #-}
@@ -60,7 +61,7 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens                 (Wrapped(..), iso)
+import           Control.Lens                 (Wrapped(..), Rewrapped, iso)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -275,8 +276,11 @@ instance Transformable Rational where
 newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
-instance Wrapped t t' (TransInv t) (TransInv t')
-         where wrapped = iso TransInv (\(TransInv t) -> t)
+instance Wrapped (TransInv t) where
+    type Unwrapped (TransInv t) = t
+    _Wrapped' = iso (\(TransInv t) -> t) TransInv
+
+instance Rewrapped (TransInv t) (TransInv t')
 
 type instance V (TransInv t) = V t
 

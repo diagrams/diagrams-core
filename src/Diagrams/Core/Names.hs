@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverlappingInstances       #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 -----------------------------------------------------------------------------
 -- |
@@ -31,7 +32,7 @@ module Diagrams.Core.Names
 
        ) where
 
-import           Control.Lens            (over, unwrapped, Wrapped(..), iso)
+import           Control.Lens            (over, Wrapped(..), Rewrapped, iso, _Unwrapping')
 import           Data.List               (intercalate)
 import qualified Data.Map                as M
 import           Data.Semigroup
@@ -92,8 +93,11 @@ instance Show AName where
 newtype Name = Name [AName]
   deriving (Eq, Ord, Semigroup, Monoid, Typeable)
 
-instance Wrapped [AName] [AName] Name Name
-  where wrapped = iso Name (\(Name ans) -> ans)
+instance Wrapped Name where
+    type Unwrapped Name = [AName]
+    _Wrapped' = iso (\(Name ans) -> ans) Name
+
+instance Rewrapped Name Name
 
 instance Show Name where
   show (Name ns) = intercalate " .> " $ map show ns
@@ -118,7 +122,7 @@ instance Qualifiable Name where
   (|>) = (.>)
 
 instance Qualifiable a => Qualifiable (TransInv a) where
-  (|>) n = over unwrapped (n |>)
+  (|>) n = over (_Unwrapping' TransInv) (n |>)
 
 instance (Qualifiable a, Qualifiable b) => Qualifiable (a,b) where
   n |> (a,b) = (n |> a, n |> b)

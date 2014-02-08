@@ -43,8 +43,8 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
-import           Control.Lens (Wrapped(..), iso, view, over, mapped, unwrapped
-                              , unwrapped')
+import           Control.Lens (Wrapped(..), Rewrapped, iso, over, mapped
+                              , _Wrapping', op)
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
@@ -97,18 +97,17 @@ import           Diagrams.Core.V
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://www.cis.upenn.edu/~byorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
 newtype Envelope v = Envelope (Option (v -> Max (Scalar v)))
 
-instance (Scalar v ~ s, Scalar v' ~ s', s ~ s')
-                                        => Wrapped
-                                        (Option (v -> Max s))
-                                        (Option (v' -> Max s'))
-                                        (Envelope v) (Envelope v')
-         where wrapped = iso Envelope (\(Envelope e) -> e)
+instance Wrapped (Envelope v) where
+    type Unwrapped (Envelope v) = Option (v -> Max (Scalar v))
+    _Wrapped' = iso (\(Envelope e) -> e) Envelope
+
+instance Rewrapped (Envelope v) (Envelope v')
 
 appEnvelope :: Envelope v -> Maybe (v -> Scalar v)
 appEnvelope (Envelope (Option e)) = (getMax .) <$> e
 
 onEnvelope :: ((v -> Scalar v) -> (v -> Scalar v)) -> Envelope v -> Envelope v
-onEnvelope t = over (unwrapped . mapped) ((Max .) . t . (getMax .))
+onEnvelope t = over (_Wrapping' Envelope . mapped) ((Max .) . t . (getMax .))
 
 mkEnvelope :: (v -> Scalar v) -> Envelope v
 mkEnvelope = Envelope . Option . Just . (Max .)
@@ -189,7 +188,7 @@ instance (OrderedField (Scalar v), InnerSpace v) => Enveloped (Point v) where
   getEnvelope p = moveTo p . mkEnvelope $ const zeroV
 
 instance Enveloped t => Enveloped (TransInv t) where
-  getEnvelope = getEnvelope . view unwrapped'
+  getEnvelope = getEnvelope . op TransInv
 
 instance (Enveloped a, Enveloped b, V a ~ V b) => Enveloped (a,b) where
   getEnvelope (x,y) = getEnvelope x <> getEnvelope y
