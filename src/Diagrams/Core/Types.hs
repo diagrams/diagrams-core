@@ -747,7 +747,7 @@ class Transformable p => IsPrim p where
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
+  Prim :: (IsPrim p, Typeable p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
 
@@ -766,6 +766,7 @@ instance HasLinearMap v => Renderable (Prim b v) b where
 
 -- | The null primitive.
 data NullPrim v = NullPrim
+  deriving Typeable
 
 type instance (V (NullPrim v)) = v
 
@@ -779,7 +780,7 @@ instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b wher
 
 -- | The null primitive, which every backend can render by doing
 --   nothing.
-nullPrim :: (HasLinearMap v, Monoid (Render b v)) => Prim b v
+nullPrim :: (HasLinearMap v, Typeable v, Monoid (Render b v)) => Prim b v
 nullPrim = Prim NullPrim
 
 ------------------------------------------------------------
