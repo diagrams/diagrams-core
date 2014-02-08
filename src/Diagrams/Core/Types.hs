@@ -322,11 +322,15 @@ names :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v))
 names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 
 -- | Attach an atomic name to a certain subdiagram, computed from the
---   given diagram.
+--   given diagram /with the mapping from name to subdiagram
+--   included/.  The upshot of this knot-tying is that if @d' = d #
+--   named x@, then @lookupName x d' == Just d'@ (instead of @Just
+--   d@).
 nameSub :: ( IsName n
            , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
         => (QDiagram b v m -> Subdiagram b v m) -> n -> QDiagram b v m -> QDiagram b v m
-nameSub s n d = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d)]) d
+nameSub s n d = d'
+  where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
 
 -- | Lookup the most recent diagram associated with (some
 --   qualification of) the given name.
