@@ -57,9 +57,9 @@ module Diagrams.Core
 
          -- ** Projections (projective transforms, not invertable)
 
-       , Projection(..)
-       , asProjection
-       , Projectable(..)
+       , Deformation(..)
+       , asDeformation
+       , Deformable(..)
 
          -- * Names
 
@@ -161,12 +161,12 @@ module Diagrams.Core
 
        ) where
 
+import           Diagrams.Core.Deform
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
 import           Diagrams.Core.Names
 import           Diagrams.Core.Points
-import           Diagrams.Core.Project
 import           Diagrams.Core.Query
 import           Diagrams.Core.Style
 import           Diagrams.Core.Trace

@@ -28,7 +28,7 @@ Library
                        Diagrams.Core.Juxtapose,
                        Diagrams.Core.Names,
                        Diagrams.Core.Points,
-                       Diagrams.Core.Project,
+                       Diagrams.Core.Deform,
                        Diagrams.Core.Style,
                        Diagrams.Core.Trace,
                        Diagrams.Core.Transform,
