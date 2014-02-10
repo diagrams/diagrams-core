@@ -32,6 +32,9 @@ module Diagrams.Core
 
          -- * Transformations
 
+         -- ** Utilities
+       , determinant
+
          -- ** Invertible linear transformations
        , (:-:), (<->), linv, lapp
 

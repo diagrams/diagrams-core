@@ -41,6 +41,8 @@ module Diagrams.Core.Transform
        , papply
        , fromLinear
        , onBasis
+       , matrixRep
+       , determinant
 
          -- * The Transformable class
 
@@ -197,6 +199,35 @@ onBasis t = (vmat, tr)
         es    = map basisValue basis
         vmat :: [v]
         vmat = map (apply t) es
+
+-- Remove the nth element from a list
+remove :: Int -> [a] -> [a]
+remove n xs = ys ++ (tail zs)
+  where
+    (ys, zs) = splitAt n xs
+
+-- Minor matrix of cofactore C(i,j)
+minor :: Int -> Int -> [[a]] -> [[a]]
+minor i j xs = remove j $ map (remove i) xs
+
+-- The determinant of a square matrix represented as a list of lists
+-- representing column vectors, that is [column].
+det :: Num a => [[a]] -> a
+det (a:[]) = head a
+det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
+  where
+    c1 = head m
+    n = length m
+
+-- | Convert a `Transformation v` to a matrix representation as a list of
+--   column vectors which are also lists.
+matrixRep :: HasLinearMap v => Transformation v -> [[Scalar v]]
+matrixRep t = map listRep (fst . onBasis $ t)
+  where listRep v = map snd (decompose v)
+
+-- | The determinant of a `Transformation`.
+determinant :: (HasLinearMap v, Num (Scalar v)) => Transformation v -> Scalar v
+determinant t = det . matrixRep $ t
 
 ------------------------------------------------------------
 --  The Transformable class  -------------------------------
