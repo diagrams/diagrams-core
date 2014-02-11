@@ -33,6 +33,7 @@ module Diagrams.Core
          -- * Transformations
 
          -- ** Utilities
+       , basis
        , determinant
 
          -- ** Invertible linear transformations

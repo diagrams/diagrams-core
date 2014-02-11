@@ -40,6 +40,7 @@ module Diagrams.Core.Transform
        , apply
        , papply
        , fromLinear
+       , basis
        , onBasis
        , matrixRep
        , determinant
@@ -186,19 +187,19 @@ papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
 fromLinear l1 l2 = Transformation l1 l2 zeroV
 
+-- | Get the matrix equivalent of the basis of the vector space v as
+--   a list of columns.
+basis :: forall v. HasLinearMap v => [v]
+basis = map basisValue b
+  where b = map fst (decompose (zeroV :: v))
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
 onBasis :: forall v. HasLinearMap v => Transformation v -> ([v], v)
 onBasis t = (vmat, tr)
-  where tr :: v
-        tr    = transl t
-        basis :: [Basis v]
-        basis = map fst (decompose tr)
-        es :: [v]
-        es    = map basisValue basis
-        vmat :: [v]
-        vmat = map (apply t) es
+  where
+      tr    = transl t
+      vmat = map (apply t) basis
 
 -- Remove the nth element from a list
 remove :: Int -> [a] -> [a]
