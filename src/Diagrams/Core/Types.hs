@@ -820,7 +820,7 @@ data RNode b v a =  RStyle (Style v)
                     --   in the context of an arbitrary
                     --   transformation; such backends can instead use
                     --   the 'avgScale' function from
-                    --   "Diagrams.TwoD.Transform" (from the
+                    --   @Diagrams.TwoD.Transform@ (from the
                     --   @diagrams-lib@ package).
                   | RAnnot a
                   | RPrim (Transformation v) (Prim b v)
@@ -870,7 +870,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
                     --   support stroking in the context of an
                     --   arbitrary transformation; such backends can
                     --   instead use the 'avgScale' function from
-                    --   "Diagrams.TwoD.Transform" (from the
+                    --   @Diagrams.TwoD.Transform@ (from the
                     --   @diagrams-lib@ package).
                  -> Render b v -- ^ Rendering operation to run
                  -> Render b v -- ^ Rendering operation using the style locally

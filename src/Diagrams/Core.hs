@@ -9,7 +9,7 @@
 -- domain-specific language for describing and rendering diagrams.
 -- Normal users of the diagrams library should almost never need to
 -- import anything from this package directly; instead, import modules
--- (especially "Diagrams.Prelude") from the diagrams-lib package,
+-- (especially @Diagrams.Prelude@) from the diagrams-lib package,
 -- which re-exports most things of value to users.
 --
 -- For most library code needing access to core internals, it should
