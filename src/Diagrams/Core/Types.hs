@@ -161,7 +161,6 @@ import           Diagrams.Core.V
 data Measure t = Output t
                | Normalized t
                | Local t
-               | Global t
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -503,7 +502,7 @@ instance Functor (QDiagram b v) where
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => HasStyle (QDiagram b v m) where
-  applyStyle = over unwrapped . D.applyD . inj
+  applyStyle = over _Wrapped' . D.applyD . inj
              . (inR :: Style v -> Transformation v :+: Style v)
 
 ---- Juxtaposable
