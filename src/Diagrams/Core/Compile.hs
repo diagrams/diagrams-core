@@ -16,6 +16,7 @@ module Diagrams.Core.Compile
     RNode(..)
   , RTree
   , toRTree
+  , mapRTreeStyle
 
   -- * Internals
 
@@ -31,6 +32,7 @@ import           Data.Monoid.MList
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
+import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
@@ -85,15 +87,13 @@ toDTree (QD qd)
       qd
 
 -- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
---   A @DTree@ includes nodes of type @DTransform (Split (Transformation v))@;
---   in the @RTree@ the frozen part of the transform is put in a node of type
---   @RFrozenTr (Transformation v)@ and the unfrozen part is pushed down until
---   it is either frozen or reaches a primitive node.
+--   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
+--   in the @RTree@ transform is pushed down until it reaches a primitive node.
 fromDTree :: HasLinearMap v => DTree b v () -> RTree b v ()
 fromDTree = fromDTree' mempty
   where
     fromDTree' :: HasLinearMap v => Transformation v -> DTree b v () -> RTree b v ()
-    -- We put the accumulated unfrozen transformation (accTr) and the prim
+    -- We put the accumulated transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
       = Node (RPrim accTr p) []
@@ -109,7 +109,7 @@ fromDTree = fromDTree' mempty
 
     -- Drop accumulated transformations upon encountering a DDelay
     -- node --- the tree unfolded beneath it already took into account
-    -- any non-frozen transformation at this point.
+    -- any transformation at this point.
     fromDTree' _ (Node DDelay ts)
       = Node REmpty (fmap (fromDTree' mempty) ts)
 
@@ -117,6 +117,12 @@ fromDTree = fromDTree' mempty
     -- handle DAnnots separately if they are used, again accTr flows through.
     fromDTree' accTr (Node _ ts)
       = Node REmpty (fmap (fromDTree' accTr) ts)
+
+-- | Map a function that alters a style over an @RTree@.
+mapRTreeStyle :: (Style v -> Style v) -> RTree b v () -> RTree b v ()
+mapRTreeStyle _ prim@(Node (RPrim _ _) []) = prim
+mapRTreeStyle f (Node (RStyle s) ts) = Node (RStyle (f s)) (map (mapRTreeStyle f) ts)
+mapRTreeStyle f (Node a ts) = Node a (map (mapRTreeStyle f) ts)
 
 -- | Compile a @QDiagram@ into an 'RTree'.  Suitable for use by
 --   backends when implementing 'renderData'.

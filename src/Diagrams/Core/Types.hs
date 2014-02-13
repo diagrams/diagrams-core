@@ -79,6 +79,9 @@ module Diagrams.Core.Types
        , setEnvelope
        , setTrace
 
+         -- * Measurements
+       , Measure(..)
+
          -- * Subdiagrams
 
        , Subdiagram(..), mkSubdiagram
@@ -151,6 +154,15 @@ import           Diagrams.Core.V
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
+
+------------------------------------------------------------
+--  Measurement Units  -------------------------------------
+------------------------------------------------------------
+-- | Type of measurement units for attributes.
+data Measure t = Output t
+               | Normalized t
+               | Local t
+               | Global t
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -836,24 +848,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   -- | Backend-specific rendering options.
   data Options b v :: *
 
-  -- | Perform a rendering operation with a local style. The default
-  --   implementation does nothing, and must be overridden by backends
-  --   that do not override 'renderData'.
-  withStyle      :: b          -- ^ Backend token (needed only for type inference)
-                 -> Style v    -- ^ Style to use
-                 -> Transformation v
-                    -- ^ \"Frozen\" transformation; line width and
-                    --   other similar \"scale invariant\" attributes
-                    --   should be affected by this transformation.
-                    --   In the case of 2D, some backends may not
-                    --   support stroking in the context of an
-                    --   arbitrary transformation; such backends can
-                    --   instead use the 'avgScale' function from
-                    --   "Diagrams.TwoD.Transform" (from the
-                    --   @diagrams-lib@ package).
-                 -> Render b v -- ^ Rendering operation to run
-                 -> Render b v -- ^ Rendering operation using the style locally
-  withStyle _ _ _ r = r
+
 
   -- | 'doRender' is used to interpret rendering operations.
   doRender       :: b           -- ^ Backend token (needed only for type inference)
@@ -874,7 +869,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
             => b -> Options b v -> QDiagram b v m -> Result b v
-  renderDia b opts d = doRender b opts' . renderData b $ d'
+  renderDia b opts d = doRender b opts' . renderData opts' $ d'
     where (opts', d') = adjustDia b opts d
 
   -- | Backends may override 'renderData' to gain more control over
@@ -885,12 +880,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   where @renderRTree :: RTree b v () -> Render b v@ is
   --   implemented by the backend (with appropriate types filled in
   --   for @b@ and @v@), and 'toRTree' is from "Diagrams.Core.Compile".
-  renderData :: Monoid' m => b -> QDiagram b v m -> Render b v
-  renderData b = mconcat . map renderOne . prims
-    where
-      renderOne :: (Prim b v, (Transformation v, Style v)) -> Render b v
-      renderOne (p, (t, s)) = withStyle b s mempty (render b (transform t p))
-      --renderOne (p, (t1 :| t2, s)) = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
+  renderData :: Monoid' m => Options b v -> QDiagram b v m -> Render b v
 
   -- See Note [backend token]
 
@@ -994,8 +984,8 @@ instance HasLinearMap v => Backend NullBackend v where
   type Result NullBackend v = ()
   data Options NullBackend v
 
-  withStyle _ _ _ _ = NullBackendRender
   doRender _ _ _    = ()
+  renderData _ _  = NullBackendRender
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.

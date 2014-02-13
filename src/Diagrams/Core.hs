@@ -136,6 +136,8 @@ module Diagrams.Core
        , location
        , subPoint
 
+         -- * Measurements
+       , Measure(..)
          -- * Backends
 
        , Backend(..)
