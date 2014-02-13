@@ -137,6 +137,9 @@ lapp (f :-: _) = lapply f
 --   inverse transpose.  This is exactly what we need when
 --   transforming bounding functions, which are defined in terms of
 --   /perpendicular/ (i.e. normal) hyperplanes.
+--
+--   For more general, non-invertable transformations, see
+--   @Diagrams.Deform@ (in @diagrams-lib@).
 
 data Transformation v = Transformation (v :-: v) (v :-: v) v
 
