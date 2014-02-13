@@ -120,9 +120,8 @@ module Diagrams.Core.Types
        ) where
 
 import           Control.Arrow             (first, second, (***))
-import           Control.Lens              (Lens', Wrapped (..), iso, lens,
-                                            over, unwrapped, view, (^.)
-                                           , unwrapped')
+import           Control.Lens              (Lens', Wrapped (..), Rewrapped, iso, lens,
+                                            over, view, (^.), _Wrapping, _Wrapped)
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.List                 (isSuffixOf)
@@ -249,11 +248,12 @@ newtype QDiagram b v m
   = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
   deriving (Typeable)
 
-instance Wrapped
-         (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
-         (D.DUALTree (DownAnnots v') (UpAnnots b' v' m') () (QDiaLeaf b' v' m'))
-         (QDiagram b v m) (QDiagram b' v' m')
-         where wrapped = iso QD (\(QD d) -> d)
+instance Wrapped (QDiagram b v m) where
+    type Unwrapped (QDiagram b v m) =
+        D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m)
+    _Wrapped' = iso (\(QD d) -> d) QD
+
+instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
 
 type instance V (QDiagram b v m) = v
 
@@ -276,7 +276,7 @@ prims :: HasLinearMap v
       => QDiagram b v m -> [(Prim b v, (Transformation v, Style v))]
 prims = concatMap processLeaf
       . D.flatten
-      . view unwrapped'
+      . view _Wrapped'
   where
     processLeaf (PrimLeaf p, (trSty,_)) = [(p, untangle . option mempty id $ trSty)]
     processLeaf (DelayedLeaf k, d)      = prims (k d)
@@ -290,14 +290,14 @@ getU' = maybe mempty (option mempty id . get) . D.getU
 envelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Monoid' m)
          => Lens' (QDiagram b v m) (Envelope v)
-envelope = lens (unDelete . getU' . view unwrapped') (flip setEnvelope)
+envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                              , HasLinearMap v, Monoid' m)
           => Envelope v -> QDiagram b v m -> QDiagram b v m
 setEnvelope e =
-    over unwrapped ( D.applyUpre (inj . toDeletable $ e)
+    over _Wrapped' ( D.applyUpre (inj . toDeletable $ e)
                 . D.applyUpre (inj (deleteL :: Deletable (Envelope v)))
                 . D.applyUpost (inj (deleteR :: Deletable (Envelope v)))
               )
@@ -305,13 +305,13 @@ setEnvelope e =
 -- | Get the trace of a diagram.
 trace :: (InnerSpace v, HasLinearMap v, OrderedField (Scalar v), Semigroup m) =>
          Lens' (QDiagram b v m) (Trace v)
-trace = lens (unDelete . getU' . view unwrapped') (flip setTrace)
+trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
 setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Semigroup m)
          => Trace v -> QDiagram b v m -> QDiagram b v m
-setTrace t = over unwrapped ( D.applyUpre (inj . toDeletable $ t)
+setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
                          . D.applyUpre (inj (deleteL :: Deletable (Trace v)))
                          . D.applyUpost (inj (deleteR :: Deletable (Trace v)))
                        )
@@ -320,22 +320,26 @@ setTrace t = over unwrapped ( D.applyUpre (inj . toDeletable $ t)
 --   subdiagrams) of a diagram.
 subMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
           Lens' (QDiagram b v m) (SubMap b v m)
-subMap = lens (unDelete . getU' . view unwrapped') (flip setMap) where
+subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap) where
   setMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
             SubMap b v m -> QDiagram b v m -> QDiagram b v m
-  setMap m = over unwrapped ( D.applyUpre . inj . toDeletable $ m)
+  setMap m = over _Wrapped' ( D.applyUpre . inj . toDeletable $ m)
 
 -- | Get a list of names of subdiagrams and their locations.
 names :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v))
          => QDiagram b v m -> [(Name, [Point v])]
-names = (map . second . map) location . M.assocs . view (subMap . unwrapped)
+names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 
 -- | Attach an atomic name to a certain subdiagram, computed from the
---   given diagram.
+--   given diagram /with the mapping from name to subdiagram
+--   included/.  The upshot of this knot-tying is that if @d' = d #
+--   named x@, then @lookupName x d' == Just d'@ (instead of @Just
+--   d@).
 nameSub :: ( IsName n
            , HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
         => (QDiagram b v m -> Subdiagram b v m) -> n -> QDiagram b v m -> QDiagram b v m
-nameSub s n d = over unwrapped (D.applyUpre . inj . toDeletable $ fromNames [(n,s d)]) d
+nameSub s n d = d'
+  where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
 
 -- | Lookup the most recent diagram associated with (some
 --   qualification of) the given name.
@@ -384,14 +388,14 @@ localize :: forall b v m. ( HasLinearMap v, InnerSpace v
                           , OrderedField (Scalar v), Semigroup m
                           )
          => QDiagram b v m -> QDiagram b v m
-localize = over unwrapped ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v m)))
+localize = over _Wrapped' ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v m)))
                    . D.applyUpost (inj (deleteR :: Deletable (SubMap b v m)))
                    )
 
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v m -> Query v m
-query = getU' . view unwrapped'
+query = getU' . view _Wrapped'
 
 -- | Sample a diagram's query function at a given point.
 sample :: Monoid m => QDiagram b v m -> Point v -> m
@@ -470,7 +474,7 @@ infixl 6 `atop`
 ---- Functor
 
 instance Functor (QDiagram b v) where
-  fmap f = over unwrapped
+  fmap f = over (_Wrapping QD)
            ( (D.mapU . second . second)
              ( (first . fmap . fmap . fmap)   f
              . (second . first . fmap . fmap) f
@@ -501,29 +505,6 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => HasStyle (QDiagram b v m) where
   applyStyle = over unwrapped . D.applyD . inj
              . (inR :: Style v -> Transformation v :+: Style v)
-
--- | By default, diagram attributes are not affected by
---   transformations.  This means, for example, that @lw 0.01 circle@
---   and @scale 2 (lw 0.01 circle)@ will be drawn with lines of the
---   /same/ width, and @scaleY 3 circle@ will be an ellipse drawn with
---   a uniform line.  Once a diagram is frozen, however,
---   transformations do affect attributes, so, for example, @scale 2
---   (freeze (lw 0.01 circle))@ will be drawn with a line twice as
---   thick as @lw 0.01 circle@, and @scaleY 3 (freeze circle)@ will be
---   drawn with a \"stretched\", variable-width line.
---
---   Another way of thinking about it is that pre-@freeze@, we are
---   transforming the \"abstract idea\" of a diagram, and the
---   transformed version is then drawn; when doing a @freeze@, we
---   produce a concrete drawing of the diagram, and it is this visual
---   representation itself which is acted upon by subsequent
---   transformations.
---freeze :: forall v b m. (HasLinearMap v, InnerSpace v
---                        , OrderedField (Scalar v), Semigroup m)
---       => QDiagram b v m -> QDiagram b v m
---freeze = over unwrapped . D.applyD . inj
---       . (inL :: Split (Transformation v) -> Split (Transformation v :+: Style v)
---       $ split
 
 ---- Juxtaposable
 
@@ -559,7 +540,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
       => Transformable (QDiagram b v m) where
-  transform = over unwrapped . D.applyD . transfToAnnot
+  transform = over _Wrapped' . D.applyD . transfToAnnot
 
 ---- Qualifiable
 
@@ -567,7 +548,7 @@ instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
 --   now be referred to using the qualification prefix.
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => Qualifiable (QDiagram b v m) where
-  (|>) = over unwrapped . D.applyD . inj . toName
+  (|>) = over _Wrapped' . D.applyD . inj . toName
 
 
 ------------------------------------------------------------
@@ -636,7 +617,7 @@ getSub :: ( HasLinearMap v, InnerSpace v
           , Semigroup m
           )
        => Subdiagram b v m -> QDiagram b v m
-getSub (Subdiagram d a) = over unwrapped (D.applyD a) d
+getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d
 
 -- | Extract the \"raw\" content of a subdiagram, by throwing away the
 --   context.
@@ -652,11 +633,11 @@ rawSub (Subdiagram d _) = d
 newtype SubMap b v m = SubMap (M.Map Name [Subdiagram b v m])
   -- See Note [SubMap Set vs list]
 
-instance Wrapped
-         (M.Map Name [Subdiagram b v m])
-         (M.Map Name [Subdiagram b v m'])
-         (SubMap b v m) (SubMap b v m')
-         where wrapped = iso SubMap (\(SubMap m) -> m)
+instance Wrapped (SubMap b v m) where
+    type Unwrapped (SubMap b v m) = M.Map Name [Subdiagram b v m]
+    _Wrapped' = iso (\(SubMap m) -> m) SubMap
+
+instance Rewrapped (SubMap b v m) (SubMap b' v' m')
 
 -- ~~~~ [SubMap Set vs list]
 -- In some sense it would be nicer to use
@@ -666,7 +647,7 @@ instance Wrapped
 type instance V (SubMap b v m) = v
 
 instance Functor (SubMap b v) where
-  fmap = over unwrapped . fmap . map . fmap
+  fmap = over _Wrapped . fmap . map . fmap
 
 instance Semigroup (SubMap b v m) where
   SubMap s1 <> SubMap s2 = SubMap $ M.unionWith (++) s1 s2
@@ -682,11 +663,11 @@ instance Monoid (SubMap b v m) where
 
 instance (OrderedField (Scalar v), InnerSpace v, HasLinearMap v)
       => HasOrigin (SubMap b v m) where
-  moveOriginTo = over unwrapped . moveOriginTo
+  moveOriginTo = over _Wrapped' . moveOriginTo
 
 instance (InnerSpace v, Floating (Scalar v), HasLinearMap v)
   => Transformable (SubMap b v m) where
-  transform = over unwrapped . transform
+  transform = over _Wrapped' . transform
 
 -- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a |>
 --   ns@ is the same 'SubMap' except with every name qualified by
@@ -701,7 +682,7 @@ fromNames = SubMap . M.fromListWith (++) . map (toName *** (:[]))
 
 -- | Add a name/diagram association to a submap.
 rememberAs :: IsName a => a -> QDiagram b v m -> SubMap b v m -> SubMap b v m
-rememberAs n b = over unwrapped $ M.insertWith (++) (toName n) [mkSubdiagram b]
+rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (SubMap b v m) where
@@ -752,7 +733,7 @@ class Transformable p => IsPrim p where
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: (IsPrim p, Renderable p b) => p -> Prim b (V p)
+  Prim :: (IsPrim p, Typeable p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
 
@@ -771,6 +752,7 @@ instance HasLinearMap v => Renderable (Prim b v) b where
 
 -- | The null primitive.
 data NullPrim v = NullPrim
+  deriving Typeable
 
 type instance (V (NullPrim v)) = v
 
@@ -784,7 +766,7 @@ instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b wher
 
 -- | The null primitive, which every backend can render by doing
 --   nothing.
-nullPrim :: (HasLinearMap v, Monoid (Render b v)) => Prim b v
+nullPrim :: (HasLinearMap v, Typeable v, Monoid (Render b v)) => Prim b v
 nullPrim = Prim NullPrim
 
 ------------------------------------------------------------
@@ -847,8 +829,6 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- | Backend-specific rendering options.
   data Options b v :: *
-
-
 
   -- | 'doRender' is used to interpret rendering operations.
   doRender       :: b           -- ^ Backend token (needed only for type inference)

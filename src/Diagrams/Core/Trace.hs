@@ -141,12 +141,11 @@ instance Ord a => Monoid (SortedList a) where
 
 newtype Trace v = Trace { appTrace :: Point v -> v -> SortedList (Scalar v) }
 
-instance (Scalar v ~ s, Scalar v' ~ s', s ~ s') =>
-         Wrapped
-         (Point v -> v -> SortedList s)
-         (Point v' -> v' -> SortedList s')
-         (Trace v) (Trace v')
-         where wrapped = iso Trace appTrace
+instance Wrapped (Trace v) where
+    type Unwrapped (Trace v) = Point v -> v -> SortedList (Scalar v)
+    _Wrapped' = iso appTrace Trace
+
+instance Rewrapped (Trace v) (Trace v')
 
 mkTrace :: (Point v -> v -> SortedList (Scalar v)) -> Trace v
 mkTrace = Trace
@@ -163,7 +162,7 @@ deriving instance (Ord (Scalar v)) => Monoid (Trace v)
 type instance V (Trace v) = v
 
 instance (VectorSpace v) => HasOrigin (Trace v) where
-  moveOriginTo (P u) = unwrapping Trace %~ \f p -> f (p .+^ u)
+  moveOriginTo (P u) = (_Wrapping' Trace) %~ \f p -> f (p .+^ u)
 
 instance Show (Trace v) where
   show _ = "<trace>"
@@ -173,7 +172,7 @@ instance Show (Trace v) where
 ------------------------------------------------------------
 
 instance HasLinearMap v => Transformable (Trace v) where
-  transform t = unwrapped %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
+  transform t = _Wrapped' %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
 
 ------------------------------------------------------------
 --  Traced class  ------------------------------------------

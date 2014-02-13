@@ -6,6 +6,7 @@
            , MultiParamTypeClasses
            , GeneralizedNewtypeDeriving
            , TemplateHaskell
+           , TypeFamilies
            , TypeSynonymInstances
            , ScopedTypeVariables
   #-}
@@ -39,7 +40,10 @@ module Diagrams.Core.Transform
        , apply
        , papply
        , fromLinear
+       , basis
        , onBasis
+       , matrixRep
+       , determinant
 
          -- * The Transformable class
 
@@ -60,7 +64,7 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens                 (Wrapped(..), iso)
+import           Control.Lens                 (Wrapped(..), Rewrapped, iso)
 import qualified Data.Map as M
 import           Data.Semigroup
 import qualified Data.Set as S
@@ -133,6 +137,9 @@ lapp (f :-: _) = lapply f
 --   inverse transpose.  This is exactly what we need when
 --   transforming bounding functions, which are defined in terms of
 --   /perpendicular/ (i.e. normal) hyperplanes.
+--
+--   For more general, non-invertable transformations, see
+--   @Diagrams.Deform@ (in @diagrams-lib@).
 
 data Transformation v = Transformation (v :-: v) (v :-: v) v
 
@@ -183,19 +190,48 @@ papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
 fromLinear l1 l2 = Transformation l1 l2 zeroV
 
+-- | Get the matrix equivalent of the basis of the vector space v as
+--   a list of columns.
+basis :: forall v. HasLinearMap v => [v]
+basis = map basisValue b
+  where b = map fst (decompose (zeroV :: v))
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
 onBasis :: forall v. HasLinearMap v => Transformation v -> ([v], v)
 onBasis t = (vmat, tr)
-  where tr :: v
-        tr    = transl t
-        basis :: [Basis v]
-        basis = map fst (decompose tr)
-        es :: [v]
-        es    = map basisValue basis
-        vmat :: [v]
-        vmat = map (apply t) es
+  where
+      tr    = transl t
+      vmat = map (apply t) basis
+
+-- Remove the nth element from a list
+remove :: Int -> [a] -> [a]
+remove n xs = ys ++ (tail zs)
+  where
+    (ys, zs) = splitAt n xs
+
+-- Minor matrix of cofactore C(i,j)
+minor :: Int -> Int -> [[a]] -> [[a]]
+minor i j xs = remove j $ map (remove i) xs
+
+-- The determinant of a square matrix represented as a list of lists
+-- representing column vectors, that is [column].
+det :: Num a => [[a]] -> a
+det (a:[]) = head a
+det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
+  where
+    c1 = head m
+    n = length m
+
+-- | Convert a `Transformation v` to a matrix representation as a list of
+--   column vectors which are also lists.
+matrixRep :: HasLinearMap v => Transformation v -> [[Scalar v]]
+matrixRep t = map listRep (fst . onBasis $ t)
+  where listRep v = map snd (decompose v)
+
+-- | The determinant of a `Transformation`.
+determinant :: (HasLinearMap v, Num (Scalar v)) => Transformation v -> Scalar v
+determinant t = det . matrixRep $ t
 
 ------------------------------------------------------------
 --  The Transformable class  -------------------------------
@@ -275,8 +311,11 @@ instance Transformable Rational where
 newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
-instance Wrapped t t' (TransInv t) (TransInv t')
-         where wrapped = iso TransInv (\(TransInv t) -> t)
+instance Wrapped (TransInv t) where
+    type Unwrapped (TransInv t) = t
+    _Wrapped' = iso (\(TransInv t) -> t) TransInv
+
+instance Rewrapped (TransInv t) (TransInv t')
 
 type instance V (TransInv t) = V t
 
