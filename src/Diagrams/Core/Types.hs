@@ -98,7 +98,7 @@ module Diagrams.Core.Types
          -- * Primtives
          -- $prim
 
-       , Prim(..), IsPrim(..), nullPrim
+       , Prim(..), nullPrim
 
          -- * Backends
 
@@ -191,9 +191,6 @@ type UpAnnots b v m = Deletable (Envelope v)
 -- | Monoidal annotations which travel down the diagram tree,
 --   /i.e./ which accumulate along each path to a leaf (and which can
 --   act on the upwards-travelling annotations):
---
---   * transformations (split at the innermost freeze): see
---     "Diagrams.Core.Transform"
 --
 --   * styles (see "Diagrams.Core.Style")
 --
@@ -715,30 +712,18 @@ lookupSub a (SubMap m)
 ------------------------------------------------------------
 
 -- $prim
--- Ultimately, every diagram is essentially a list of /primitives/,
+-- Ultimately, every diagram is essentially a tree whose leaves are /primitives/,
 -- basic building blocks which can be rendered by backends.  However,
 -- not every backend must be able to render every type of primitive;
 -- the collection of primitives a given backend knows how to render is
 -- determined by instances of 'Renderable'.
 
--- | A type class for primitive things which know how to handle being
---   transformed by both a normal transformation and a \"frozen\"
---   transformation.  The default implementation simply applies both.
---   At the moment, 'ScaleInv' is the only type with a non-default
---   instance of 'IsPrim'.
-class Transformable p => IsPrim p where
-  transformWithFreeze :: Transformation (V p) -> Transformation (V p) -> p -> p
-  transformWithFreeze t1 t2 = transform (t1 <> t2)
-
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: (IsPrim p, Typeable p, Renderable p b) => p -> Prim b (V p)
+  Prim :: (Transformable p, Typeable p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
-
-instance HasLinearMap v => IsPrim (Prim b v) where
-  transformWithFreeze t1 t2 (Prim p) = Prim $ transformWithFreeze t1 t2 p
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
@@ -755,8 +740,6 @@ data NullPrim v = NullPrim
   deriving Typeable
 
 type instance (V (NullPrim v)) = v
-
-instance HasLinearMap v => IsPrim (NullPrim v)
 
 instance HasLinearMap v => Transformable (NullPrim v) where
   transform _ _ = NullPrim
