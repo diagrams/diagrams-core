@@ -838,29 +838,39 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   -- | 'adjustDia' allows the backend to make adjustments to the final
   --   diagram (e.g. to adjust the size based on the options) before
-  --   rendering it.  It can also make adjustments to the options
+  --   rendering it. It also returns any scale factor used to adjust the size
+  --   so that @renderData@ can use it to make adjustments to attributes whose
+  --   value is @Measure@ . It can also make adjustments to the options
   --   record, usually to fill in incompletely specified size
   --   information.  A default implementation is provided which makes
   --   no adjustments.  See the diagrams-lib package for other useful
   --   implementations.
-  adjustDia :: Monoid' m => b -> Options b v
-            -> QDiagram b v m -> (Options b v, QDiagram b v m)
-  adjustDia _ o d = (o,d)
+  adjustDia :: (Monoid' m, Num (Scalar v)) => b -> Options b v
+            -> QDiagram b v m -> (Scalar v, Options b v, QDiagram b v m)
+  adjustDia _ o d = (1,o,d)
+
+  -- | Convert an RTree to a renderable object. The transforms have
+  --   been accumulated and are in the leaves of the RTree along with the Prims.
+  renderRTree :: RTree b v a -> Render b v
 
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
             => b -> Options b v -> QDiagram b v m -> Result b v
-  renderDia b opts d = doRender b opts' . renderData opts' d $ d'
-    where (opts', d') = adjustDia b opts d
+  renderDia b opts d = doRender b opts' . renderData opts' s $ d'
+    where (s, opts', d') = adjustDia b opts d
 
-  -- | Backends may override 'renderData' to gain more control over
-  --   the way that rendering happens.  A typical implementation might be something like
+  -- | Backends must implement 'renderData' to convert the @QDiagram@ to
+  --   an RTree and insure any attributes with values of type @Measure t@ are
+  --   @Output t@. A typical implementation might be something like
   --
-  --   > renderData = renderRTree . toRTree
+  --   > renderData = renderRTree . toOutput (opts^.size) s . toRTree
   --
   --   where @renderRTree :: RTree b v () -> Render b v@ is
   --   implemented by the backend (with appropriate types filled in
   --   for @b@ and @v@), and 'toRTree' is from "Diagrams.Core.Compile".
-  renderData :: Monoid' m => Options b v -> QDiagram b v m -> QDiagram b v m -> Render b v
+  --   Here `toOutput` converts `LineWidth` to @Output@ units, `s` is
+  --   a scale factor obtained from @adjustDia@. See
+  --   "Diagrams.TwoD.Attributes".
+  renderData :: Monoid' m => Options b v -> Scalar v -> QDiagram b v m -> Render b v
 
   -- See Note [backend token]
 
@@ -965,6 +975,7 @@ instance HasLinearMap v => Backend NullBackend v where
   data Options NullBackend v
 
   doRender _ _ _    = ()
+  renderRTree _ = NullBackendRender
   renderData _ _ _ = NullBackendRender
 
 -- | A class for backends which support rendering multiple diagrams,
