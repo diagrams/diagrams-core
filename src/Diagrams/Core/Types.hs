@@ -161,6 +161,7 @@ import           Diagrams.Core.V
 data Measure t = Output t
                | Normalized t
                | Local t
+               | Global t
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -848,7 +849,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
 
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
             => b -> Options b v -> QDiagram b v m -> Result b v
-  renderDia b opts d = doRender b opts' . renderData opts' $ d'
+  renderDia b opts d = doRender b opts' . renderData opts' d $ d'
     where (opts', d') = adjustDia b opts d
 
   -- | Backends may override 'renderData' to gain more control over
@@ -859,7 +860,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   where @renderRTree :: RTree b v () -> Render b v@ is
   --   implemented by the backend (with appropriate types filled in
   --   for @b@ and @v@), and 'toRTree' is from "Diagrams.Core.Compile".
-  renderData :: Monoid' m => Options b v -> QDiagram b v m -> Render b v
+  renderData :: Monoid' m => Options b v -> QDiagram b v m -> QDiagram b v m -> Render b v
 
   -- See Note [backend token]
 
@@ -964,7 +965,7 @@ instance HasLinearMap v => Backend NullBackend v where
   data Options NullBackend v
 
   doRender _ _ _    = ()
-  renderData _ _  = NullBackendRender
+  renderData _ _ _ = NullBackendRender
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
