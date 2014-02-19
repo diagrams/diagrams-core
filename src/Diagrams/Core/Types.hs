@@ -779,17 +779,13 @@ type DTree b v a = Tree (DNode b v a)
 data RNode b v a =  RStyle (Style v)
                     -- ^ A style node.
                   | RAnnot a
-                  | RPrim (Transformation v) (Prim b v)
-                    -- ^ A primitive, along with the (non-frozen)
-                    --   transformation which applies to it.
+                  | RPrim (Prim b v)
+                    -- ^ A primitive.
                   | REmpty
 
 -- | An 'RTree' is a compiled and optimized representation of a
---   'QDiagram', which can be used by backends.  They have several
---   invariants which backends may rely upon:
---
---   * All non-frozen transformations have been pushed all the way to
---     the leaves.
+--   'QDiagram', which can be used by backends.  They have the
+--   following invariant which backends may rely upon:
 --
 --   * @RPrim@ nodes never have any children.
 type RTree b v a = Tree (RNode b v a )

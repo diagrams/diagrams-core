@@ -96,7 +96,7 @@ fromDTree = fromDTree' mempty
     -- We put the accumulated transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
-      = Node (RPrim accTr p) []
+      = Node (RPrim (transform accTr p)) []
 
     -- Styles are transformed then stored in their own node
     -- and accTr is push down the tree.
@@ -120,7 +120,7 @@ fromDTree = fromDTree' mempty
 
 -- | Map a function that alters a style over an @RTree@.
 mapRTreeStyle :: (Style v -> Style v) -> RTree b v () -> RTree b v ()
-mapRTreeStyle _ prim@(Node (RPrim _ _) []) = prim
+mapRTreeStyle _ prim@(Node (RPrim _) []) = prim
 mapRTreeStyle f (Node (RStyle s) ts) = Node (RStyle (f s)) (map (mapRTreeStyle f) ts)
 mapRTreeStyle f (Node a ts) = Node a (map (mapRTreeStyle f) ts)
 
