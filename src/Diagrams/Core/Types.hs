@@ -45,7 +45,9 @@ module Diagrams.Core.Types
          -- * Diagrams
 
          -- ** Annotations
-         UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+         Annotation(Href)
+       , applyAnnotation
+       , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
          -- ** Basic type definitions
        , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), Diagram
@@ -116,6 +118,8 @@ module Diagrams.Core.Types
        , Renderable(..)
 
        ) where
+
+import qualified Debug.Trace as DB
 
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Wrapped (..), Rewrapped, iso, lens,
@@ -230,18 +234,20 @@ withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (Q
 withQDiaLeaf f _ (PrimLeaf p)    = f p
 withQDiaLeaf _ g (DelayedLeaf d) = g d
 
+data Annotation = Href String deriving Show
+
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
 newtype QDiagram b v m
-  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
+  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) Annotation (QDiaLeaf b v m))
   deriving (Typeable)
 
 instance Wrapped (QDiagram b v m) where
     type Unwrapped (QDiagram b v m) =
-        D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m)
+        D.DUALTree (DownAnnots v) (UpAnnots b v m) Annotation (QDiaLeaf b v m)
     _Wrapped' = iso (\(QD d) -> d) QD
 
 instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
@@ -491,6 +497,19 @@ instance Functor (QDiagram b v) where
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
 ---- HasStyle
+  
+
+applyAnnotation ::
+  (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) =>
+  Annotation -> QDiagram b v m -> QDiagram b v m
+  
+applyAnnotation an (QD dt) 
+  | DB.trace ("applyAnnotation"
+           ++ "\n  an: " ++ show an
+--           ++ "\n  dt " ++ show dt
+          ) False = undefined
+                    
+applyAnnotation an (QD dt) = QD (D.annot an dt)
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => HasStyle (QDiagram b v m) where

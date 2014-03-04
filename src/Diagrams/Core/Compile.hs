@@ -13,7 +13,8 @@
 
 module Diagrams.Core.Compile
   ( -- * Tools for backends
-    RNode(..)
+    Annotation(Href)
+  , RNode(..)
   , RTree
   , toRTree
 
@@ -39,7 +40,7 @@ emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
+toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v Annotation)
 toDTree (QD qd)
   = foldDUAL
 
@@ -90,10 +91,10 @@ toDTree (QD qd)
 --   in the @RTree@ the frozen part of the transform is put in a node of type
 --   @RFrozenTr (Transformation v)@ and the unfrozen part is pushed down until
 --   it is either frozen or reaches a primitive node.
-fromDTree :: HasLinearMap v => DTree b v () -> RTree b v ()
+fromDTree :: HasLinearMap v => DTree b v Annotation -> RTree b v Annotation
 fromDTree = fromDTree' mempty
   where
-    fromDTree' :: HasLinearMap v => Transformation v -> DTree b v () -> RTree b v ()
+    fromDTree' :: HasLinearMap v => Transformation v -> DTree b v Annotation -> RTree b v Annotation
     -- We put the accumulated unfrozen transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
@@ -126,5 +127,5 @@ fromDTree = fromDTree' mempty
 
 -- | Compile a @QDiagram@ into an 'RTree'.  Suitable for use by
 --   backends when implementing 'renderData'.
-toRTree :: HasLinearMap v => QDiagram b v m -> RTree b v ()
+toRTree :: HasLinearMap v => QDiagram b v m -> RTree b v Annotation
 toRTree = fromDTree . fromMaybe (Node DEmpty []) . toDTree
