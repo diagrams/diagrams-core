@@ -119,8 +119,6 @@ module Diagrams.Core.Types
 
        ) where
 
-import qualified Debug.Trace as DB
-
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Wrapped (..), Rewrapped, iso, lens,
                                             over, view, (^.), _Wrapping, _Wrapped)
@@ -502,13 +500,6 @@ instance Functor (QDiagram b v) where
 applyAnnotation ::
   (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) =>
   Annotation -> QDiagram b v m -> QDiagram b v m
-  
-applyAnnotation an (QD dt) 
-  | DB.trace ("applyAnnotation"
-           ++ "\n  an: " ++ show an
---           ++ "\n  dt " ++ show dt
-          ) False = undefined
-                    
 applyAnnotation an (QD dt) = QD (D.annot an dt)
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
