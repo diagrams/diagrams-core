@@ -114,14 +114,16 @@ fromDTree = fromDTree' mempty
     fromDTree' accTr (Node (DTransform (tr1 :| tr2)) ts)
       = Node (RFrozenTr (accTr <> tr1)) (fmap (fromDTree' tr2) ts)
 
+    fromDTree' accTr (Node (DAnnot a) ts)
+      = Node (RAnnot a) (fmap (fromDTree' accTr) ts)
+
     -- Drop accumulated transformations upon encountering a DDelay
     -- node --- the tree unfolded beneath it already took into account
     -- any non-frozen transformation at this point.
     fromDTree' _ (Node DDelay ts)
       = Node REmpty (fmap (fromDTree' mempty) ts)
-
-    -- DAnnot and DEmpty nodes become REmpties, in the future my want to
-    -- handle DAnnots separately if they are used, again accTr flows through.
+        
+    -- DEmpty nodes become REmpties, again accTr flows through.
     fromDTree' accTr (Node _ ts)
       = Node REmpty (fmap (fromDTree' accTr) ts)
 
