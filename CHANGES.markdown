@@ -15,6 +15,10 @@
       without `Ray`, but return the first intersection in the
       *positive* direction from the given point, rather than the
       smallest in absolute terms.
+    - New `Annotation` type and corresponding `applyAnnotation`
+      function, for attaching uninterpreted annotations at specific
+      points in a diagram tree.  Currently this is used for
+      hyperlinks; more annotation types will be added in the future.
 
 * **Dependency/version changes**
 
