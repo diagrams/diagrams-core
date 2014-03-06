@@ -129,6 +129,8 @@ module Diagrams.Core
        , withNames
        , localize
 
+       , href
+
        , freeze, setEnvelope, setTrace
 
        , atop
