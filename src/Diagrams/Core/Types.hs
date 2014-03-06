@@ -45,9 +45,14 @@ module Diagrams.Core.Types
          -- * Diagrams
 
          -- ** Annotations
+
+         -- *** Static annotations
          Annotation(Href)
-       , applyAnnotation
+       , applyAnnotation, href
+
+         -- *** Dynamic (monoidal) annotations
        , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+
          -- ** Basic type definitions
        , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), Diagram
@@ -120,8 +125,9 @@ module Diagrams.Core.Types
        ) where
 
 import           Control.Arrow             (first, second, (***))
-import           Control.Lens              (Lens', Wrapped (..), Rewrapped, iso, lens,
-                                            over, view, (^.), _Wrapping, _Wrapped)
+import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
+                                            lens, over, view, (^.), _Wrapped,
+                                            _Wrapping)
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.List                 (isSuffixOf)
@@ -232,7 +238,22 @@ withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (Q
 withQDiaLeaf f _ (PrimLeaf p)    = f p
 withQDiaLeaf _ g (DelayedLeaf d) = g d
 
-data Annotation = Href String deriving Show
+-- | Static annotations which can be placed at a particular node of a
+--   diagram tree.
+data Annotation
+  = Href String    -- ^ Hyperlink
+  deriving Show
+
+-- | Apply a static annotation at the root of a diagram.
+applyAnnotation
+  :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+  => Annotation -> QDiagram b v m -> QDiagram b v m
+applyAnnotation an (QD dt) = QD (D.annot an dt)
+
+-- | Make a diagram into a hyperlink.  Note that only some backends
+--   will honor hyperlink annotations.
+href :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) => String -> QDiagram b v m -> QDiagram b v m
+href = applyAnnotation . Href
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
@@ -495,12 +516,6 @@ instance Functor (QDiagram b v) where
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
 ---- HasStyle
-  
-
-applyAnnotation ::
-  (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) =>
-  Annotation -> QDiagram b v m -> QDiagram b v m
-applyAnnotation an (QD dt) = QD (D.annot an dt)
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => HasStyle (QDiagram b v m) where

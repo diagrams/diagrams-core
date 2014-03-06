@@ -13,8 +13,7 @@
 
 module Diagrams.Core.Compile
   ( -- * Tools for backends
-    Annotation(Href)
-  , RNode(..)
+    RNode(..)
   , RTree
   , toRTree
 
@@ -122,7 +121,7 @@ fromDTree = fromDTree' mempty
     -- any non-frozen transformation at this point.
     fromDTree' _ (Node DDelay ts)
       = Node REmpty (fmap (fromDTree' mempty) ts)
-        
+
     -- DEmpty nodes become REmpties, again accTr flows through.
     fromDTree' accTr (Node _ ts)
       = Node REmpty (fmap (fromDTree' accTr) ts)
