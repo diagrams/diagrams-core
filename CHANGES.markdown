@@ -23,6 +23,7 @@
 * **Dependency/version changes**
 
     - Require `lens-4.0`
+	- Allow `vector-space-points-0.2`
 
 * **Bug fixes**
 
