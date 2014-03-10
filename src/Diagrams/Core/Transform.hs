@@ -197,10 +197,6 @@ basis :: forall v. HasLinearMap v => [v]
 basis = map basisValue b
   where b = map fst (decompose (zeroV :: v))
 
--- | Get the dimension of a Transformation.
-dimension :: forall v. HasLinearMap v => Transformation v -> Int
-dimension t = length $ map (apply t) basis
-
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
