@@ -44,6 +44,7 @@ module Diagrams.Core.Transform
        , onBasis
        , matrixRep
        , determinant
+       , avgScale
 
          -- * The Transformable class
 
@@ -195,6 +196,11 @@ fromLinear l1 l2 = Transformation l1 l2 zeroV
 basis :: forall v. HasLinearMap v => [v]
 basis = map basisValue b
   where b = map fst (decompose (zeroV :: v))
+
+-- | Get the dimension of a Transformation.
+dimension :: forall v. HasLinearMap v => Transformation v -> Int
+dimension t = length $ map (apply t) basis
+
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
@@ -232,6 +238,40 @@ matrixRep t = map listRep (fst . onBasis $ t)
 -- | The determinant of a `Transformation`.
 determinant :: (HasLinearMap v, Num (Scalar v)) => Transformation v -> Scalar v
 determinant t = det . matrixRep $ t
+
+-- | Compute the \"average\" amount of scaling performed by a
+--   transformation.  Satisfies the properties
+--
+--   @
+--   avgScale (scaling k) == k
+--   avgScale (t1 <> t2)  == avgScale t1 * avgScale t2
+--   @
+--
+avgScale :: (HasLinearMap v, Scalar v ~ Double) => Transformation v -> Double
+avgScale t = (abs . det $ m) ** (1 / fromIntegral (length m))
+  where m = matrixRep t
+
+{-
+
+avgScale is computed as the nth root of the positive
+determinant. Proofs for the specified properties:
+
+1. (|det (scaling k)|)^(1/n) = (k^n)^(1/n) = k
+2. (|det t1|)^(1/n) * (|det t2|)^(1/n) * ... * (|det tn|)^(1/n)
+   = (|det t1| * |det t2| * ... * |det tn|)^(1/n)
+   = (|det t1 * det t2 * ... * det tn|)^(1/n)
+   = (|det (t1 * t2 * ... * tn)|)^(1/n)
+
+From wikipedia:
+
+     A geometric interpretation can be given to the value of the
+     determinant of a square matrix with real entries: the absolute
+     value of the determinant gives the scale factor by which area or
+     volume (or a higher dimensional analogue) is multiplied under the
+     associated linear transformation, while its sign indicates whether
+     the transformation preserves orientation.
+
+-}
 
 ------------------------------------------------------------
 --  The Transformable class  -------------------------------

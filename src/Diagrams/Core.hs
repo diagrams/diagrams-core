@@ -49,6 +49,7 @@ module Diagrams.Core
          -- ** Some specific transformations
        , translation, translate, moveTo, place
        , scaling, scale
+       , avgScale
 
          -- ** The Transformable class
 
