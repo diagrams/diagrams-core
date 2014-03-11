@@ -29,6 +29,7 @@ module Diagrams.Core
          -- * Points
 
        , Point, origin, (*.)
+       , _relative
 
          -- * Transformations
 
