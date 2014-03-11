@@ -41,6 +41,7 @@ module Diagrams.Core.Transform
        , papply
        , fromLinear
        , basis
+       , dimension
        , onBasis
        , matrixRep
        , determinant
@@ -197,6 +198,10 @@ basis :: forall v. HasLinearMap v => [v]
 basis = map basisValue b
   where b = map fst (decompose (zeroV :: v))
 
+-- | Get the dimension of a Transformation
+dimension :: forall v. HasLinearMap v => Transformation v -> Int
+dimension _ = length (decompose (zeroV :: v))
+
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
@@ -243,9 +248,8 @@ determinant t = det . matrixRep $ t
 --   avgScale (t1 <> t2)  == avgScale t1 * avgScale t2
 --   @
 --
-avgScale :: (HasLinearMap v, Scalar v ~ Double) => Transformation v -> Double
-avgScale t = (abs . det $ m) ** (1 / fromIntegral (length m))
-  where m = matrixRep t
+avgScale :: (HasLinearMap v, Floating (Scalar v)) => Transformation v -> Scalar v
+avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
 
 {-
 
