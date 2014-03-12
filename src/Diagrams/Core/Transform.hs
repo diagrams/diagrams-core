@@ -41,9 +41,11 @@ module Diagrams.Core.Transform
        , papply
        , fromLinear
        , basis
+       , dimension
        , onBasis
        , matrixRep
        , determinant
+       , avgScale
 
          -- * The Transformable class
 
@@ -195,6 +197,12 @@ fromLinear l1 l2 = Transformation l1 l2 zeroV
 basis :: forall v. HasLinearMap v => [v]
 basis = map basisValue b
   where b = map fst (decompose (zeroV :: v))
+
+-- | Get the dimension of an object whose vector space is an instance of
+--   @HasLinearMap@, e.g. transformations, paths, diagrams, etc.
+dimension :: forall a. HasLinearMap (V a) => a -> Int
+dimension _ = length (decompose (zeroV :: V a))
+
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
@@ -232,6 +240,35 @@ matrixRep t = map listRep (fst . onBasis $ t)
 -- | The determinant of a `Transformation`.
 determinant :: (HasLinearMap v, Num (Scalar v)) => Transformation v -> Scalar v
 determinant t = det . matrixRep $ t
+
+-- | Compute the \"average\" amount of scaling performed by a
+--   transformation.  Satisfies the properties
+--
+--   @
+--   avgScale (scaling k) == k
+--   avgScale (t1 <> t2)  == avgScale t1 * avgScale t2
+--   @
+--
+avgScale :: (HasLinearMap v, Floating (Scalar v)) => Transformation v -> Scalar v
+avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
+
+{-
+
+avgScale is computed as the nth root of the positive determinant.
+This works because the determinant is the factor by which a transformation
+scales area/volume. See http://en.wikipedia.org/wiki/Determinant.
+
+Proofs for the specified properties:
+
+1. sqrt (|det (scaling k)|) = sqrt (k^2) = k
+2. sqrt (|det t1|) * sqrt (|det t2|)
+   = sqrt (|det t1| * |det t2|)
+   = sqrt (|det t1 * det t2|)
+   = sqrt (|det (t1 * t2)|)
+
+
+
+-}
 
 ------------------------------------------------------------
 --  The Transformable class  -------------------------------
