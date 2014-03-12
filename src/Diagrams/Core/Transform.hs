@@ -260,13 +260,11 @@ scales area/volume. See http://en.wikipedia.org/wiki/Determinant.
 
 Proofs for the specified properties:
 
-1. sqrt (|det (scaling k)|) = sqrt (k^2) = k
-2. sqrt (|det t1|) * sqrt (|det t2|)
-   = sqrt (|det t1| * |det t2|)
-   = sqrt (|det t1 * det t2|)
-   = sqrt (|det (t1 * t2)|)
-
-
+1. |det (scaling k)|^(1/n) = (k^n)^(1/n) = k
+2. |det t1|^(1/n) * |det t2|^(1/n)
+   = (|det t1| * |det t2|)^(1/n)
+   = |det t1 * det t2|^(1/n)
+   = |det (t1 <> t2)|^(1/n)
 
 -}
 
