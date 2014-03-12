@@ -198,7 +198,8 @@ basis :: forall v. HasLinearMap v => [v]
 basis = map basisValue b
   where b = map fst (decompose (zeroV :: v))
 
--- | Get the dimension of a Transformation
+-- | Get the dimension of an object whose vector space is an instance of
+--   @HasLinearMap@, e.g. transformations, paths, diagrams, etc.
 dimension :: forall a. HasLinearMap (V a) => a -> Int
 dimension _ = length (decompose (zeroV :: V a))
 
@@ -261,6 +262,15 @@ determinant. Proofs for the specified properties:
    = sqrt (|det t1| * |det t2|)
    = sqrt (|det t1 * det t2|)
    = sqrt (|det (t1 * t2)|)
+
+From wikipedia:
+
+     A geometric interpretation can be given to the value of the
+     determinant of a square matrix with real entries: the absolute
+     value of the determinant gives the scale factor by which area or
+     volume (or a higher dimensional analogue) is multiplied under the
+     associated linear transformation, while its sign indicates whether
+     the transformation preserves orientation.
 
 -}
 
