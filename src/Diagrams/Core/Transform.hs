@@ -254,8 +254,11 @@ avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
 
 {-
 
-avgScale is computed as the nth root of the positive
-determinant. Proofs for the specified properties:
+avgScale is computed as the nth root of the positive determinant.
+This works because the determinant is the factor by which a transformation
+scales area/volume. See http://en.wikipedia.org/wiki/Determinant.
+
+Proofs for the specified properties:
 
 1. sqrt (|det (scaling k)|) = sqrt (k^2) = k
 2. sqrt (|det t1|) * sqrt (|det t2|)
@@ -263,14 +266,7 @@ determinant. Proofs for the specified properties:
    = sqrt (|det t1 * det t2|)
    = sqrt (|det (t1 * t2)|)
 
-From wikipedia:
 
-     A geometric interpretation can be given to the value of the
-     determinant of a square matrix with real entries: the absolute
-     value of the determinant gives the scale factor by which area or
-     volume (or a higher dimensional analogue) is multiplied under the
-     associated linear transformation, while its sign indicates whether
-     the transformation preserves orientation.
 
 -}
 
