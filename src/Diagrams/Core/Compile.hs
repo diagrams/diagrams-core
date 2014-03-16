@@ -40,8 +40,9 @@ emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v ())
-toDTree (QD qd)
+toDTree :: HasLinearMap v =>
+             (Style v -> Style v) -> QDiagram b v m -> Maybe (DTree b v ())
+toDTree f (QD qd)
   = foldDUAL
 
       -- Prims at the leaves.  We ignore the accumulated d-annotations
@@ -57,7 +58,7 @@ toDTree (QD qd)
                -- the continuation, convert the result to a DTree, and
                -- splice it in, adding a DDelay node to mark the point
                -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree . ($d))
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree f . ($d))
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
@@ -79,7 +80,7 @@ toDTree (QD qd)
                  Option Nothing   -> t
                  Option (Just d') ->
                    let (tr,sty) = untangle d'
-                   in  Node (DStyle sty) [Node (DTransform tr) [t]]
+                   in  Node (DStyle $ f sty) [Node (DTransform tr) [t]]
       )
 
       -- Internal a-annotations.
@@ -124,7 +125,10 @@ mapRTreeStyle _ prim@(Node (RPrim _) []) = prim
 mapRTreeStyle f (Node (RStyle s) ts) = Node (RStyle (f s)) (map (mapRTreeStyle f) ts)
 mapRTreeStyle f (Node a ts) = Node a (map (mapRTreeStyle f) ts)
 
--- | Compile a @QDiagram@ into an 'RTree'.  Suitable for use by
---   backends when implementing 'renderData'.
-toRTree :: HasLinearMap v => QDiagram b v m -> RTree b v ()
-toRTree = fromDTree . fromMaybe (Node DEmpty []) . toDTree
+-- | Compile a @QDiagram@ into an 'RTree', rewriting styles with the
+-- given function along the way.  Suitable for use by backends when
+-- implementing 'renderData'.  Styles must be rewritten before
+-- converting to RTree in case a DelayedLeaf uses a modified
+-- Attribute.
+toRTree :: HasLinearMap v => (Style v -> Style v) -> QDiagram b v m -> RTree b v ()
+toRTree f = fromDTree . fromMaybe (Node DEmpty []) . toDTree f
