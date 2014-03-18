@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators              #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -39,6 +40,9 @@ import           Diagrams.Core.Types
 emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
 
+onStyle :: (a -> a) -> (a ::: l) -> (a ::: l)
+onStyle f (Option (Just a), l) = f a *: l
+
 -- | Convert a @QDiagram@ into a raw tree.
 toDTree :: HasLinearMap v =>
              (Style v -> Style v) -> QDiagram b v m -> Maybe (DTree b v ())
@@ -58,7 +62,7 @@ toDTree f (QD qd)
                -- the continuation, convert the result to a DTree, and
                -- splice it in, adding a DDelay node to mark the point
                -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree f . ($d))
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree f . ($ (onStyle (mapR f) d)))
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
