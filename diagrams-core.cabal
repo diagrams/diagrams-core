@@ -1,5 +1,5 @@
 Name:                diagrams-core
-Version:             1.1
+Version:             1.1.0.1
 Synopsis:            Core libraries for diagrams EDSL
 Description:         The core modules underlying diagrams,
                      an embedded domain-specific language
