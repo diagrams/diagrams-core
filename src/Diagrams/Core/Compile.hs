@@ -41,7 +41,7 @@ import           Diagrams.Core.Types
 emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
 
-onStyle :: forall v. (Style v -> Style v) -> DownAnnots v -> DownAnnots v
+onStyle :: forall v. HasLinearMap v => (Style v -> Style v) -> DownAnnots v -> DownAnnots v
 onStyle f = alt (fmap (mapR f :: Transformation v :+: Style v -> Transformation v :+: Style v))
 
 -- | Convert a @QDiagram@ into a raw tree.
