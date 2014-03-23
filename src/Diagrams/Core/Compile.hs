@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators       #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -40,8 +41,8 @@ import           Diagrams.Core.Types
 emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
 
-onStyle :: (a -> a) -> (a ::: l) -> (a ::: l)
-onStyle f (Option (Just a), l) = f a *: l
+onStyle :: forall v. (Style v -> Style v) -> DownAnnots v -> DownAnnots v
+onStyle f = alt (fmap (mapR f :: Transformation v :+: Style v -> Transformation v :+: Style v))
 
 -- | Convert a @QDiagram@ into a raw tree.
 toDTree :: HasLinearMap v =>
@@ -62,7 +63,7 @@ toDTree f (QD qd)
                -- the continuation, convert the result to a DTree, and
                -- splice it in, adding a DDelay node to mark the point
                -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree f . ($ (onStyle (mapR f) d)))
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree f . ($ onStyle f d))
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
