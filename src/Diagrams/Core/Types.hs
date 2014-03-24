@@ -163,6 +163,7 @@ data Measure t = Output t
                | Normalized t
                | Local t
                | Global t
+  deriving (Eq, Ord, Show, Typeable)
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
