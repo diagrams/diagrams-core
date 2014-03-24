@@ -18,7 +18,6 @@ module Diagrams.Core.Compile
     RNode(..)
   , RTree
   , toRTree
-  , mapRTreeStyle
 
   -- * Internals
 
@@ -123,12 +122,6 @@ fromDTree = fromDTree' mempty
     -- handle DAnnots separately if they are used, again accTr flows through.
     fromDTree' accTr (Node _ ts)
       = Node REmpty (fmap (fromDTree' accTr) ts)
-
--- | Map a function that alters a style over an @RTree@.
-mapRTreeStyle :: (Style v -> Style v) -> RTree b v () -> RTree b v ()
-mapRTreeStyle _ prim@(Node (RPrim _) []) = prim
-mapRTreeStyle f (Node (RStyle s) ts) = Node (RStyle (f s)) (map (mapRTreeStyle f) ts)
-mapRTreeStyle f (Node a ts) = Node a (map (mapRTreeStyle f) ts)
 
 -- | Compile a @QDiagram@ into an 'RTree', rewriting styles with the
 -- given function along the way.  Suitable for use by backends when
