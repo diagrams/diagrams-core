@@ -132,13 +132,13 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             _Wrapping)
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
+import           Data.Data
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Tree
-import           Data.Typeable
 import           Data.VectorSpace
 
 import           Data.Monoid.Action
@@ -170,7 +170,7 @@ data Measure t = Output t
                | Normalized t
                | Local t
                | Global t
-  deriving (Eq, Ord, Show, Typeable)
+  deriving (Eq, Ord, Show, Data, Typeable)
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------

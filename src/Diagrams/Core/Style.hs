@@ -1,12 +1,13 @@
-{-# LANGUAGE ScopedTypeVariables
-           , GADTs
-           , KindSignatures
-           , FlexibleInstances
-           , MultiParamTypeClasses
-           , TemplateHaskell
-           , TypeFamilies
-           , UndecidableInstances
-  #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 -- The UndecidableInstances flag is needed under 6.12.3 for the
 -- HasStyle (a,b) instance.
@@ -38,19 +39,20 @@ module Diagrams.Core.Style
        , Style(..)
        , attrToStyle, tAttrToStyle
        , getAttr, setAttr, addAttr, combineAttr
+       , gmapAttrs
 
        , HasStyle(..)
 
        ) where
 
-import           Control.Arrow ((***))
-import           Control.Lens (Wrapped(..), Rewrapped, iso)
-import qualified Data.Map as M
+import           Control.Arrow           ((***))
+import           Control.Lens            (Rewrapped, Wrapped (..), iso)
+import           Data.Generics
+import qualified Data.Map                as M
 import           Data.Semigroup
-import qualified Data.Set as S
-import           Data.Typeable
+import qualified Data.Set                as S
 
-import Data.Monoid.Action
+import           Data.Monoid.Action
 
 import           Diagrams.Core.Transform
 import           Diagrams.Core.V
@@ -79,7 +81,7 @@ import           Diagrams.Core.V
 --   simply guarantees 'Typeable' and 'Semigroup' constraints.  The
 --   'Semigroup' instance for an attribute determines how it will combine
 --   with other attributes of the same type.
-class (Typeable a, Semigroup a) => AttributeClass a where
+class (Typeable a, Data a, Semigroup a) => AttributeClass a where
 
 -- | An existential wrapper type to hold attributes.  Some attributes
 --   are affected by transformations and some are not.
@@ -188,6 +190,16 @@ combineAttr a s =
   case getAttr s of
     Nothing -> setAttr a s
     Just a' -> setAttr (a <> a') s
+
+-- | Map generically over all attributes in a style, applying the
+--   given function to any values with the given type, even deeply
+--   nested ones.
+gmapAttrs :: forall v a. Data a => (a -> a) -> Style v -> Style v
+gmapAttrs f = (inStyle . M.map) gmapAttr
+  where
+    gmapAttr :: Attribute v -> Attribute v
+    gmapAttr (Attribute a) = Attribute (everywhere (mkT f) a)
+    gmapAttr (TAttribute a) = TAttribute (everywhere (mkT f) a)
 
 instance Semigroup (Style v) where
   Style s1 <> Style s2 = Style $ M.unionWith (<>) s1 s2

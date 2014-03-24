@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators       #-}
 
@@ -26,6 +27,7 @@ module Diagrams.Core.Compile
   )
   where
 
+import           Data.Data
 import qualified Data.List.NonEmpty      as NEL
 import           Data.Maybe              (fromMaybe)
 import           Data.Monoid.Coproduct
@@ -33,6 +35,7 @@ import           Data.Monoid.MList
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
+import           Data.VectorSpace
 import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
@@ -40,13 +43,9 @@ import           Diagrams.Core.Types
 emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
 
-onStyle :: forall v. HasLinearMap v => (Style v -> Style v) -> DownAnnots v -> DownAnnots v
-onStyle f = alt (fmap (mapR f :: Transformation v :+: Style v -> Transformation v :+: Style v))
-
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: HasLinearMap v =>
-             (Style v -> Style v) -> QDiagram b v m -> Maybe (DTree b v Annotation)
-toDTree f (QD qd)
+toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v Annotation)
+toDTree (QD qd)
   = foldDUAL
 
       -- Prims at the leaves.  We ignore the accumulated d-annotations
@@ -62,7 +61,7 @@ toDTree f (QD qd)
                -- the continuation, convert the result to a DTree, and
                -- splice it in, adding a DDelay node to mark the point
                -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree f . ($ onStyle f d))
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree . ($ d))
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
@@ -84,7 +83,7 @@ toDTree f (QD qd)
                  Option Nothing   -> t
                  Option (Just d') ->
                    let (tr,sty) = untangle d'
-                   in  Node (DStyle $ f sty) [Node (DTransform tr) [t]]
+                   in  Node (DStyle sty) [Node (DTransform tr) [t]]
       )
 
       -- Internal a-annotations.
@@ -130,5 +129,32 @@ fromDTree = fromDTree' mempty
 -- implementing 'renderData'.  Styles must be rewritten before
 -- converting to RTree in case a DelayedLeaf uses a modified
 -- Attribute.
-toRTree :: HasLinearMap v => (Style v -> Style v) -> QDiagram b v m -> RTree b v Annotation
-toRTree f = fromDTree . fromMaybe (Node DEmpty []) . toDTree f
+toRTree :: (Typeable v, Data v, HasLinearMap v, Floating (Scalar v)) => Transformation v -> QDiagram b v m -> RTree b v Annotation
+toRTree globalToOutput d
+  = (fmap . onRStyle) (toOutput (avgScale globalToOutput) (avgScale (globalToOutput <> normToGlobal)))
+  . fromDTree
+  . fromMaybe (Node DEmpty [])
+  . toDTree
+  $ d
+  where
+    -- XXX todo: query the diagram envelope extent in each basis
+    -- direction (and its negative); construct a transformation which
+    -- scales along each axis in order to normalize the range to 1
+    -- unit.
+    normToGlobal = undefined
+
+onRStyle :: (Style v -> Style v) -> (RNode b v a -> RNode b v a)
+onRStyle f (RStyle s) = RStyle (f s)
+onRStyle _ n          = n
+
+-- XXX comment me!
+toOutput
+  :: forall v. (Typeable v, Data v, HasLinearMap v, Floating (Scalar v))
+  => Scalar v -> Scalar v -> Style v -> Style v
+toOutput globalToOutput normToOutput = gmapAttrs convert
+  where
+    convert :: Measure v -> Measure v
+    convert m@(Output _)   = m
+    convert (Local s)      = Output s
+    convert (Global s)     = Output (globalToOutput *^ s)
+    convert (Normalized s) = Output (normToOutput *^ s)
