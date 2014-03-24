@@ -29,11 +29,13 @@ module Diagrams.Core
          -- * Points
 
        , Point, origin, (*.)
+       , _relative
 
          -- * Transformations
 
          -- ** Utilities
        , basis
+       , dimension
        , determinant
 
          -- ** Invertible linear transformations
@@ -49,6 +51,7 @@ module Diagrams.Core
          -- ** Some specific transformations
        , translation, translate, moveTo, place
        , scaling, scale
+       , avgScale
 
          -- ** The Transformable class
 
@@ -128,6 +131,8 @@ module Diagrams.Core
        , withNameAll
        , withNames
        , localize
+
+       , href
 
        , setEnvelope, setTrace
 

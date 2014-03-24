@@ -1,3 +1,40 @@
+1.1.0.1 (19 March 2014)
+----------------------
+
+    - Allow lens-4.1
+
+1.1 (8 March 2014)
+------------------
+
+* **New features**
+
+    - New `basis` function
+	- New `determinant` function for computing the determinant of a
+      `Transformation`
+    - Add `Typeable` constraint on `Prim`s, making it possible to
+      extract things back out of a `Prim` wrapper using `cast`
+	- Raw `Trace`s now return a *sorted list* of intersections,
+      instead of only the smallest.  This is used to implement a new
+      family of functions `rayTraceV`, `rayTraceP`, `maxRayTraceV`,
+      `maxRayTraceP`, which work similarly to the parallel versions
+      without `Ray`, but return the first intersection in the
+      *positive* direction from the given point, rather than the
+      smallest in absolute terms.
+    - New `Annotation` type and corresponding `applyAnnotation`
+      function, for attaching uninterpreted annotations at specific
+      points in a diagram tree.  Currently this is used for
+      hyperlinks; more annotation types will be added in the future.
+
+* **Dependency/version changes**
+
+    - Require `lens-4.0`
+	- Allow `vector-space-points-0.2`
+
+* **Bug fixes**
+
+    - Looking up a subdiagram by name now results in a diagram which
+      still has that name (#43)
+
 1.0.0.1 (27 November 2013)
 --------------------------
 

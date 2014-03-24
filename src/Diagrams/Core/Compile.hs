@@ -45,7 +45,7 @@ onStyle f = alt (fmap (mapR f :: Transformation v :+: Style v -> Transformation 
 
 -- | Convert a @QDiagram@ into a raw tree.
 toDTree :: HasLinearMap v =>
-             (Style v -> Style v) -> QDiagram b v m -> Maybe (DTree b v ())
+             (Style v -> Style v) -> QDiagram b v m -> Maybe (DTree b v Annotation)
 toDTree f (QD qd)
   = foldDUAL
 
@@ -94,10 +94,10 @@ toDTree f (QD qd)
 -- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
-fromDTree :: HasLinearMap v => DTree b v () -> RTree b v ()
+fromDTree :: HasLinearMap v => DTree b v Annotation -> RTree b v Annotation
 fromDTree = fromDTree' mempty
   where
-    fromDTree' :: HasLinearMap v => Transformation v -> DTree b v () -> RTree b v ()
+    fromDTree' :: HasLinearMap v => Transformation v -> DTree b v Annotation -> RTree b v Annotation
     -- We put the accumulated transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
@@ -112,14 +112,16 @@ fromDTree = fromDTree' mempty
     fromDTree' accTr (Node (DTransform tr) ts)
       = Node REmpty (fmap (fromDTree' (accTr <> tr)) ts)
 
+    fromDTree' accTr (Node (DAnnot a) ts)
+      = Node (RAnnot a) (fmap (fromDTree' accTr) ts)
+
     -- Drop accumulated transformations upon encountering a DDelay
     -- node --- the tree unfolded beneath it already took into account
     -- any transformation at this point.
     fromDTree' _ (Node DDelay ts)
       = Node REmpty (fmap (fromDTree' mempty) ts)
 
-    -- DAnnot and DEmpty nodes become REmpties, in the future my want to
-    -- handle DAnnots separately if they are used, again accTr flows through.
+    -- DEmpty nodes become REmpties, again accTr flows through.
     fromDTree' accTr (Node _ ts)
       = Node REmpty (fmap (fromDTree' accTr) ts)
 
@@ -128,5 +130,5 @@ fromDTree = fromDTree' mempty
 -- implementing 'renderData'.  Styles must be rewritten before
 -- converting to RTree in case a DelayedLeaf uses a modified
 -- Attribute.
-toRTree :: HasLinearMap v => (Style v -> Style v) -> QDiagram b v m -> RTree b v ()
+toRTree :: HasLinearMap v => (Style v -> Style v) -> QDiagram b v m -> RTree b v Annotation
 toRTree f = fromDTree . fromMaybe (Node DEmpty []) . toDTree f
