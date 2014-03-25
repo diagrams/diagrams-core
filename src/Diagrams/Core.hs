@@ -78,11 +78,11 @@ module Diagrams.Core
          -- * Attributes and styles
 
        , AttributeClass
-       , Attribute, mkAttr, mkTAttr, unwrapAttr
+       , Attribute, mkAttr, mkTAttr, mkGTAttr, unwrapAttr
 
        , Style, HasStyle(..)
        , getAttr, combineAttr
-       , applyAttr, applyTAttr
+       , applyAttr, applyTAttr, applyGTAttr
 
          -- * Envelopes
 

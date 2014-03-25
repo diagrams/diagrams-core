@@ -30,8 +30,8 @@ module Diagrams.Core.Style
 
          AttributeClass
        , Attribute(..)
-       , mkAttr, mkTAttr, unwrapAttr
-       , applyAttr, applyTAttr
+       , mkAttr, mkTAttr, mkGTAttr, unwrapAttr
+       , applyAttr, applyTAttr, applyGTAttr
 
          -- * Styles
          -- $style
@@ -81,13 +81,23 @@ import           Diagrams.Core.V
 --   simply guarantees 'Typeable' and 'Semigroup' constraints.  The
 --   'Semigroup' instance for an attribute determines how it will combine
 --   with other attributes of the same type.
-class (Typeable a, Data a, Semigroup a) => AttributeClass a where
+class (Typeable a, Semigroup a) => AttributeClass a where
 
 -- | An existential wrapper type to hold attributes.  Some attributes
---   are affected by transformations and some are not.
+--   are simply inert/static; some are affected by transformations;
+--   and some are affected by transformations and can be modified
+--   generically.
 data Attribute v :: * where
-  Attribute  :: AttributeClass a => a -> Attribute v
-  TAttribute :: (AttributeClass a, Transformable a, V a ~ v) => a -> Attribute v
+  Attribute   :: AttributeClass a => a -> Attribute v
+  TAttribute  :: (AttributeClass a, Transformable a, V a ~ v) => a -> Attribute v
+  GTAttribute :: (AttributeClass a, Data a, Transformable a, V a ~ v) => a -> Attribute v
+
+  -- Note: one could imagine requiring all attributes to be generic,
+  -- but adding Data instances for everything would be a big pain in
+  -- the butt, especially for things in other packages which don't
+  -- export their constructors (e.g. FingerTree).  Having three
+  -- different attribute wrappers is not ideal but it's far less work
+  -- than the alternative.
 
 type instance V (Attribute v) = v
 
@@ -99,14 +109,19 @@ mkAttr = Attribute
 mkTAttr :: (AttributeClass a, Transformable a, V a ~ v) => a -> Attribute v
 mkTAttr = TAttribute
 
+-- | Wrap up a transformable and generic attribute.
+mkGTAttr :: (AttributeClass a, Data a, Transformable a, V a ~ v) => a -> Attribute v
+mkGTAttr = GTAttribute
+
 -- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
 --   safe) check on the type of the result.  If the required type
 --   matches the type of the attribute, the attribute value is
 --   returned wrapped in @Just@; if the types do not match, @Nothing@
 --   is returned.
 unwrapAttr :: AttributeClass a => Attribute v -> Maybe a
-unwrapAttr (Attribute a)  = cast a
-unwrapAttr (TAttribute a) = cast a
+unwrapAttr (Attribute a)   = cast a
+unwrapAttr (TAttribute a)  = cast a
+unwrapAttr (GTAttribute a) = cast a
 
 -- | Attributes form a semigroup, where the semigroup operation simply
 --   returns the right-hand attribute when the types do not match, and
@@ -121,10 +136,15 @@ instance Semigroup (Attribute v) where
     case unwrapAttr a2 of
       Nothing  -> a2
       Just a2' -> TAttribute (a1 <> a2')
+  (GTAttribute a1) <> a2 =
+    case unwrapAttr a2 of
+      Nothing -> a2
+      Just a2' -> GTAttribute (a1 <> a2')
 
 instance HasLinearMap v => Transformable (Attribute v) where
-  transform _ (Attribute  a) = Attribute a
-  transform t (TAttribute a) = TAttribute (transform t a)
+  transform _ (Attribute  a)  = Attribute a
+  transform t (TAttribute a)  = TAttribute (transform t a)
+  transform t (GTAttribute a) = GTAttribute (transform t a)
 
 ------------------------------------------------------------
 --  Styles  ------------------------------------------------
@@ -172,6 +192,10 @@ attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a)
 tAttrToStyle :: forall a v. (AttributeClass a, Transformable a, V a ~ v) => a -> Style v
 tAttrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkTAttr a))
 
+-- | Create a style from a single transformable, generic attribute.
+gtAttrToStyle :: forall a v. (AttributeClass a, Data a, Transformable a, V a ~ v) => a -> Style v
+gtAttrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkGTAttr a))
+
 -- | Add a new attribute to a style, or replace the old attribute of
 --   the same type if one exists.
 setAttr :: forall a v. AttributeClass a => a -> Style v -> Style v
@@ -191,15 +215,16 @@ combineAttr a s =
     Nothing -> setAttr a s
     Just a' -> setAttr (a <> a') s
 
--- | Map generically over all attributes in a style, applying the
---   given function to any values with the given type, even deeply
---   nested ones.
+-- | Map generically over all generic attributes in a style, applying
+--   the given function to any values with the given type, even deeply
+--   nested ones.  Note that only attributes wrapped in 'GTAttribute'
+--   are affected.
 gmapAttrs :: forall v a. Data a => (a -> a) -> Style v -> Style v
 gmapAttrs f = (inStyle . M.map) gmapAttr
   where
     gmapAttr :: Attribute v -> Attribute v
-    gmapAttr (Attribute a) = Attribute (everywhere (mkT f) a)
-    gmapAttr (TAttribute a) = TAttribute (everywhere (mkT f) a)
+    gmapAttr (GTAttribute a) = GTAttribute (everywhere (mkT f) a)
+    gmapAttr a = a
 
 instance Semigroup (Style v) where
   Style s1 <> Style s2 = Style $ M.unionWith (<>) s1 s2
@@ -257,3 +282,6 @@ applyAttr = applyStyle . attrToStyle
 --   structure.
 applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, HasStyle d) => a -> d -> d
 applyTAttr = applyStyle . tAttrToStyle
+
+applyGTAttr :: (AttributeClass a, Data a, Transformable a, V a ~ V d, HasStyle d) => a -> d -> d
+applyGTAttr = applyStyle . gtAttrToStyle

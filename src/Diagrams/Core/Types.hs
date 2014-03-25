@@ -856,10 +856,6 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
             -> QDiagram b v m -> (Options b v, Transformation v, QDiagram b v m)
   adjustDia _ o d = (o,mempty,d)
 
-  -- | Convert an RTree to a renderable object. The transforms have
-  --   been accumulated and are in the leaves of the RTree along with the Prims.
-  renderRTree :: RTree b v a -> Render b v
-
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
             => b -> Options b v -> QDiagram b v m -> Result b v
   renderDia b opts d = snd (renderDiaT b opts d)
@@ -870,7 +866,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   renderDiaT
     :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
     => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
-  renderDiaT b opts d = (t, doRender b opts' . renderData b opts' t $ d')
+  renderDiaT b opts d = (t, doRender b opts' . renderData b t $ d')
     where (opts', t, d') = adjustDia b opts d
 
   -- | Backends must implement 'renderData' to convert the @QDiagram@ to
@@ -879,13 +875,13 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --
   --   > renderData opts t = renderRTree . toOutput (opts^.size) t . toRTree
   --
-  --   where @renderRTree :: RTree b v () -> Render b v@ is
+  --   where @renderRTree :: RTree b v Annotation -> Render b v@ is
   --   implemented by the backend (with appropriate types filled in
   --   for @b@ and @v@), and 'toRTree' is from
   --   "Diagrams.Core.Compile".  Here 'toOutput' converts 'Measure'
   --   values to 'Output' units, and @t@ is a transformation obtained
   --   from @adjustDia@. See "Diagrams.TwoD.Attributes".
-  renderData :: Monoid' m => b -> Options b v -> Transformation v -> QDiagram b v m -> Render b v
+  renderData :: Monoid' m => b -> Transformation v -> QDiagram b v m -> Render b v
 
   -- See Note [backend token]
 
@@ -990,8 +986,7 @@ instance HasLinearMap v => Backend NullBackend v where
   data Options NullBackend v
 
   doRender _ _ _    = ()
-  renderRTree _ = NullBackendRender
-  renderData _ _ _ _ = NullBackendRender
+  renderData _ _ _ = NullBackendRender
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
