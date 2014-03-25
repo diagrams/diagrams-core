@@ -135,7 +135,7 @@ toRTree
   :: (HasLinearMap v, InnerSpace v, Data (Scalar v), OrderedField (Scalar v), Monoid m, Semigroup m)
   => Transformation v -> QDiagram b v m -> RTree b v Annotation
 toRTree globalToOutput d
-  = (fmap . onRStyle) (toOutput gToO (gToO * nToG))
+  = (fmap . onRStyle) (toOutput gToO nToO)
   . fromDTree
   . fromMaybe (Node DEmpty [])
   . toDTree
@@ -143,9 +143,11 @@ toRTree globalToOutput d
   where
     gToO = avgScale globalToOutput
 
-    -- scaling factor from normalized units to output units: nth root of
-    -- product of diameters along each basis direction
-    nToG = product (map (\v -> diameter v d) basis) ** (1 / fromIntegral (dimension d))
+    -- Scaling factor from normalized units to output units: nth root
+    -- of product of diameters along each basis direction.  Note at
+    -- this point the diagram has already had the globalToOutput
+    -- transformation applied, so output = global = local units.
+    nToO = product (map (\v -> diameter v d) basis) ** (1 / fromIntegral (dimension d))
 
 -- | Apply a style transformation on 'RStyle' nodes; the identity for
 --   other 'RNode's.
