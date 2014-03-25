@@ -3,9 +3,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE TemplateHaskell            #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Envelope
@@ -36,6 +36,7 @@ module Diagrams.Core.Envelope
          -- * Utility functions
        , diameter
        , radius
+       , extent
        , envelopeVMay, envelopeV, envelopePMay, envelopeP, envelopeSMay, envelopeS
 
          -- * Miscellaneous
@@ -43,8 +44,8 @@ module Diagrams.Core.Envelope
        ) where
 
 import           Control.Applicative     ((<$>))
-import           Control.Lens (Wrapped(..), Rewrapped, iso, over, mapped
-                              , _Wrapping', op)
+import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped,
+                                          op, over, _Wrapping')
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
@@ -255,11 +256,16 @@ envelopeS v = fromMaybe 0 . envelopeSMay v
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
 diameter :: Enveloped a => V a -> a -> Scalar (V a)
-diameter v a = case appEnvelope $ getEnvelope a of
-  (Just env) -> (env v + env (negateV v)) * magnitude v
-  Nothing -> 0
+diameter v a = maybe 0 (\(lo,hi) -> (hi - lo) * magnitude v) (extent v a)
 
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
 --   along a particular vector.
 radius :: Enveloped a => V a -> a -> Scalar (V a)
 radius v = (0.5*) . diameter v
+
+-- | Compute the range of an enveloped object along a certain
+--   direction.  Returns a pair of scalars @(lo,hi)@ such that the
+--   object extends from @(lo *^ v)@ to @(hi *^ v)@. Returns @Nothing@
+--   for objects with an empty envelope.
+extent :: Enveloped a => V a -> a -> Maybe (Scalar (V a), Scalar (V a))
+extent v a = (\f -> (-f (negateV v), f v)) <$> (appEnvelope . getEnvelope $ a)
