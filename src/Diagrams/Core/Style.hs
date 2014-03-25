@@ -46,8 +46,10 @@ module Diagrams.Core.Style
        ) where
 
 import           Control.Arrow           ((***))
-import           Control.Lens            (Rewrapped, Wrapped (..), iso)
-import           Data.Generics
+import           Control.Lens            (Rewrapped, Wrapped (..), iso, (%~),
+                                          (&))
+import           Data.Data
+import           Data.Data.Lens          (template)
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
@@ -223,7 +225,7 @@ gmapAttrs :: forall v a. Data a => (a -> a) -> Style v -> Style v
 gmapAttrs f = (inStyle . M.map) gmapAttr
   where
     gmapAttr :: Attribute v -> Attribute v
-    gmapAttr (GTAttribute a) = GTAttribute (everywhere (mkT f) a)
+    gmapAttr (GTAttribute a) = GTAttribute (a & template %~ f)
     gmapAttr a = a
 
 instance Semigroup (Style v) where

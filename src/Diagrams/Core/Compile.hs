@@ -24,6 +24,7 @@ module Diagrams.Core.Compile
 
   , toDTree
   , fromDTree
+  , toOutput
   )
   where
 
@@ -131,7 +132,7 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (Typeable v, Data v, HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid m, Semigroup m)
+  :: (HasLinearMap v, InnerSpace v, Data (Scalar v), OrderedField (Scalar v), Monoid m, Semigroup m)
   => Transformation v -> QDiagram b v m -> RTree b v Annotation
 toRTree globalToOutput d
   = (fmap . onRStyle) (toOutput gToO (gToO * nToG))
@@ -159,12 +160,12 @@ onRStyle _ n          = n
 --   case if all transformations have been fully pushed down and
 --   applied).
 toOutput
-  :: forall v. (Typeable v, Data v, HasLinearMap v, Floating (Scalar v))
+  :: forall v. (Data (Scalar v), Num (Scalar v))
   => Scalar v -> Scalar v -> Style v -> Style v
 toOutput globalToOutput normToOutput = gmapAttrs convert
   where
-    convert :: Measure v -> Measure v
+    convert :: Measure (Scalar v) -> Measure (Scalar v)
     convert m@(Output _)   = m
     convert (Local s)      = Output s
-    convert (Global s)     = Output (globalToOutput *^ s)
-    convert (Normalized s) = Output (normToOutput *^ s)
+    convert (Global s)     = Output (globalToOutput * s)
+    convert (Normalized s) = Output (normToOutput * s)
