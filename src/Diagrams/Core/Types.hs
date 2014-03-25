@@ -45,7 +45,14 @@ module Diagrams.Core.Types
          -- * Diagrams
 
          -- ** Annotations
-         UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+
+         -- *** Static annotations
+         Annotation(Href)
+       , applyAnnotation, href
+
+         -- *** Dynamic (monoidal) annotations
+       , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+
          -- ** Basic type definitions
        , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), Diagram
@@ -125,13 +132,13 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             _Wrapping)
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
+import           Data.Data
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Tree
-import           Data.Typeable
 import           Data.VectorSpace
 
 import           Data.Monoid.Action
@@ -163,7 +170,7 @@ data Measure t = Output t
                | Normalized t
                | Local t
                | Global t
-  deriving (Eq, Ord, Show, Typeable)
+  deriving (Eq, Ord, Show, Data, Typeable)
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -238,18 +245,35 @@ withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (Q
 withQDiaLeaf f _ (PrimLeaf p)    = f p
 withQDiaLeaf _ g (DelayedLeaf d) = g d
 
+-- | Static annotations which can be placed at a particular node of a
+--   diagram tree.
+data Annotation
+  = Href String    -- ^ Hyperlink
+  deriving Show
+
+-- | Apply a static annotation at the root of a diagram.
+applyAnnotation
+  :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+  => Annotation -> QDiagram b v m -> QDiagram b v m
+applyAnnotation an (QD dt) = QD (D.annot an dt)
+
+-- | Make a diagram into a hyperlink.  Note that only some backends
+--   will honor hyperlink annotations.
+href :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) => String -> QDiagram b v m -> QDiagram b v m
+href = applyAnnotation . Href
+
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
 newtype QDiagram b v m
-  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m))
+  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) Annotation (QDiaLeaf b v m))
   deriving (Typeable)
 
 instance Wrapped (QDiagram b v m) where
     type Unwrapped (QDiagram b v m) =
-        D.DUALTree (DownAnnots v) (UpAnnots b v m) () (QDiaLeaf b v m)
+        D.DUALTree (DownAnnots v) (UpAnnots b v m) Annotation (QDiaLeaf b v m)
     _Wrapped' = iso (\(QD d) -> d) QD
 
 instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
@@ -832,10 +856,6 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
             -> QDiagram b v m -> (Options b v, Transformation v, QDiagram b v m)
   adjustDia _ o d = (o,mempty,d)
 
-  -- | Convert an RTree to a renderable object. The transforms have
-  --   been accumulated and are in the leaves of the RTree along with the Prims.
-  renderRTree :: RTree b v a -> Render b v
-
   renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
             => b -> Options b v -> QDiagram b v m -> Result b v
   renderDia b opts d = snd (renderDiaT b opts d)
@@ -846,7 +866,7 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   renderDiaT
     :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
     => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
-  renderDiaT b opts d = (t, doRender b opts' . renderData b opts' t $ d')
+  renderDiaT b opts d = (t, doRender b opts' . renderData b t $ d')
     where (opts', t, d') = adjustDia b opts d
 
   -- | Backends must implement 'renderData' to convert the @QDiagram@ to
@@ -855,13 +875,13 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --
   --   > renderData opts t = renderRTree . toOutput (opts^.size) t . toRTree
   --
-  --   where @renderRTree :: RTree b v () -> Render b v@ is
+  --   where @renderRTree :: RTree b v Annotation -> Render b v@ is
   --   implemented by the backend (with appropriate types filled in
   --   for @b@ and @v@), and 'toRTree' is from
   --   "Diagrams.Core.Compile".  Here 'toOutput' converts 'Measure'
   --   values to 'Output' units, and @t@ is a transformation obtained
   --   from @adjustDia@. See "Diagrams.TwoD.Attributes".
-  renderData :: Monoid' m => b -> Options b v -> Transformation v -> QDiagram b v m -> Render b v
+  renderData :: Monoid' m => b -> Transformation v -> QDiagram b v m -> Render b v
 
   -- See Note [backend token]
 
@@ -966,8 +986,7 @@ instance HasLinearMap v => Backend NullBackend v where
   data Options NullBackend v
 
   doRender _ _ _    = ()
-  renderRTree _ = NullBackendRender
-  renderData _ _ _ _ = NullBackendRender
+  renderData _ _ _ = NullBackendRender
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
