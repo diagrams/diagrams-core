@@ -8,6 +8,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
@@ -166,11 +167,22 @@ import           Diagrams.Core.V
 --  Measurement Units  -------------------------------------
 ------------------------------------------------------------
 -- | Type of measurement units for attributes.
-data Measure t = Output t
-               | Normalized t
-               | Local t
-               | Global t
-  deriving (Eq, Ord, Show, Data, Typeable)
+data Measure v = Output (Scalar v)
+               | Normalized (Scalar v)
+               | Local (Scalar v)
+               | Global (Scalar v)
+  deriving (Typeable)
+
+deriving instance (Eq (Scalar v)) => Eq (Measure v)
+deriving instance (Ord (Scalar v)) => Ord (Measure v)
+deriving instance (Show (Scalar v)) => Show (Measure v)
+deriving instance (Typeable v, Data v, Data (Scalar v)) => Data (Measure v)
+
+type instance V (Measure v) = v
+
+instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) where
+  transform tr (Local x) = Local (avgScale tr * x)
+  transform _ y = y
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
