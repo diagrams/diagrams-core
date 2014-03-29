@@ -63,7 +63,6 @@ module Diagrams.Core.Types
        , mkQD, mkQD', pointDiagram
 
          -- ** Extracting information
-       , prims
        , envelope, trace, subMap, names, query, sample
        , value, resetValue, clearValue
 
@@ -244,18 +243,18 @@ transfFromAnnot = option mempty killR . fst
 --   scale-invariant).
 data QDiaLeaf b v m
   = PrimLeaf (Prim b v)
-  | DelayedLeaf (DownAnnots v -> QDiagram b v m)
+  | DelayedLeaf (DownAnnots v -> Scalar v -> Scalar v -> QDiagram b v m)
     -- ^ The @QDiagram@ produced by a @DelayedLeaf@ function /must/
-    --   already apply any non-frozen transformation in the given
-    --   @DownAnnots@ (that is, the non-frozen transformation will not
-    --   be applied by the context). On the other hand, it must assume
-    --   that any frozen transformation or attributes will be applied
-    --   by the context.
+    --   already apply any transformation in the given
+    --   @DownAnnots@ (that is, the transformation will not
+    --   be applied by the context).
   deriving (Functor)
 
-withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (QDiaLeaf b v m -> r)
+withQDiaLeaf :: (Prim b v -> r)
+            -> ((DownAnnots v -> Scalar v -> Scalar v -> QDiagram b v m) -> r)
+            -> (QDiaLeaf b v m -> r)
 withQDiaLeaf f _ (PrimLeaf p)    = f p
-withQDiaLeaf _ g (DelayedLeaf d) = g d
+withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
 
 -- | Static annotations which can be placed at a particular node of a
 --   diagram tree.
@@ -304,17 +303,6 @@ type Diagram b v = QDiagram b v Any
 pointDiagram :: (Fractional (Scalar v), InnerSpace v)
              => Point v -> QDiagram b v m
 pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
-
--- | Extract a list of primitives from a diagram, together with their
---   associated transformations and styles.
-prims :: HasLinearMap v
-      => QDiagram b v m -> [(Prim b v, (Transformation v, Style v))]
-prims = concatMap processLeaf
-      . D.flatten
-      . view _Wrapped'
-  where
-    processLeaf (PrimLeaf p, (trSty,_)) = [(p, untangle . option mempty id $ trSty)]
-    processLeaf (DelayedLeaf k, d)      = prims (k d)
 
 -- | A useful variant of 'getU' which projects out a certain
 --   component.

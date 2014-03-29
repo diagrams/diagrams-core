@@ -45,9 +45,13 @@ import           Diagrams.Core.Types
 emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
 
+uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
+uncurry3 f (x, y, z) = f x y z
+
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: HasLinearMap v => QDiagram b v m -> Maybe (DTree b v Annotation)
-toDTree (QD qd)
+toDTree :: HasLinearMap v => Scalar v -> Scalar v -> QDiagram b v m
+                          -> Maybe (DTree b v Annotation)
+toDTree g n (QD qd)
   = foldDUAL
 
       -- Prims at the leaves.  We ignore the accumulated d-annotations
@@ -63,7 +67,8 @@ toDTree (QD qd)
                -- the continuation, convert the result to a DTree, and
                -- splice it in, adding a DDelay node to mark the point
                -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree . ($ d))
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree g n
+                            . ($ (d, g, n)) . uncurry3)
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
@@ -138,7 +143,7 @@ toRTree globalToOutput d
   = (fmap . onRStyle) (toOutput gToO nToO)
   . fromDTree
   . fromMaybe (Node DEmpty [])
-  . toDTree
+  . toDTree gToO nToO
   $ d
   where
     gToO = avgScale globalToOutput
