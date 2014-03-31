@@ -117,7 +117,7 @@ module Diagrams.Core
 
          -- * Primtives
 
-       , Prim(..), nullPrim
+       , Prim(..)
 
          -- * Diagrams
 
