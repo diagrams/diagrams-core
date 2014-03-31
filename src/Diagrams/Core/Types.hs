@@ -761,23 +761,6 @@ instance HasLinearMap v => Transformable (Prim b v) where
 instance HasLinearMap v => Renderable (Prim b v) b where
   render b (Prim p) = render b p
 
--- | The null primitive.
-data NullPrim v = NullPrim
-  deriving Typeable
-
-type instance (V (NullPrim v)) = v
-
-instance HasLinearMap v => Transformable (NullPrim v) where
-  transform _ _ = NullPrim
-
-instance (HasLinearMap v) => Renderable (NullPrim v) b where
-  render _ _ = undefined
-
--- | The null primitive, which every backend can render by doing
---   nothing.
-nullPrim :: (HasLinearMap v, Typeable v) => Prim b v
-nullPrim = Prim NullPrim
-
 ------------------------------------------------------------
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
