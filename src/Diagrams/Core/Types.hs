@@ -770,12 +770,12 @@ type instance (V (NullPrim v)) = v
 instance HasLinearMap v => Transformable (NullPrim v) where
   transform _ _ = NullPrim
 
-instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b where
-  render _ _ = mempty
+instance (HasLinearMap v) => Renderable (NullPrim v) b where
+  render _ _ = undefined
 
 -- | The null primitive, which every backend can render by doing
 --   nothing.
-nullPrim :: (HasLinearMap v, Typeable v, Monoid (Render b v)) => Prim b v
+nullPrim :: (HasLinearMap v, Typeable v) => Prim b v
 nullPrim = Prim NullPrim
 
 ------------------------------------------------------------
@@ -818,28 +818,26 @@ type RTree b v a = Tree (RNode b v a )
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
---   instance of the 'Backend' class. A minimal complete definition
---   consists of the three associated types, an implementation for
---   'doRender', and /one of/ either 'withStyle' or 'renderData'.
-class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
+--   instance of the 'Backend' class.
+--
+--   A minimal complete definition consists of 'Result', 'Options',
+--   and 'renderRTree' (though most backends will want to implement
+--   'adjustDia' as well; the default definition does nothing and is probably
+class HasLinearMap v => Backend b v where
 
-  -- | The type of rendering operations used by this backend, which
-  --   must be a monoid. For example, if @Render b v = M ()@ for some
-  --   monad @M@, a monoid instance can be made with @mempty = return
-  --   ()@ and @mappend = (>>)@.
-  data Render  b v :: *
+  -- | An intermediate representation used for rendering primitives.
+  --   (Typically, this will be some sort of monad, but it need not
+  --   be.)  The 'Renderable' class guarantees that a backend will be
+  --   able to convert primitives into this type; how these rendered
+  --   primitives are combined into an ultimate 'Result' is completely
+  --   up to the backend.
+  data Render b v :: *
 
   -- | The result of running/interpreting a rendering operation.
   type Result  b v :: *
 
   -- | Backend-specific rendering options.
   data Options b v :: *
-
-  -- | 'doRender' is used to interpret rendering operations.
-  doRender       :: b           -- ^ Backend token (needed only for type inference)
-                 -> Options b v -- ^ Backend-specific collection of rendering options
-                 -> Render b v  -- ^ Rendering operation to perform
-                 -> Result b v  -- ^ Output of the rendering operation
 
   -- | 'adjustDia' allows the backend to make adjustments to the final
   --   diagram (e.g. to adjust the size based on the options) before
@@ -849,39 +847,16 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   --   /e.g./ screen coordinates back into local diagram coordinates),
   --   and the adjusted diagram itself.
   --
-  --  A default implementation is provided which makes
-  --   no adjustments.  See the diagrams-lib package for other useful
-  --   implementations.
+  --   See the diagrams-lib package (particularly the
+  --   @Diagrams.TwoD.Adjust@ module) for some useful implementations.
   adjustDia :: (Monoid' m, Num (Scalar v)) => b -> Options b v
             -> QDiagram b v m -> (Options b v, Transformation v, QDiagram b v m)
   adjustDia _ o d = (o,mempty,d)
 
-  renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
-            => b -> Options b v -> QDiagram b v m -> Result b v
-  renderDia b opts d = snd (renderDiaT b opts d)
-
-  -- | Render a diagram, returning also a transformation which can be
-  --   used to translate output/device coordinates back into local
-  --   diagram coordinates (see 'adjustDia').
-  renderDiaT
-    :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
-    => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
-  renderDiaT b opts d = (t, doRender b opts' . renderData b t $ d')
-    where (opts', t, d') = adjustDia b opts d
-
-  -- | Backends must implement 'renderData' to convert the @QDiagram@ to
-  --   an RTree and ensure any attributes with values of type @Measure t@ are
-  --   @Output t@. A typical implementation might be something like
-  --
-  --   > renderData opts t = renderRTree . toOutput (opts^.size) t . toRTree
-  --
-  --   where @renderRTree :: RTree b v Annotation -> Render b v@ is
-  --   implemented by the backend (with appropriate types filled in
-  --   for @b@ and @v@), and 'toRTree' is from
-  --   "Diagrams.Core.Compile".  Here 'toOutput' converts 'Measure'
-  --   values to 'Output' units, and @t@ is a transformation obtained
-  --   from @adjustDia@. See "Diagrams.TwoD.Attributes".
-  renderData :: Monoid' m => b -> Transformation v -> QDiagram b v m -> Render b v
+  -- | Given some options, take a representation of a diagram as a
+  --   tree and render it.  The 'RTree' has already been simplified
+  --   and has all measurements converted to @Output@ units.
+  renderRTree :: b -> Options b v -> RTree b v Annotation -> Result b v
 
   -- See Note [backend token]
 
@@ -985,8 +960,7 @@ instance HasLinearMap v => Backend NullBackend v where
   type Result NullBackend v = ()
   data Options NullBackend v
 
-  doRender _ _ _    = ()
-  renderData _ _ _ = NullBackendRender
+  renderRTree _ _ _ = ()
 
 -- | A class for backends which support rendering multiple diagrams,
 --   e.g. to a multi-page pdf or something similar.
@@ -1019,3 +993,4 @@ return some associated type applied to b (e.g. Render b) and unifying
 them with something else will never work, since type families are not
 necessarily injective.
 -}
+

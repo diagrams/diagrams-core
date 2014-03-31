@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators       #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeOperators         #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -20,7 +21,12 @@ module Diagrams.Core.Compile
   , RTree
   , toRTree
 
-  -- * Internals
+    -- * Backend API
+
+  , renderDia
+  , renderDiaT
+
+    -- * Internals
 
   , toDTree
   , fromDTree
@@ -29,15 +35,16 @@ module Diagrams.Core.Compile
   where
 
 import           Data.Data
-import qualified Data.List.NonEmpty      as NEL
-import           Data.Maybe              (fromMaybe)
+import qualified Data.List.NonEmpty        as NEL
+import           Data.Maybe                (fromMaybe)
 import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
+import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
 import           Data.VectorSpace
-import           Diagrams.Core.Envelope  (OrderedField, diameter)
+import           Diagrams.Core.Envelope    (OrderedField, diameter)
 import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
@@ -176,3 +183,30 @@ toOutput globalToOutput normToOutput = gmapAttrs convert
     convert (Local s)      = Output s
     convert (Global s)     = Output (globalToOutput * s)
     convert (Normalized s) = Output (normToOutput * s)
+
+--------------------------------------------------
+
+-- | Render a diagram, returning also the transformation which was
+--   used to convert the diagram from its (\"global\") coordinate
+--   system into the output coordinate system.  The inverse of this
+--   transformation can be used, for example, to convert output/screen
+--   coordinates back into diagram coordinates.  See also 'adjustDia'.
+renderDiaT
+  :: ( Backend b v
+     , HasLinearMap v, InnerSpace v, Data v
+     , OrderedField (Scalar v), Data (Scalar v)
+     , Monoid' m
+     )
+  => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
+renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
+  where (opts', g2o, d') = adjustDia b opts d
+
+-- | Render a diagram.
+renderDia
+  :: ( Backend b v
+     , InnerSpace v, Data v
+     , OrderedField (Scalar v), Data (Scalar v)
+     , Monoid' m
+     )
+          => b -> Options b v -> QDiagram b v m -> Result b v
+renderDia b opts d = snd (renderDiaT b opts d)
