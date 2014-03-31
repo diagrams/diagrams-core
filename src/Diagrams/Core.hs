@@ -117,7 +117,7 @@ module Diagrams.Core
 
          -- * Primtives
 
-       , Prim(..), nullPrim
+       , Prim(..)
 
          -- * Diagrams
 
@@ -152,6 +152,9 @@ module Diagrams.Core
        , MultiBackend(..)
        , Renderable(..)
 
+       , renderDia
+       , renderDiaT
+
          -- ** The null backend
 
        , NullBackend, D
@@ -164,6 +167,7 @@ module Diagrams.Core
 
        ) where
 
+import           Diagrams.Core.Compile
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
