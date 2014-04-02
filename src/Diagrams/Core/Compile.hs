@@ -172,9 +172,10 @@ onRStyle _ n          = n
 --   units, and from normalized units to output units.  It is assumed
 --   that local units are identical to output units (which will be the
 --   case if all transformations have been fully pushed down and
---   applied).
+--   applied). Normalized units are based on a logical diagram size of
+--   100 x 1000.
 toOutput
-  :: forall v. (Data v, Data (Scalar v), Num (Scalar v))
+  :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Fractional (Scalar v))
   => Scalar v -> Scalar v -> Style v -> Style v
 toOutput globalToOutput normToOutput = gmapAttrs convert
   where
@@ -182,7 +183,7 @@ toOutput globalToOutput normToOutput = gmapAttrs convert
     convert m@(Output _)   = m
     convert (Local s)      = Output s
     convert (Global s)     = Output (globalToOutput * s)
-    convert (Normalized s) = Output (normToOutput * s)
+    convert (Normalized s) = Output (normToOutput * s * 0.01)
 
 --------------------------------------------------
 
