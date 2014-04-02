@@ -173,7 +173,7 @@ onRStyle _ n          = n
 --   that local units are identical to output units (which will be the
 --   case if all transformations have been fully pushed down and
 --   applied). Normalized units are based on a logical diagram size of
---   100 x 1000.
+--   100 x 100.
 toOutput
   :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Fractional (Scalar v))
   => Scalar v -> Scalar v -> Style v -> Style v
