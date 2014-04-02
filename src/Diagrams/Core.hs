@@ -146,6 +146,7 @@ module Diagrams.Core
 
          -- * Measurements
        , Measure(..)
+       , fromOutput
          -- * Backends
 
        , Backend(..)

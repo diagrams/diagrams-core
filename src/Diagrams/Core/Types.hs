@@ -88,6 +88,7 @@ module Diagrams.Core.Types
 
          -- * Measurements
        , Measure(..)
+       , fromOutput
 
          -- * Subdiagrams
 
@@ -183,6 +184,22 @@ instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) wher
   transform tr (Local x) = Local (avgScale tr * x)
   transform _ y = y
 
+-- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
+--   Only 'Ouput' measures should be left in the 'RTree' passed to the backend.
+--   Eventually we may use a GADT like:
+--
+--   > data Measure o v where
+--   > Output :: Scalar v -> Measure O v
+--   > Normalized :: Scalar v -> Measure A v
+--   > Global :: Scalar v -> Measure A v
+--   > Local :: Scale v -> Measure A v
+--
+--   to check this at compile time. But for now we throw a runtime error.
+fromOutput :: Measure v -> Scalar v
+fromOutput (Output w) = w
+fromOutput (Normalized _) = error "Cannot pass Normalized to backends, must be Output"
+fromOutput (Local _) = error "Cannot pass Local to backends, must be Output"
+fromOutput (Global _) = error "Cannot pass Global to backends, must be Output"
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
