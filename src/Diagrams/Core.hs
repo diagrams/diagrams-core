@@ -150,7 +150,6 @@ module Diagrams.Core
          -- * Backends
 
        , Backend(..)
-       , MultiBackend(..)
        , Renderable(..)
 
        , renderDia

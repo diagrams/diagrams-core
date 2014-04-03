@@ -111,7 +111,6 @@ module Diagrams.Core.Types
          -- * Backends
 
        , Backend(..)
-       , MultiBackend(..)
        , DNode(..)
        , DTree
        , RNode(..)
@@ -961,17 +960,6 @@ instance HasLinearMap v => Backend NullBackend v where
   data Options NullBackend v
 
   renderRTree _ _ _ = ()
-
--- | A class for backends which support rendering multiple diagrams,
---   e.g. to a multi-page pdf or something similar.
-class Backend b v => MultiBackend b v where
-
-  -- | Render multiple diagrams at once.
-  renderDias :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
-             => b -> Options b v -> [QDiagram b v m] -> Result b v
-
-  -- See Note [backend token]
-
 
 -- | The Renderable type class connects backends to primitives which
 --   they know how to render.
