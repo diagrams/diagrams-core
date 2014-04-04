@@ -185,9 +185,13 @@ deriving instance (Ord (Scalar v)) => Ord (Measure v)
 deriving instance (Show (Scalar v)) => Show (Measure v)
 deriving instance (Typeable v, Data v, Data (Scalar v)) => Data (Measure v)
 
+-- | Compute the larger of two 'Measure's.  Useful for setting lower
+--   bounds.
 atLeast :: Measure v -> Measure v -> Measure v
 atLeast = MaxM
 
+-- | Compute the smaller of two 'Measure's.  Useful for setting upper
+--   bounds.
 atMost :: Measure v -> Measure v -> Measure v
 atMost = MinM
 
