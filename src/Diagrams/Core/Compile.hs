@@ -175,15 +175,29 @@ onRStyle _ n          = n
 --   applied). Normalized units are based on a logical diagram size of
 --   100 x 100.
 toOutput
-  :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Fractional (Scalar v))
+  :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
   => Scalar v -> Scalar v -> Style v -> Style v
 toOutput globalToOutput normToOutput = gmapAttrs convert
   where
     convert :: Measure v -> Measure v
+
     convert m@(Output _)   = m
     convert (Local s)      = Output s
     convert (Global s)     = Output (globalToOutput * s)
     convert (Normalized s) = Output (normToOutput * s * 0.01)
+
+    convert (MinM m1 m2)   = outBin min (convert m1) (convert m2)
+    convert (MaxM m1 m2)   = outBin max (convert m1) (convert m2)
+    convert (ZeroM)        = Output 0
+    convert (NegateM m)    = outUn negate (convert m)
+    convert (PlusM m1 m2)  = outBin (+) (convert m1) (convert m2)
+    convert (ScaleM s m)   = outUn (s*) (convert m)
+
+    outUn  op (Output o1)             = Output (op o1)
+    outUn  _  _ = error "outUn: The sky is falling!"
+    outBin op (Output o1) (Output o2) = Output (o1 `op` o2)
+    outBin _ _ _ = error "outBin: Both skies are falling!"
+
 
 --------------------------------------------------
 
