@@ -221,7 +221,7 @@ combineAttr a s =
 --   the given function to any values with the given type, even deeply
 --   nested ones.  Note that only attributes wrapped in 'GTAttribute'
 --   are affected.
-gmapAttrs :: forall v a. Data a => (a -> a) -> Style v -> Style v
+gmapAttrs :: forall v a. Typeable a => (a -> a) -> Style v -> Style v
 gmapAttrs f = (inStyle . M.map) gmapAttr
   where
     gmapAttr :: Attribute v -> Attribute v
