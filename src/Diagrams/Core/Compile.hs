@@ -185,18 +185,18 @@ styleToOutput globalToOutput normToOutput =
 toOutput :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
   => Scalar v -> Scalar v -> Measure v -> Measure v
 toOutput g n m =
-  case (g, n, m) of
-     (_,  _, m'@(Output _))    -> m'
-     (_,  _, (Local s))       -> Output s
-     (g', _, (Global s))      -> Output (g' * s)
-     (_, n', (Normalized s))  -> Output (n' * s * 0.01)
+  case m of
+     m'@(Output _)    -> m'
+     Local s       -> Output s
+     Global s      -> Output (g * s)
+     Normalized s  -> Output (n * s * 0.01)
 
-     (g', n', (MinM m1 m2))    -> outBin min (toOutput g' n' m1) (toOutput g' n' m2)
-     (g', n', (MaxM m1 m2))    -> outBin max (toOutput g' n' m1) (toOutput g' n' m2)
-     (_ , _ , (ZeroM))         -> Output 0
-     (g', n', (NegateM m'))     -> outUn negate (toOutput g' n' m')
-     (g', n', (PlusM m1 m2))   -> outBin (+) (toOutput g' n' m1) (toOutput g' n' m2)
-     (g', n', (ScaleM s m'))    -> outUn (s*) (toOutput g' n' m')
+     MinM m1 m2    -> outBin min (toOutput g n m1) (toOutput g n m2)
+     MaxM m1 m2    -> outBin max (toOutput g n m1) (toOutput g n m2)
+     ZeroM         -> Output 0
+     NegateM m'     -> outUn negate (toOutput g n m')
+     PlusM m1 m2   -> outBin (+) (toOutput g n m1) (toOutput g n m2)
+     ScaleM s m'    -> outUn (s*) (toOutput g n m')
   where
     outUn  op (Output o1)             = Output (op o1)
     outUn  _  _ = error "outUn: The sky is falling!"
