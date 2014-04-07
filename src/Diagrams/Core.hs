@@ -148,6 +148,9 @@ module Diagrams.Core
        , Measure(..)
        , fromOutput
        , toOutput
+       , atMost
+       , atLeast
+
          -- * Backends
 
        , Backend(..)
