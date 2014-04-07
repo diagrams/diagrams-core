@@ -89,6 +89,7 @@ module Diagrams.Core.Types
          -- * Measurements
        , Measure(..)
        , fromOutput
+       , atMost, atLeast
 
          -- * Subdiagrams
 
@@ -170,12 +171,41 @@ data Measure v = Output (Scalar v)
                | Normalized (Scalar v)
                | Local (Scalar v)
                | Global (Scalar v)
+
+               | MinM (Measure v) (Measure v)
+               | MaxM (Measure v) (Measure v)
+               | ZeroM
+               | NegateM (Measure v)
+               | PlusM (Measure v) (Measure v)
+               | ScaleM (Scalar v) (Measure v)
   deriving (Typeable)
 
 deriving instance (Eq (Scalar v)) => Eq (Measure v)
 deriving instance (Ord (Scalar v)) => Ord (Measure v)
 deriving instance (Show (Scalar v)) => Show (Measure v)
 deriving instance (Typeable v, Data v, Data (Scalar v)) => Data (Measure v)
+
+-- | Compute the larger of two 'Measure's.  Useful for setting lower
+--   bounds.
+atLeast :: Measure v -> Measure v -> Measure v
+atLeast = MaxM
+
+-- | Compute the smaller of two 'Measure's.  Useful for setting upper
+--   bounds.
+atMost :: Measure v -> Measure v -> Measure v
+atMost = MinM
+
+instance AdditiveGroup (Measure v) where
+  zeroV = ZeroM
+  negateV (NegateM m) = m
+  negateV m = NegateM m
+  ZeroM ^+^ m = m
+  m ^+^ ZeroM = m
+  m1 ^+^ m2 = PlusM m1 m2
+
+instance VectorSpace (Measure v) where
+  type Scalar (Measure v) = Scalar v
+  s *^ m = ScaleM s m
 
 type instance V (Measure v) = v
 
@@ -185,6 +215,21 @@ instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) wher
 
 -- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
 --   Only 'Ouput' measures should be left in the 'RTree' passed to the backend.
+fromOutput :: Measure v -> Scalar v
+fromOutput (Output w)     = w
+fromOutput (Normalized _) = fromOutputErr "Normalized"
+fromOutput (Local _)      = fromOutputErr "Local"
+fromOutput (Global _)     = fromOutputErr "Global"
+fromOutput (MinM _ _)     = fromOutputErr "MinM"
+fromOutput (MaxM _ _)     = fromOutputErr "MaxM"
+fromOutput (ZeroM)        = fromOutputErr "ZeroM"
+fromOutput (NegateM _)    = fromOutputErr "NegateM"
+fromOutput (PlusM _ _)    = fromOutputErr "PlusM"
+fromOutput (ScaleM _ _)   = fromOutputErr "ScaleM"
+
+fromOutputErr :: String -> a
+fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must be Output."
+
 --   Eventually we may use a GADT like:
 --
 --   > data Measure o v where
@@ -194,11 +239,17 @@ instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) wher
 --   > Local :: Scale v -> Measure A v
 --
 --   to check this at compile time. But for now we throw a runtime error.
-fromOutput :: Measure v -> Scalar v
-fromOutput (Output w) = w
-fromOutput (Normalized _) = error "Cannot pass Normalized to backends, must be Output"
-fromOutput (Local _) = error "Cannot pass Local to backends, must be Output"
-fromOutput (Global _) = error "Cannot pass Global to backends, must be Output"
+--
+--   [BAY 4 April 2014] I tried switching to such a GADT.  One tricky
+--   bit is that you have to use Output :: Scalar v -> Measure o v,
+--   not Measure O v: the reason is that operations like addition have
+--   to take two values of the same type, so in order to be able to
+--   add Output to something else, Output must be able to have an A
+--   annotation.  That all works fine.  The problem is with gmapAttrs,
+--   which has to preserve type: so we can't generically convert from
+--   Measure A to Measure O.
+
+
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
@@ -981,4 +1032,3 @@ return some associated type applied to b (e.g. Render b) and unifying
 them with something else will never work, since type families are not
 necessarily injective.
 -}
-

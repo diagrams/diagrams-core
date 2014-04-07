@@ -30,6 +30,7 @@ module Diagrams.Core.Compile
 
   , toDTree
   , fromDTree
+  , styleToOutput
   , toOutput
   )
   where
@@ -147,7 +148,7 @@ toRTree
   :: (HasLinearMap v, InnerSpace v, Data v, Data (Scalar v), OrderedField (Scalar v), Monoid m, Semigroup m)
   => Transformation v -> QDiagram b v m -> RTree b v Annotation
 toRTree globalToOutput d
-  = (fmap . onRStyle) (toOutput gToO nToO)
+  = (fmap . onRStyle) (styleToOutput gToO nToO)
   . fromDTree
   . fromMaybe (Node DEmpty [])
   . toDTree gToO nToO
@@ -174,16 +175,34 @@ onRStyle _ n          = n
 --   case if all transformations have been fully pushed down and
 --   applied). Normalized units are based on a logical diagram size of
 --   100 x 100.
-toOutput
-  :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Fractional (Scalar v))
+styleToOutput
+  :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
   => Scalar v -> Scalar v -> Style v -> Style v
-toOutput globalToOutput normToOutput = gmapAttrs convert
+styleToOutput globalToOutput normToOutput =
+  gmapAttrs (toOutput globalToOutput normToOutput :: Measure v -> Measure v)
+
+-- | Convert an aribrary 'Measure' to 'Output' units.
+toOutput :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
+  => Scalar v -> Scalar v -> Measure v -> Measure v
+toOutput g n m =
+  case (g, n, m) of
+     (_,  _, m'@(Output _))    -> m'
+     (_,  _, (Local s))       -> Output s
+     (g', _, (Global s))      -> Output (g' * s)
+     (_, n', (Normalized s))  -> Output (n' * s * 0.01)
+
+     (g', n', (MinM m1 m2))    -> outBin min (toOutput g' n' m1) (toOutput g' n' m2)
+     (g', n', (MaxM m1 m2))    -> outBin max (toOutput g' n' m1) (toOutput g' n' m2)
+     (_ , _ , (ZeroM))         -> Output 0
+     (g', n', (NegateM m'))     -> outUn negate (toOutput g' n' m')
+     (g', n', (PlusM m1 m2))   -> outBin (+) (toOutput g' n' m1) (toOutput g' n' m2)
+     (g', n', (ScaleM s m'))    -> outUn (s*) (toOutput g' n' m')
   where
-    convert :: Measure v -> Measure v
-    convert m@(Output _)   = m
-    convert (Local s)      = Output s
-    convert (Global s)     = Output (globalToOutput * s)
-    convert (Normalized s) = Output (normToOutput * s * 0.01)
+    outUn  op (Output o1)             = Output (op o1)
+    outUn  _  _ = error "outUn: The sky is falling!"
+    outBin op (Output o1) (Output o2) = Output (o1 `op` o2)
+    outBin _ _ _ = error "outBin: Both skies are falling!"
+
 
 --------------------------------------------------
 
