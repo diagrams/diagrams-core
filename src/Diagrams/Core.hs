@@ -78,11 +78,11 @@ module Diagrams.Core
          -- * Attributes and styles
 
        , AttributeClass
-       , Attribute, mkAttr, mkTAttr, unwrapAttr
+       , Attribute, mkAttr, mkTAttr, mkGTAttr, unwrapAttr
 
        , Style, HasStyle(..)
        , getAttr, combineAttr
-       , applyAttr, applyTAttr
+       , applyAttr, applyTAttr, applyGTAttr
 
          -- * Envelopes
 
@@ -117,12 +117,11 @@ module Diagrams.Core
 
          -- * Primtives
 
-       , Prim(..), IsPrim(..), nullPrim
+       , Prim(..)
 
          -- * Diagrams
 
        , QDiagram, Diagram, mkQD, pointDiagram
-       , prims
        , envelope, trace, subMap, names, query, sample
        , value, resetValue, clearValue
 
@@ -134,7 +133,7 @@ module Diagrams.Core
 
        , href
 
-       , freeze, setEnvelope, setTrace
+       , setEnvelope, setTrace
 
        , atop
 
@@ -145,11 +144,20 @@ module Diagrams.Core
        , location
        , subPoint
 
+         -- * Measurements
+       , Measure(..)
+       , fromOutput
+       , toOutput
+       , atMost
+       , atLeast
+
          -- * Backends
 
        , Backend(..)
-       , MultiBackend(..)
        , Renderable(..)
+
+       , renderDia
+       , renderDiaT
 
          -- ** The null backend
 
@@ -163,6 +171,7 @@ module Diagrams.Core
 
        ) where
 
+import           Diagrams.Core.Compile
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose

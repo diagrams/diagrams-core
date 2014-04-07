@@ -45,7 +45,6 @@ Library
                        monoid-extras >= 0.3 && < 0.4,
                        dual-tree >= 0.2 && < 0.3,
                        lens >= 4.0 && < 4.2
-
   hs-source-dirs:      src
 
   Other-extensions:    DeriveDataTypeable

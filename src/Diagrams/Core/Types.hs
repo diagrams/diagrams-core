@@ -8,6 +8,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
@@ -62,7 +63,6 @@ module Diagrams.Core.Types
        , mkQD, mkQD', pointDiagram
 
          -- ** Extracting information
-       , prims
        , envelope, trace, subMap, names, query, sample
        , value, resetValue, clearValue
 
@@ -83,9 +83,13 @@ module Diagrams.Core.Types
        , localize
 
          -- *** Other
-       , freeze
        , setEnvelope
        , setTrace
+
+         -- * Measurements
+       , Measure(..)
+       , fromOutput
+       , atMost, atLeast
 
          -- * Subdiagrams
 
@@ -103,12 +107,11 @@ module Diagrams.Core.Types
          -- * Primtives
          -- $prim
 
-       , Prim(..), IsPrim(..), nullPrim
+       , Prim(..)
 
          -- * Backends
 
        , Backend(..)
-       , MultiBackend(..)
        , DNode(..)
        , DTree
        , RNode(..)
@@ -130,20 +133,19 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             _Wrapping)
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
+import           Data.Data
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Tree
-import           Data.Typeable
 import           Data.VectorSpace
 
 import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
 import           Data.Monoid.Deletable
 import           Data.Monoid.MList
-import           Data.Monoid.Split
 import           Data.Monoid.WithSemigroup
 import qualified Data.Tree.DUAL            as D
 
@@ -160,6 +162,93 @@ import           Diagrams.Core.V
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
+
+------------------------------------------------------------
+--  Measurement Units  -------------------------------------
+------------------------------------------------------------
+-- | Type of measurement units for attributes.
+data Measure v = Output (Scalar v)
+               | Normalized (Scalar v)
+               | Local (Scalar v)
+               | Global (Scalar v)
+
+               | MinM (Measure v) (Measure v)
+               | MaxM (Measure v) (Measure v)
+               | ZeroM
+               | NegateM (Measure v)
+               | PlusM (Measure v) (Measure v)
+               | ScaleM (Scalar v) (Measure v)
+  deriving (Typeable)
+
+deriving instance (Eq (Scalar v)) => Eq (Measure v)
+deriving instance (Ord (Scalar v)) => Ord (Measure v)
+deriving instance (Show (Scalar v)) => Show (Measure v)
+deriving instance (Typeable v, Data v, Data (Scalar v)) => Data (Measure v)
+
+-- | Compute the larger of two 'Measure's.  Useful for setting lower
+--   bounds.
+atLeast :: Measure v -> Measure v -> Measure v
+atLeast = MaxM
+
+-- | Compute the smaller of two 'Measure's.  Useful for setting upper
+--   bounds.
+atMost :: Measure v -> Measure v -> Measure v
+atMost = MinM
+
+instance AdditiveGroup (Measure v) where
+  zeroV = ZeroM
+  negateV (NegateM m) = m
+  negateV m = NegateM m
+  ZeroM ^+^ m = m
+  m ^+^ ZeroM = m
+  m1 ^+^ m2 = PlusM m1 m2
+
+instance VectorSpace (Measure v) where
+  type Scalar (Measure v) = Scalar v
+  s *^ m = ScaleM s m
+
+type instance V (Measure v) = v
+
+instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) where
+  transform tr (Local x) = Local (avgScale tr * x)
+  transform _ y = y
+
+-- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
+--   Only 'Ouput' measures should be left in the 'RTree' passed to the backend.
+fromOutput :: Measure v -> Scalar v
+fromOutput (Output w)     = w
+fromOutput (Normalized _) = fromOutputErr "Normalized"
+fromOutput (Local _)      = fromOutputErr "Local"
+fromOutput (Global _)     = fromOutputErr "Global"
+fromOutput (MinM _ _)     = fromOutputErr "MinM"
+fromOutput (MaxM _ _)     = fromOutputErr "MaxM"
+fromOutput (ZeroM)        = fromOutputErr "ZeroM"
+fromOutput (NegateM _)    = fromOutputErr "NegateM"
+fromOutput (PlusM _ _)    = fromOutputErr "PlusM"
+fromOutput (ScaleM _ _)   = fromOutputErr "ScaleM"
+
+fromOutputErr :: String -> a
+fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must be Output."
+
+--   Eventually we may use a GADT like:
+--
+--   > data Measure o v where
+--   > Output :: Scalar v -> Measure O v
+--   > Normalized :: Scalar v -> Measure A v
+--   > Global :: Scalar v -> Measure A v
+--   > Local :: Scale v -> Measure A v
+--
+--   to check this at compile time. But for now we throw a runtime error.
+--
+--   [BAY 4 April 2014] I tried switching to such a GADT.  One tricky
+--   bit is that you have to use Output :: Scalar v -> Measure o v,
+--   not Measure O v: the reason is that operations like addition have
+--   to take two values of the same type, so in order to be able to
+--   add Output to something else, Output must be able to have an A
+--   annotation.  That all works fine.  The problem is with gmapAttrs,
+--   which has to preserve type: so we can't generically convert from
+--   Measure A to Measure O.
+
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -190,13 +279,10 @@ type UpAnnots b v m = Deletable (Envelope v)
 --   /i.e./ which accumulate along each path to a leaf (and which can
 --   act on the upwards-travelling annotations):
 --
---   * transformations (split at the innermost freeze): see
---     "Diagrams.Core.Transform"
---
 --   * styles (see "Diagrams.Core.Style")
 --
 --   * names (see "Diagrams.Core.Names")
-type DownAnnots v = (Split (Transformation v) :+: Style v)
+type DownAnnots v = (Transformation v :+: Style v)
                 ::: Name
                 ::: ()
 
@@ -209,13 +295,12 @@ type DownAnnots v = (Split (Transformation v) :+: Style v)
 transfToAnnot :: Transformation v -> DownAnnots v
 transfToAnnot
   = inj
-  . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
-  . M
+  . (inL :: Transformation v -> Transformation v :+: Style v)
 
 -- | Extract the (total) transformation from a downwards annotation
 --   value.
 transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
-transfFromAnnot = option mempty (unsplit . killR) . fst
+transfFromAnnot = option mempty killR . fst
 
 -- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
 --   @QDiagram@ which expands to a real @QDiagram@ once it learns the
@@ -225,18 +310,18 @@ transfFromAnnot = option mempty (unsplit . killR) . fst
 --   scale-invariant).
 data QDiaLeaf b v m
   = PrimLeaf (Prim b v)
-  | DelayedLeaf (DownAnnots v -> QDiagram b v m)
+  | DelayedLeaf (DownAnnots v -> Scalar v -> Scalar v -> QDiagram b v m)
     -- ^ The @QDiagram@ produced by a @DelayedLeaf@ function /must/
-    --   already apply any non-frozen transformation in the given
-    --   @DownAnnots@ (that is, the non-frozen transformation will not
-    --   be applied by the context). On the other hand, it must assume
-    --   that any frozen transformation or attributes will be applied
-    --   by the context.
+    --   already apply any transformation in the given
+    --   @DownAnnots@ (that is, the transformation will not
+    --   be applied by the context).
   deriving (Functor)
 
-withQDiaLeaf :: (Prim b v -> r) -> ((DownAnnots v -> QDiagram b v m) -> r) -> (QDiaLeaf b v m -> r)
+withQDiaLeaf :: (Prim b v -> r)
+            -> ((DownAnnots v -> Scalar v -> Scalar v -> QDiagram b v m) -> r)
+            -> (QDiaLeaf b v m -> r)
 withQDiaLeaf f _ (PrimLeaf p)    = f p
-withQDiaLeaf _ g (DelayedLeaf d) = g d
+withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
 
 -- | Static annotations which can be placed at a particular node of a
 --   diagram tree.
@@ -285,17 +370,6 @@ type Diagram b v = QDiagram b v Any
 pointDiagram :: (Fractional (Scalar v), InnerSpace v)
              => Point v -> QDiagram b v m
 pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
-
--- | Extract a list of primitives from a diagram, together with their
---   associated transformations and styles.
-prims :: HasLinearMap v
-      => QDiagram b v m -> [(Prim b v, (Split (Transformation v), Style v))]
-prims = concatMap processLeaf
-      . D.flatten
-      . view _Wrapped'
-  where
-    processLeaf (PrimLeaf p, (trSty,_)) = [(p, untangle . option mempty id $ trSty)]
-    processLeaf (DelayedLeaf k, d)      = prims (k d)
 
 -- | A useful variant of 'getU' which projects out a certain
 --   component.
@@ -520,30 +594,7 @@ instance Functor (QDiagram b v) where
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => HasStyle (QDiagram b v m) where
   applyStyle = over _Wrapped' . D.applyD . inj
-             . (inR :: Style v -> Split (Transformation v) :+: Style v)
-
--- | By default, diagram attributes are not affected by
---   transformations.  This means, for example, that @lw 0.01 circle@
---   and @scale 2 (lw 0.01 circle)@ will be drawn with lines of the
---   /same/ width, and @scaleY 3 circle@ will be an ellipse drawn with
---   a uniform line.  Once a diagram is frozen, however,
---   transformations do affect attributes, so, for example, @scale 2
---   (freeze (lw 0.01 circle))@ will be drawn with a line twice as
---   thick as @lw 0.01 circle@, and @scaleY 3 (freeze circle)@ will be
---   drawn with a \"stretched\", variable-width line.
---
---   Another way of thinking about it is that pre-@freeze@, we are
---   transforming the \"abstract idea\" of a diagram, and the
---   transformed version is then drawn; when doing a @freeze@, we
---   produce a concrete drawing of the diagram, and it is this visual
---   representation itself which is acted upon by subsequent
---   transformations.
-freeze :: forall v b m. (HasLinearMap v, InnerSpace v
-                        , OrderedField (Scalar v), Semigroup m)
-       => QDiagram b v m -> QDiagram b v m
-freeze = over _Wrapped' . D.applyD . inj
-       . (inL :: Split (Transformation v) -> Split (Transformation v) :+: Style v)
-       $ split
+             . (inR :: Style v -> Transformation v :+: Style v)
 
 ---- Juxtaposable
 
@@ -754,30 +805,18 @@ lookupSub a (SubMap m)
 ------------------------------------------------------------
 
 -- $prim
--- Ultimately, every diagram is essentially a list of /primitives/,
+-- Ultimately, every diagram is essentially a tree whose leaves are /primitives/,
 -- basic building blocks which can be rendered by backends.  However,
 -- not every backend must be able to render every type of primitive;
 -- the collection of primitives a given backend knows how to render is
 -- determined by instances of 'Renderable'.
 
--- | A type class for primitive things which know how to handle being
---   transformed by both a normal transformation and a \"frozen\"
---   transformation.  The default implementation simply applies both.
---   At the moment, 'ScaleInv' is the only type with a non-default
---   instance of 'IsPrim'.
-class Transformable p => IsPrim p where
-  transformWithFreeze :: Transformation (V p) -> Transformation (V p) -> p -> p
-  transformWithFreeze t1 t2 = transform (t1 <> t2)
-
 -- | A value of type @Prim b v@ is an opaque (existentially quantified)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v where
-  Prim :: (IsPrim p, Typeable p, Renderable p b) => p -> Prim b (V p)
+  Prim :: (Transformable p, Typeable p, Renderable p b) => p -> Prim b (V p)
 
 type instance V (Prim b v) = v
-
-instance HasLinearMap v => IsPrim (Prim b v) where
-  transformWithFreeze t1 t2 (Prim p) = Prim $ transformWithFreeze t1 t2 p
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
@@ -789,31 +828,12 @@ instance HasLinearMap v => Transformable (Prim b v) where
 instance HasLinearMap v => Renderable (Prim b v) b where
   render b (Prim p) = render b p
 
--- | The null primitive.
-data NullPrim v = NullPrim
-  deriving Typeable
-
-type instance (V (NullPrim v)) = v
-
-instance HasLinearMap v => IsPrim (NullPrim v)
-
-instance HasLinearMap v => Transformable (NullPrim v) where
-  transform _ _ = NullPrim
-
-instance (HasLinearMap v, Monoid (Render b v)) => Renderable (NullPrim v) b where
-  render _ _ = mempty
-
--- | The null primitive, which every backend can render by doing
---   nothing.
-nullPrim :: (HasLinearMap v, Typeable v, Monoid (Render b v)) => Prim b v
-nullPrim = Prim NullPrim
-
 ------------------------------------------------------------
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
 
 data DNode b v a = DStyle (Style v)
-                 | DTransform (Split (Transformation v))
+                 | DTransform (Transformation v)
                  | DAnnot a
                  | DDelay
                    -- ^ @DDelay@ marks a point where a delayed subtree
@@ -834,47 +854,34 @@ type DTree b v a = Tree (DNode b v a)
 
 data RNode b v a =  RStyle (Style v)
                     -- ^ A style node.
-                  | RFrozenTr (Transformation v)
-                    -- ^ A \"frozen\" transformation, /i.e./ one which
-                    --   was applied after a call to 'freeze'.  It
-                    --   applies to everything below it in the tree.
-                    --   Note that line width and other similar
-                    --   \"scale invariant\" attributes should be
-                    --   affected by this transformation.  In the case
-                    --   of 2D, some backends may not support stroking
-                    --   in the context of an arbitrary
-                    --   transformation; such backends can instead use
-                    --   the 'avgScale' function from
-                    --   @Diagrams.TwoD.Transform@ (from the
-                    --   @diagrams-lib@ package).
                   | RAnnot a
-                  | RPrim (Transformation v) (Prim b v)
-                    -- ^ A primitive, along with the (non-frozen)
-                    --   transformation which applies to it.
+                  | RPrim (Prim b v)
+                    -- ^ A primitive.
                   | REmpty
 
 -- | An 'RTree' is a compiled and optimized representation of a
---   'QDiagram', which can be used by backends.  They have several
---   invariants which backends may rely upon:
---
---   * All non-frozen transformations have been pushed all the way to
---     the leaves.
+--   'QDiagram', which can be used by backends.  They have the
+--   following invariant which backends may rely upon:
 --
 --   * @RPrim@ nodes never have any children.
 type RTree b v a = Tree (RNode b v a )
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
---   instance of the 'Backend' class. A minimal complete definition
---   consists of the three associated types, an implementation for
---   'doRender', and /one of/ either 'withStyle' or 'renderData'.
-class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
+--   instance of the 'Backend' class.
+--
+--   A minimal complete definition consists of 'Result', 'Options',
+--   and 'renderRTree' (though most backends will want to implement
+--   'adjustDia' as well; the default definition does nothing and is probably
+class HasLinearMap v => Backend b v where
 
-  -- | The type of rendering operations used by this backend, which
-  --   must be a monoid. For example, if @Render b v = M ()@ for some
-  --   monad @M@, a monoid instance can be made with @mempty = return
-  --   ()@ and @mappend = (>>)@.
-  data Render  b v :: *
+  -- | An intermediate representation used for rendering primitives.
+  --   (Typically, this will be some sort of monad, but it need not
+  --   be.)  The 'Renderable' class guarantees that a backend will be
+  --   able to convert primitives into this type; how these rendered
+  --   primitives are combined into an ultimate 'Result' is completely
+  --   up to the backend.
+  data Render b v :: *
 
   -- | The result of running/interpreting a rendering operation.
   type Result  b v :: *
@@ -882,61 +889,24 @@ class (HasLinearMap v, Monoid (Render b v)) => Backend b v where
   -- | Backend-specific rendering options.
   data Options b v :: *
 
-  -- | Perform a rendering operation with a local style. The default
-  --   implementation does nothing, and must be overridden by backends
-  --   that do not override 'renderData'.
-  withStyle      :: b          -- ^ Backend token (needed only for type inference)
-                 -> Style v    -- ^ Style to use
-                 -> Transformation v
-                    -- ^ \"Frozen\" transformation; line width and
-                    --   other similar \"scale invariant\" attributes
-                    --   should be affected by this transformation.
-                    --   In the case of 2D, some backends may not
-                    --   support stroking in the context of an
-                    --   arbitrary transformation; such backends can
-                    --   instead use the 'avgScale' function from
-                    --   @Diagrams.TwoD.Transform@ (from the
-                    --   @diagrams-lib@ package).
-                 -> Render b v -- ^ Rendering operation to run
-                 -> Render b v -- ^ Rendering operation using the style locally
-  withStyle _ _ _ r = r
-
-  -- | 'doRender' is used to interpret rendering operations.
-  doRender       :: b           -- ^ Backend token (needed only for type inference)
-                 -> Options b v -- ^ Backend-specific collection of rendering options
-                 -> Render b v  -- ^ Rendering operation to perform
-                 -> Result b v  -- ^ Output of the rendering operation
-
   -- | 'adjustDia' allows the backend to make adjustments to the final
   --   diagram (e.g. to adjust the size based on the options) before
-  --   rendering it.  It can also make adjustments to the options
-  --   record, usually to fill in incompletely specified size
-  --   information.  A default implementation is provided which makes
-  --   no adjustments.  See the diagrams-lib package for other useful
-  --   implementations.
-  adjustDia :: Monoid' m => b -> Options b v
-            -> QDiagram b v m -> (Options b v, QDiagram b v m)
-  adjustDia _ o d = (o,d)
-
-  renderDia :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
-            => b -> Options b v -> QDiagram b v m -> Result b v
-  renderDia b opts d = doRender b opts' . renderData b $ d'
-    where (opts', d') = adjustDia b opts d
-
-  -- | Backends may override 'renderData' to gain more control over
-  --   the way that rendering happens.  A typical implementation might be something like
+  --   rendering it. It returns a modified options record, the
+  --   transformation applied to the diagram (which can be used to
+  --   convert attributes whose value is @Measure@, or transform
+  --   /e.g./ screen coordinates back into local diagram coordinates),
+  --   and the adjusted diagram itself.
   --
-  --   > renderData = renderRTree . toRTree
-  --
-  --   where @renderRTree :: RTree b v () -> Render b v@ is
-  --   implemented by the backend (with appropriate types filled in
-  --   for @b@ and @v@), and 'toRTree' is from "Diagrams.Core.Compile".
-  renderData :: Monoid' m => b -> QDiagram b v m -> Render b v
-  renderData b = mconcat . map renderOne . prims
-    where
-      renderOne :: (Prim b v, (Split (Transformation v), Style v)) -> Render b v
-      renderOne (p, (M t,      s)) = withStyle b s mempty (render b (transform t p))
-      renderOne (p, (t1 :| t2, s)) = withStyle b s t1 (render b (transformWithFreeze t1 t2 p))
+  --   See the diagrams-lib package (particularly the
+  --   @Diagrams.TwoD.Adjust@ module) for some useful implementations.
+  adjustDia :: (Monoid' m, Num (Scalar v)) => b -> Options b v
+            -> QDiagram b v m -> (Options b v, Transformation v, QDiagram b v m)
+  adjustDia _ o d = (o,mempty,d)
+
+  -- | Given some options, take a representation of a diagram as a
+  --   tree and render it.  The 'RTree' has already been simplified
+  --   and has all measurements converted to @Output@ units.
+  renderRTree :: b -> Options b v -> RTree b v Annotation -> Result b v
 
   -- See Note [backend token]
 
@@ -1040,19 +1010,7 @@ instance HasLinearMap v => Backend NullBackend v where
   type Result NullBackend v = ()
   data Options NullBackend v
 
-  withStyle _ _ _ _ = NullBackendRender
-  doRender _ _ _    = ()
-
--- | A class for backends which support rendering multiple diagrams,
---   e.g. to a multi-page pdf or something similar.
-class Backend b v => MultiBackend b v where
-
-  -- | Render multiple diagrams at once.
-  renderDias :: (InnerSpace v, OrderedField (Scalar v), Monoid' m)
-             => b -> Options b v -> [QDiagram b v m] -> Result b v
-
-  -- See Note [backend token]
-
+  renderRTree _ _ _ = ()
 
 -- | The Renderable type class connects backends to primitives which
 --   they know how to render.
