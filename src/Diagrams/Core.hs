@@ -44,6 +44,7 @@ module Diagrams.Core
          -- ** General transformations
        , Transformation
        , inv, transp, transl
+       , dropTransl
        , apply
        , papply
        , fromLinear

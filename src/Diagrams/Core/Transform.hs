@@ -37,6 +37,7 @@ module Diagrams.Core.Transform
          -- ** General transformations
        , Transformation(..)
        , inv, transp, transl
+       , dropTransl
        , apply
        , papply
        , fromLinear
@@ -160,6 +161,11 @@ transp (Transformation _ t' _) = t'
 -- | Get the translational component of a transformation.
 transl :: Transformation v -> v
 transl (Transformation _ _ v) = v
+
+-- | Drop the translational component of a transformation, leaving only
+--   the linear part.
+dropTransl :: AdditiveGroup v => Transformation v -> Transformation v
+dropTransl (Transformation a a' _) = Transformation a a' zeroV
 
 -- | Transformations are closed under composition; @t1 <> t2@ is the
 --   transformation which performs first @t2@, then @t1@.
