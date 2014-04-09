@@ -38,6 +38,7 @@ module Diagrams.Core.Compile
 import           Data.Data
 import qualified Data.List.NonEmpty        as NEL
 import           Data.Maybe                (fromMaybe)
+import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup (Monoid')
@@ -89,16 +90,17 @@ toDTree g n (QD qd)
                 ts' -> Node DEmpty ts'
       )
 
-      -- Internal d-annotations.  We untangle the interleaved
-      -- transformations and style, and carefully place the style
-      -- /above/ the transform in the tree (since by calling
-      -- 'untangle' we have already performed the action of the
-      -- transform on the style).
-      (\d t -> case get d of
-                 Option Nothing   -> t
-                 Option (Just d') ->
-                   let (tr,sty) = untangle d'
-                   in  Node (DStyle sty) [Node (DTransform tr) [t]]
+      -- Internal d-annotations.
+      (\d t -> let tr  = get d
+                   sty = get d
+               in case (tr, sty) of
+                 (Option Nothing, Option Nothing) -> t
+                 (Option (Just tr), Option Nothing) ->
+                    Node (DTransform tr) [t]
+                 (Option Nothing, Option (Just sty)) ->
+                    Node (DStyle sty) [t]
+                 (Option (Just tr), Option (Just sty)) ->
+                    Node (DTransform tr) [Node (DStyle sty) [t]]
       )
 
       -- Internal a-annotations.
