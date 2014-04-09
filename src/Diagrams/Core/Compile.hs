@@ -38,8 +38,6 @@ module Diagrams.Core.Compile
 import           Data.Data
 import qualified Data.List.NonEmpty        as NEL
 import           Data.Maybe                (fromMaybe)
-import           Data.Monoid.Action
-import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
@@ -91,9 +89,9 @@ toDTree g n (QD qd)
       )
 
       -- Internal d-annotations.
-      (\d t -> let tr  = get d
-                   sty = get d
-               in case (tr, sty) of
+      (\d t -> let tr'  = get d
+                   sty' = get d
+               in case (tr', sty') of
                  (Option Nothing, Option Nothing) -> t
                  (Option (Just tr), Option Nothing) ->
                     Node (DTransform tr) [t]
