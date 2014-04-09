@@ -52,7 +52,7 @@ module Diagrams.Core.Types
        , applyAnnotation, href
 
          -- *** Dynamic (monoidal) annotations
-       , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+       , UpAnnots, DownAnnots, transfFromAnnot
 
          -- ** Basic type definitions
        , QDiaLeaf(..), withQDiaLeaf
@@ -143,7 +143,6 @@ import           Data.Tree
 import           Data.VectorSpace
 
 import           Data.Monoid.Action
-import           Data.Monoid.Coproduct
 import           Data.Monoid.Deletable
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
@@ -282,25 +281,15 @@ type UpAnnots b v m = Deletable (Envelope v)
 --   * styles (see "Diagrams.Core.Style")
 --
 --   * names (see "Diagrams.Core.Names")
-type DownAnnots v = (Transformation v :+: Style v)
+type DownAnnots v = Transformation v
+                ::: Style v
                 ::: Name
                 ::: ()
-
-  -- Note that we have to put the transformations and styles together
-  -- using a coproduct because the transformations can act on the
-  -- styles.
-
--- | Inject a transformation into a default downwards annotation
---   value.
-transfToAnnot :: Transformation v -> DownAnnots v
-transfToAnnot
-  = inj
-  . (inL :: Transformation v -> Transformation v :+: Style v)
 
 -- | Extract the (total) transformation from a downwards annotation
 --   value.
 transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
-transfFromAnnot = option mempty killR . fst
+transfFromAnnot = option mempty id . fst
 
 -- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
 --   @QDiagram@ which expands to a real @QDiagram@ once it learns the
@@ -594,7 +583,6 @@ instance Functor (QDiagram b v) where
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
       => HasStyle (QDiagram b v m) where
   applyStyle = over _Wrapped' . D.applyD . inj
-             . (inR :: Style v -> Transformation v :+: Style v)
 
 ---- Juxtaposable
 
@@ -630,7 +618,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
       => Transformable (QDiagram b v m) where
-  transform = over _Wrapped' . D.applyD . transfToAnnot
+  transform = over _Wrapped' . D.applyD . inj
 
 ---- Qualifiable
 
@@ -668,7 +656,7 @@ subPoint :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
          => Point v -> Subdiagram b v m
 subPoint p = Subdiagram
                (pointDiagram origin)
-               (transfToAnnot $ translation (p .-. origin))
+               (inj $ translation (p .-. origin))
 
 instance Functor (Subdiagram b v) where
   fmap f (Subdiagram d a) = Subdiagram (fmap f d) a
@@ -687,7 +675,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
 
 instance ( HasLinearMap v, InnerSpace v, Floating (Scalar v))
     => Transformable (Subdiagram b v m) where
-  transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
+  transform t (Subdiagram d a) = Subdiagram d (inj t <> a)
 
 -- | Get the location of a subdiagram; that is, the location of its
 --   local origin /with respect to/ the vector space of its parent
