@@ -44,7 +44,9 @@ module Diagrams.Core.Transform
        , basis
        , dimension
        , onBasis
+       , listRep
        , matrixRep
+       , matrixHomRep
        , determinant
        , avgScale
 
@@ -237,11 +239,25 @@ det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
     c1 = head m
     n = length m
 
+-- | Convert a vector v to a list of scalars.
+listRep :: HasLinearMap v => v -> [Scalar v]
+listRep v = map snd (decompose v)
+
 -- | Convert a `Transformation v` to a matrix representation as a list of
 --   column vectors which are also lists.
 matrixRep :: HasLinearMap v => Transformation v -> [[Scalar v]]
 matrixRep t = map listRep (fst . onBasis $ t)
-  where listRep v = map snd (decompose v)
+
+-- | Convert a `Transformation v` to a homogeneous matrix representation.
+--   The final list is the translation.
+--   The representation leaves off the last row of the matrix as it is
+--   always [0,0, ... 1] and this representation is the defacto standard
+--   for backends.
+matrixHomRep :: HasLinearMap v => Transformation v -> [[Scalar v]]
+matrixHomRep t = mr ++ [listRep tl]
+  where
+    mr = matrixRep t
+    tl = transl t
 
 -- | The determinant of a `Transformation`.
 determinant :: (HasLinearMap v, Num (Scalar v)) => Transformation v -> Scalar v
