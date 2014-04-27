@@ -35,6 +35,13 @@ module Diagrams.Core.Compile
   )
   where
 
+import           Diagrams.Core.Envelope    (OrderedField, diameter)
+import           Diagrams.Core.Style
+import           Diagrams.Core.Transform
+import           Diagrams.Core.Types
+import           Diagrams.Core.Units
+
+import           Control.Lens              (review)
 import           Data.Data
 import qualified Data.List.NonEmpty        as NEL
 import           Data.Maybe                (fromMaybe)
@@ -45,10 +52,6 @@ import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
 import           Data.VectorSpace
-import           Diagrams.Core.Envelope    (OrderedField, diameter)
-import           Diagrams.Core.Style
-import           Diagrams.Core.Transform
-import           Diagrams.Core.Types
 
 emptyDTree :: Tree (DNode b v a)
 emptyDTree = Node DEmpty []
@@ -181,26 +184,32 @@ styleToOutput
 styleToOutput globalToOutput normToOutput =
   gmapAttrs (toOutput globalToOutput normToOutput :: Measure v -> Measure v)
 
--- | Convert an aribrary 'Measure' to 'Output' units.
+-- | Convert an aribrary 'Measure' to 'Output' units.  The first two
+--   arguments represent the scaling factor from global to output and
+--   normalized to output coordinates, respectively; the 'Physical'
+--   argument is the physical length corresponding to one output unit;
+--   and the 'Double' argument specifies pixels per inch.
 toOutput :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
-  => Scalar v -> Scalar v -> Measure v -> Measure v
-toOutput g n m =
+  => Scalar v -> Scalar v -> Physical -> Double -> Measure v -> Measure v
+toOutput g n unit ppi m =
   case m of
-     m'@(Output _) -> m'
-     Local s       -> Output s
-     Global s      -> Output (g * s)
-     Normalized s  -> Output (n * s)
+     m'@(OutputPhys _) -> m'
+     OutputPx px       -> OutputPhys (review inches (px / ppi))
+     Local s           -> OutputPhys (s *^ unit)
+     Global s          -> OutputPhys ((g * s) *^ unit)
+     Normalized s      -> OutputPhys ((n * s) *^ unit)
 
-     MinM m1 m2    -> outBin min (toOutput g n m1) (toOutput g n m2)
-     MaxM m1 m2    -> outBin max (toOutput g n m1) (toOutput g n m2)
-     ZeroM         -> Output 0
-     NegateM m'    -> outUn negate (toOutput g n m')
-     PlusM m1 m2   -> outBin (+) (toOutput g n m1) (toOutput g n m2)
-     ScaleM s m'   -> outUn (s*) (toOutput g n m')
+     MinM m1 m2    -> outBin min (toOut m1) (toOut m2)
+     MaxM m1 m2    -> outBin max (toOut m1) (toOut m2)
+     ZeroM         -> OutputPhys zeroV
+     NegateM m'    -> outUn negate (toOut m')
+     PlusM m1 m2   -> outBin (+) (toOut m1) (toOut m2)
+     ScaleM s m'   -> outUn (s*^) (toOut m')
   where
-    outUn  op (Output o1)             = Output (op o1)
+    toOut = toOutput g n unit ppi
+    outUn  op (OutputPhys o1) = OutputPhys (op o1)
     outUn  _  _ = error "outUn: The sky is falling!"
-    outBin op (Output o1) (Output o2) = Output (o1 `op` o2)
+    outBin op (OutputPhys o1) (OutputPhys o2) = OutputPhys (o1 `op` o2)
     outBin _ _ _ = error "outBin: Both skies are falling!"
 
 

@@ -32,6 +32,7 @@ Library
                        Diagrams.Core.Trace,
                        Diagrams.Core.Transform,
                        Diagrams.Core.Types,
+                       Diagrams.Core.Units,
                        Diagrams.Core.V,
                        Diagrams.Core.Query
 

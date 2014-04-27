@@ -183,6 +183,7 @@ import           Diagrams.Core.Style
 import           Diagrams.Core.Trace
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
+import           Diagrams.Core.Units
 import           Diagrams.Core.V
 
 import           Data.Monoid.WithSemigroup (Monoid')
