@@ -50,15 +50,15 @@ import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
-emptyDTree :: Tree (DNode b v a)
+emptyDTree :: Tree (DNode v a)
 emptyDTree = Node DEmpty []
 
 uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
 uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: HasLinearMap v => Scalar v -> Scalar v -> QDiagram b v m
-                          -> Maybe (DTree b v Annotation)
+toDTree :: HasLinearMap v => Scalar v -> Scalar v -> QDiagram v m
+                          -> Maybe (DTree v Annotation)
 toDTree g n (QD qd)
   = foldDUAL
 
@@ -108,10 +108,10 @@ toDTree g n (QD qd)
 -- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
-fromDTree :: HasLinearMap v => DTree b v Annotation -> RTree b v Annotation
+fromDTree :: HasLinearMap v => DTree v Annotation -> RTree v Annotation
 fromDTree = fromDTree' mempty
   where
-    fromDTree' :: HasLinearMap v => Transformation v -> DTree b v Annotation -> RTree b v Annotation
+    fromDTree' :: HasLinearMap v => Transformation v -> DTree v Annotation -> RTree v Annotation
     -- We put the accumulated transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
@@ -146,7 +146,7 @@ fromDTree = fromDTree' mempty
 --   units.
 toRTree
   :: (HasLinearMap v, InnerSpace v, Data v, Data (Scalar v), OrderedField (Scalar v), Monoid m, Semigroup m)
-  => Transformation v -> QDiagram b v m -> RTree b v Annotation
+  => Transformation v -> QDiagram v m -> RTree v Annotation
 toRTree globalToOutput d
   = (fmap . onRStyle) (styleToOutput gToO nToO)
   . fromDTree
@@ -164,7 +164,7 @@ toRTree globalToOutput d
 
 -- | Apply a style transformation on 'RStyle' nodes; the identity for
 --   other 'RNode's.
-onRStyle :: (Style v -> Style v) -> (RNode b v a -> RNode b v a)
+onRStyle :: (Style v -> Style v) -> (RNode v a -> RNode v a)
 onRStyle f (RStyle s) = RStyle (f s)
 onRStyle _ n          = n
 
@@ -217,7 +217,7 @@ renderDiaT
      , OrderedField (Scalar v), Data (Scalar v)
      , Monoid' m
      )
-  => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
+  => b -> Options b v -> QDiagram v m -> (Transformation v, Result b v)
 renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
   where (opts', g2o, d') = adjustDia b opts d
 
@@ -228,5 +228,5 @@ renderDia
      , OrderedField (Scalar v), Data (Scalar v)
      , Monoid' m
      )
-          => b -> Options b v -> QDiagram b v m -> Result b v
+          => b -> Options b v -> QDiagram v m -> Result b v
 renderDia b opts d = snd (renderDiaT b opts d)
