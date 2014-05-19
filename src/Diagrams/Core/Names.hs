@@ -22,21 +22,22 @@
 module Diagrams.Core.Names
        (-- * Names
         -- ** Atomic names
-         AName(..)
+         AName(..), _AName
 
         -- ** Names
-       , Name(..), IsName(..), (.>)
+       , Name(..), IsName(..), _Name, (.>)
 
         -- ** Qualifiable
        , Qualifiable(..)
 
        ) where
 
-import           Control.Lens            (over, Wrapped(..), Rewrapped, iso, _Unwrapping')
+import           Control.Lens            (over, Wrapped(..), Rewrapped, iso, _Unwrapping', Prism', prism', Traversal')
 import           Data.List               (intercalate)
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
+import           Data.Traversable        (traverse)
 import           Data.Typeable
 
 import           Diagrams.Core.Transform
@@ -89,6 +90,10 @@ instance Ord AName where
 instance Show AName where
   show (AName a) = show a
 
+-- | Viewing through _AName succeeds if the 'cast' is successful.
+_AName :: (Typeable a, Ord a, Show a) => Prism' AName a
+_AName = prism' AName $ \(AName a) -> cast a
+
 -- | A (qualified) name is a (possibly empty) sequence of atomic names.
 newtype Name = Name [AName]
   deriving (Eq, Ord, Semigroup, Monoid, Typeable)
@@ -104,6 +109,16 @@ instance Show Name where
 
 instance IsName Name where
   toName = id
+
+-- | This can be used to traverse over all components of a 'Name' that have
+-- the required type.
+--
+-- @_Name = _Wrapped'.traverse._AName@
+--
+-- >>> has (_Name.only "foo") $ 3 .> "hello" .> "world" .> "foo" .> "bar"
+-- True
+_Name :: (Typeable a, Ord a, Show a) => Traversal' Name a
+_Name = _Wrapped'.traverse._AName
 
 -- | Convenient operator for writing qualified names with atomic
 --   components of different types.  Instead of writing @toName a1 \<\>
