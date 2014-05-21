@@ -8,6 +8,7 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE LambdaCase            #-}
 
 -- The UndecidableInstances flag is needed under 6.12.3 for the
 -- HasStyle (a,b) instance.
@@ -30,14 +31,15 @@ module Diagrams.Core.Style
 
          AttributeClass
        , Attribute(..)
-       , mkAttr, mkTAttr, mkGTAttr, unwrapAttr
-       , applyAttr, applyTAttr, applyGTAttr
+       , _Attribute, _TAttribute, _GTAttribute
+       , mkAttr, mkTAttr, mkGTAttr, unwrapAttr, attr
+       , applyAttr, applyTAttr, applyGTAttr, applyAttr'
 
          -- * Styles
          -- $style
 
        , Style(..)
-       , attrToStyle, tAttrToStyle, gtAttrToStyle
+       , attrToStyle, tAttrToStyle, gtAttrToStyle, attrToStyle'
        , getAttr, setAttr, addAttr, combineAttr
        , gmapAttrs
 
@@ -45,14 +47,15 @@ module Diagrams.Core.Style
 
        ) where
 
+import           Control.Applicative     ((<$>))
 import           Control.Arrow           ((***))
-import           Control.Lens            (Rewrapped, Wrapped (..), iso, (%~),
-                                          (&))
+import           Control.Lens            hiding (Action, transform)
 import           Data.Data
 import           Data.Data.Lens          (template)
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
+import           Data.Typeable.Lens      (_cast)
 
 import           Data.Monoid.Action
 
@@ -104,16 +107,32 @@ data Attribute v :: * where
 type instance V (Attribute v) = v
 
 -- | Wrap up an attribute.
+--
+--   @ mkAttr = 'review' '_Attribute' @
 mkAttr :: AttributeClass a => a -> Attribute v
 mkAttr = Attribute
 
 -- | Wrap up a transformable attribute.
+--
+--   @ mkTAttr = 'review' '_TAttribute' @
 mkTAttr :: (AttributeClass a, Transformable a, V a ~ v) => a -> Attribute v
 mkTAttr = TAttribute
 
 -- | Wrap up a transformable and generic attribute.
+--
+--   @ mkGTAttr = 'review' '_GTAttribute' @
 mkGTAttr :: (AttributeClass a, Data a, Transformable a, V a ~ v) => a -> Attribute v
 mkGTAttr = GTAttribute
+
+-- | (Proper) prisms for the three distinct types of attributes
+_Attribute :: AttributeClass a => Prism' (Attribute v) a
+_Attribute = prism' Attribute $ \case Attribute a -> cast a; _ -> Nothing
+
+_TAttribute :: (AttributeClass a, Transformable a, V a ~ v) => Prism' (Attribute v) a
+_TAttribute = prism' TAttribute $ \case TAttribute a -> cast a; _ -> Nothing
+
+_GTAttribute :: (AttributeClass a , Data a, Transformable a, V a ~ v) => Prism' (Attribute v) a
+_GTAttribute = prism' GTAttribute $ \case GTAttribute a -> cast a; _ -> Nothing
 
 -- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
 --   safe) check on the type of the result.  If the required type
@@ -186,15 +205,36 @@ getAttr (Style s) = M.lookup ty s >>= unwrapAttr
   -- the unwrapAttr should never fail, since we maintain the invariant
   -- that attributes of type T are always stored with the key "T".
 
+-- | Given a prism to match a certain attribute, modify it in a style.
+attr :: forall a v. AttributeClass a => APrism' (Attribute v) a -> Lens' (Style v) (Maybe a)
+attr p = _Wrapped'.at ty.l
+  where ty = show . typeOf $ (undefined :: a)
+        -- View through the prism to get the value out of the attribute
+        l f Nothing  = go <$> f Nothing
+        l f (Just a) = go <$> f (preview (clonePrism p) a)
+        -- Re-add the new value, if it exists, through this prism
+        go Nothing = Nothing
+        go (Just a) = Just $ review (clonePrism p) a
+
+-- | Given a prism to form an attribute, create a style
+attrToStyle' :: AttributeClass a => AReview' (Attribute v) a -> a -> Style v
+attrToStyle' p a = Style $ M.singleton (show $ typeOf a) (review p a)
+
 -- | Create a style from a single attribute.
+--
+--   @ attrToStyle = 'attrToStyle'' '_Attribute' @
 attrToStyle :: forall a v. AttributeClass a => a -> Style v
 attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a))
 
 -- | Create a style from a single transformable attribute.
+--
+--   @ tAttrToStyle = 'attrToStyle'' '_TAttribute' @
 tAttrToStyle :: forall a v. (AttributeClass a, Transformable a, V a ~ v) => a -> Style v
 tAttrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkTAttr a))
 
 -- | Create a style from a single transformable, generic attribute.
+--
+--   @ gtAttrToStyle = 'attrToStyle'' '_GTAttribute' @
 gtAttrToStyle :: forall a v. (AttributeClass a, Data a, Transformable a, V a ~ v) => a -> Style v
 gtAttrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkGTAttr a))
 
@@ -274,6 +314,8 @@ instance (HasStyle a, Ord a) => HasStyle (S.Set a) where
 --   diagram or a style).  If the object already has an attribute of
 --   the same type, the new attribute is combined on the left with the
 --   existing attribute, according to their semigroup structure.
+--
+--   @ applyAttr = 'applyAttr'' '_Attribute' @
 applyAttr :: (AttributeClass a, HasStyle d) => a -> d -> d
 applyAttr = applyStyle . attrToStyle
 
@@ -282,8 +324,17 @@ applyAttr = applyStyle . attrToStyle
 --   attribute of the same type, the new attribute is combined on the
 --   left with the existing attribute, according to their semigroup
 --   structure.
+--
+--   @ applyTAttr = 'applyAttr'' '_TAttribute' @
 applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, HasStyle d) => a -> d -> d
 applyTAttr = applyStyle . tAttrToStyle
 
+-- | @ applyGTAttr = 'applyAttr'' '_GTAttribute' @
 applyGTAttr :: (AttributeClass a, Data a, Transformable a, V a ~ V d, HasStyle d) => a -> d -> d
 applyGTAttr = applyStyle . gtAttrToStyle
+
+-- | Given a prism to construct an attribute, apply it to some object.
+--
+--   @ applyAttr' p = 'applyStyle' . 'attrToStyle'' p @
+applyAttr' :: (AttributeClass a, HasStyle d) => AReview' (Attribute (V d)) a -> a -> d -> d
+applyAttr' p = applyStyle . attrToStyle' p
