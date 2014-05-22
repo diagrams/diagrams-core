@@ -37,7 +37,7 @@ module Diagrams.Core.Style
          -- $style
 
        , Style(..)
-       , attrToStyle, tAttrToStyle
+       , attrToStyle, tAttrToStyle, gtAttrToStyle
        , getAttr, setAttr, addAttr, combineAttr
        , gmapAttrs
 
