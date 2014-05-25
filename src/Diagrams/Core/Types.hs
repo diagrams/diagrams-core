@@ -60,6 +60,7 @@ module Diagrams.Core.Types
 
          -- * Operations on diagrams
          -- ** Creating diagrams
+       , leafS
        , mkQD, mkQD', pointDiagram
 
          -- ** Extracting information
@@ -115,7 +116,7 @@ module Diagrams.Core.Types
        , DNode(..)
        , DTree
        , RNode(..)
-       , RTree
+       , RTree, emptyRTree
 
          -- ** Null backend
 
@@ -132,8 +133,10 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, over, view, (^.), _Wrapped,
                                             _Wrapping)
 import           Control.Monad             (mplus)
+import           Control.Monad.Reader
 import           Data.AffineSpace          ((.-.))
 import           Data.Data
+import           Data.Functor.Identity
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
@@ -269,59 +272,29 @@ fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must
 --   * name/subdiagram associations (see "Diagrams.Core.Names")
 --
 --   * query functions (see "Diagrams.Core.Query")
-type UpAnnots b v m = Deletable (Envelope v)
-                  ::: Deletable (Trace v)
-                  ::: Deletable (SubMap b v m)
-                  ::: Query v m
-                  ::: ()
+type Summary b v m = Deletable (Envelope v)
+                 ::: Deletable (Trace v)
+                 ::: Deletable (SubMap b v m)
+                 ::: Query v m
+                 ::: ()
 
--- | Monoidal annotations which travel down the diagram tree,
---   /i.e./ which accumulate along each path to a leaf (and which can
---   act on the upwards-travelling annotations):
+-- | The (monoidal) context in which a diagram is interpreted.
+--   Contexts can be thought of as accumulating along each path to a
+--   leaf:
 --
 --   * styles (see "Diagrams.Core.Style")
 --
 --   * names (see "Diagrams.Core.Names")
-type DownAnnots v = (Transformation v :+: Style v)
-                ::: Name
-                ::: ()
+type Context b v m = Style v
+                 ::: Name
+                 ::: SubMap b v m
+                 ::: ()
 
-  -- Note that we have to put the transformations and styles together
-  -- using a coproduct because the transformations can act on the
-  -- styles.
+--------------------------------------------------
+-- Context monad
 
--- | Inject a transformation into a default downwards annotation
---   value.
-transfToAnnot :: Transformation v -> DownAnnots v
-transfToAnnot
-  = inj
-  . (inL :: Transformation v -> Transformation v :+: Style v)
-
--- | Extract the (total) transformation from a downwards annotation
---   value.
-transfFromAnnot :: HasLinearMap v => DownAnnots v -> Transformation v
-transfFromAnnot = option mempty killR . fst
-
--- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
---   @QDiagram@ which expands to a real @QDiagram@ once it learns the
---   \"final context\" in which it will be rendered.  For example, in
---   order to decide how to draw an arrow, we must know the precise
---   transformation applied to it (since the arrow head and tail are
---   scale-invariant).
-data QDiaLeaf b v m
-  = PrimLeaf (Prim b v)
-  | DelayedLeaf (DownAnnots v -> Scalar v -> Scalar v -> QDiagram b v m)
-    -- ^ The @QDiagram@ produced by a @DelayedLeaf@ function /must/
-    --   already apply any transformation in the given
-    --   @DownAnnots@ (that is, the transformation will not
-    --   be applied by the context).
-  deriving (Functor)
-
-withQDiaLeaf :: (Prim b v -> r)
-            -> ((DownAnnots v -> Scalar v -> Scalar v -> QDiagram b v m) -> r)
-            -> (QDiaLeaf b v m -> r)
-withQDiaLeaf f _ (PrimLeaf p)    = f p
-withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
+type ContextualT b v m = ReaderT (Context b v m)
+type Contextual b v m = ContextualT b v m Identity
 
 -- | Static annotations which can be placed at a particular node of a
 --   diagram tree.
@@ -333,7 +306,7 @@ data Annotation
 applyAnnotation
   :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
   => Annotation -> QDiagram b v m -> QDiagram b v m
-applyAnnotation an (QD dt) = QD (D.annot an dt)
+applyAnnotation an = fmap (first (Node (RAnnot an))) . (: [])
 
 -- | Make a diagram into a hyperlink.  Note that only some backends
 --   will honor hyperlink annotations.
@@ -345,16 +318,7 @@ href = applyAnnotation . Href
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
-newtype QDiagram b v m
-  = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) Annotation (QDiaLeaf b v m))
-  deriving (Typeable)
-
-instance Wrapped (QDiagram b v m) where
-    type Unwrapped (QDiagram b v m) =
-        D.DUALTree (DownAnnots v) (UpAnnots b v m) Annotation (QDiaLeaf b v m)
-    _Wrapped' = iso (\(QD d) -> d) QD
-
-instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
+type QDiagram b v m  = Contextual b v m (RTree b v Annotation, Summary b v m)
 
 type instance V (QDiagram b v m) = v
 
@@ -365,16 +329,20 @@ type instance V (QDiagram b v m) = v
 --   the 'value' function.
 type Diagram b v = QDiagram b v Any
 
+-- | Create a \"leaf\" diagram with just a summary value and no
+--   diagrammatic content.
+leafS :: Summary b v m -> QDiagram b v m
+leafS s = return (emptyRTree, s)
+
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
 pointDiagram :: (Fractional (Scalar v), InnerSpace v)
              => Point v -> QDiagram b v m
-pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
+pointDiagram p = leafS (inj . toDeletable $ pointEnvelope p)
 
--- | A useful variant of 'getU' which projects out a certain
---   component.
-getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
-getU' = maybe mempty (option mempty id . get) . D.getU
+-- | Project out a component of the summary in a type-directed way.
+getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual b v m u
+getS = fmap (option mempty id . get . snd)
 
 -- | Get the envelope of a diagram.
 envelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
@@ -865,6 +833,10 @@ data RNode b v a =  RStyle (Style v)
 --
 --   * @RPrim@ nodes never have any children.
 type RTree b v a = Tree (RNode b v a )
+
+-- | The empty @RTree@.
+emptyRTree :: RTree b v a
+emptyRTree = Node REmpty []
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an

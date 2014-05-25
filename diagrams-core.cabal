@@ -36,6 +36,8 @@ Library
                        Diagrams.Core.Query
 
   Build-depends:       base >= 4.2 && < 4.8,
+                       mtl >= 2.1 && < 2.3,
+                       transformers >= 0.3 && < 0.5,
                        containers >= 0.4.2 && < 0.6,
                        semigroups >= 0.8.4 && < 0.15,
                        vector-space >= 0.8.4 && < 0.9,
@@ -43,7 +45,6 @@ Library
                        MemoTrie >= 0.4.7 && < 0.7,
                        newtype >= 0.2 && < 0.3,
                        monoid-extras >= 0.3 && < 0.4,
-                       dual-tree >= 0.2 && < 0.3,
                        lens >= 4.0 && < 4.2
   hs-source-dirs:      src
 
