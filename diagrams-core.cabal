@@ -45,6 +45,7 @@ Library
                        MemoTrie >= 0.4.7 && < 0.7,
                        newtype >= 0.2 && < 0.3,
                        monoid-extras >= 0.3 && < 0.4,
+                       dual-tree >= 0.2 && < 0.3,
                        lens >= 4.0 && < 4.2
   hs-source-dirs:      src
 

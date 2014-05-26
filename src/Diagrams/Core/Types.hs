@@ -373,9 +373,10 @@ trace = lens (fmap unDelete . getS) ((=<<) . flip setTrace)
 setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Semigroup m)
          => Trace v -> QDiagram b v m -> QDiagram b v m
-setTrace t = . applySpre (inj . toDeletable $ t)
-             . applySpre (inj (deleteL :: Deletable (Trace v)))
-             . applySpost (inj (deleteR :: Deletable (Trace v)))
+setTrace t 
+  =  applySpre (inj . toDeletable $ t)
+  . applySpre (inj (deleteL :: Deletable (Trace v)))
+  . applySpost (inj (deleteR :: Deletable (Trace v)))
 
 -- -- | Get the subdiagram map (/i.e./ an association from names to
 -- --   subdiagrams) of a diagram.
