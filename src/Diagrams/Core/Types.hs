@@ -364,19 +364,18 @@ setEnvelope e
   . applySpre (inj (deleteL :: Deletable (Envelope v)))
   . applySpost (inj (deleteR :: Deletable (Envelope v)))
 
--- -- | Get the trace of a diagram.
--- trace :: (InnerSpace v, HasLinearMap v, OrderedField (Scalar v), Semigroup m) =>
---          Lens' (QDiagram b v m) (Trace v)
--- trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
+-- | Get the trace of a diagram.
+trace :: (InnerSpace v, HasLinearMap v, OrderedField (Scalar v), Semigroup m) =>
+         Lens' (QDiagram b v m) (Contextual b v m (Trace v))
+trace = lens (fmap unDelete . getS) ((=<<) . flip setTrace)
 
--- -- | Replace the trace of a diagram.
--- setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
---                           , HasLinearMap v, Semigroup m)
---          => Trace v -> QDiagram b v m -> QDiagram b v m
--- setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
---                          . D.applyUpre (inj (deleteL :: Deletable (Trace v)))
---                          . D.applyUpost (inj (deleteR :: Deletable (Trace v)))
---                        )
+-- | Replace the trace of a diagram.
+setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
+                          , HasLinearMap v, Semigroup m)
+         => Trace v -> QDiagram b v m -> QDiagram b v m
+setTrace t = . applySpre (inj . toDeletable $ t)
+             . applySpre (inj (deleteL :: Deletable (Trace v)))
+             . applySpost (inj (deleteR :: Deletable (Trace v)))
 
 -- -- | Get the subdiagram map (/i.e./ an association from names to
 -- --   subdiagrams) of a diagram.
