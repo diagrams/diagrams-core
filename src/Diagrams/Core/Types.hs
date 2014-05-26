@@ -353,7 +353,7 @@ pointDiagram p = leafS (inj . toDeletable $ pointEnvelope p)
 envelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Monoid' m)
          => Lens' (QDiagram b v m) (Contextual b v m (Envelope v))
-envelope = lens (unDelete . getS) (flip setEnvelope)
+envelope = lens (fmap unDelete . getS) ((=<<) . flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
