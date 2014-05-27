@@ -81,6 +81,7 @@ module Diagrams.Core.Types
        , withNameAll
        , withNames
        , localize
+       , styles
 
          -- *** Other
        , setEnvelope
@@ -130,7 +131,7 @@ module Diagrams.Core.Types
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, over, view, (^.), _Wrapped,
-                                            _Wrapping)
+                                            _Wrapping, Setter', sets)
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.Data
@@ -482,6 +483,13 @@ localize = over _Wrapped' ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v 
                    . D.applyUpost (inj (deleteR :: Deletable (SubMap b v m)))
                    )
 
+-- | A 'Setter' over the existing style annotations of a diagram. For
+--   this to be used safely, the function applied to @Style v@ should be a
+--   monoid homomorphism.
+styles :: Setter' (QDiagram b v m) (Style v)
+styles = _Wrapped'.sets D.mapD.l.sets mapR
+  where l :: Setter' (DownAnnots v) (Transformation v :+: Style v)
+        l = val'
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v m -> Query v m
