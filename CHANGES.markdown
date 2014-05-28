@@ -38,7 +38,7 @@
     - Remove `nullPrim`, `IsPrim` and simplify `RPrim` so that it does not
       carry a transformation.
 
-    - Uupdate `adjustDia` to return a transformation, not just a scale factor.
+    - Update `adjustDia` to return a transformation, not just a scale factor.
       Add `renderDiaT` which returns a transformation (for use by end
       users, e.g. to convert output coordinates back into local coordinates).
 
