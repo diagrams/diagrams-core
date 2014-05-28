@@ -1,3 +1,45 @@
+1.2 (27 May 2014)
+-----------------
+
+* **New features**
+
+    - New function `matrixHomRep` to convert a transformation to a 
+      homogeneous matrix representation.
+
+    - New function `dropTransl` to drop the translation component 
+      from a transformation.
+
+    - A mini-DSL for Measures.
+
+    - New `extent` function used it in `diameter`.
+
+    - New `dimenson` function to return the dimension of an instance
+      of `HasLinearMap`.
+
+    - New `_relative` iso between points and vectors.
+
+* **Dependency/version changes**
+  
+    - Allow semigroups-0.14
+
+    - Allow lens-4.1
+
+* **API changes**    
+
+    - Major refactoring which removes `freeze` (and hence `Split` transforms, 
+      etc.) acn  adds units of `Measure`. 
+
+    - Refactoring and simplification of the `Backend` class.
+
+    - Remove Multibackend.
+
+    - Remove `nullPrim`, `IsPrim` and simplify `RPrim` so that it does not
+      carry a transformation.
+
+    - Uupdate adjustDia to return a transformation, not just a scale factor.
+      Add renderDiaT which returns a transformation (for use by end
+      users, e.g. to convert output coordinates back into local coordinates).
+
 1.1.0.3 (15 May 2014)
 ----------------------
 
