@@ -3,41 +3,43 @@
 
 * **New features**
 
-    - New function `matrixHomRep` to convert a transformation to a 
+    - New function `matrixHomRep` to convert a transformation to a
       homogeneous matrix representation.
 
-    - New function `dropTransl` to drop the translation component 
+    - New function `dropTransl` to drop the translation component
       from a transformation.
 
     - A mini-DSL for Measures.
 
-    - New `extent` function used it in `diameter`.
+    - New `extent` function, used in `diameter`.
 
-    - New `dimenson` function to return the dimension of an instance
-      of `HasLinearMap`.
+    - New `dimenson` function to return the dimension of a vector space.
 
     - New `_relative` iso between points and vectors.
 
+    - `avgScale` function (for computing the average scaling factor of
+      a transformation) has been moved from `diagrams-lib` to
+      `diagrams-core` and generalized to work over any vector space.
+
 * **Dependency/version changes**
-  
-    - Allow semigroups-0.14
 
-    - Allow lens-4.1
+    - Allow `semigroups-0.14`
+    - Allow `lens-4.1`
 
-* **API changes**    
+* **API changes**
 
-    - Major refactoring which removes `freeze` (and hence `Split` transforms, 
-      etc.) acn  adds units of `Measure`. 
+    - Major refactoring which removes `freeze` (and hence `Split` transforms,
+      etc.) and adds units of `Measure`.
 
     - Refactoring and simplification of the `Backend` class.
 
-    - Remove Multibackend.
+    - Remove `Multibackend`.
 
     - Remove `nullPrim`, `IsPrim` and simplify `RPrim` so that it does not
       carry a transformation.
 
-    - Uupdate adjustDia to return a transformation, not just a scale factor.
-      Add renderDiaT which returns a transformation (for use by end
+    - Update `adjustDia` to return a transformation, not just a scale factor.
+      Add `renderDiaT` which returns a transformation (for use by end
       users, e.g. to convert output coordinates back into local coordinates).
 
 1.1.0.3 (15 May 2014)
