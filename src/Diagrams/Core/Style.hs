@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE TypeOperators         #-}
 
 -- The UndecidableInstances flag is needed under 6.12.3 for the
 -- HasStyle (a,b) instance.
@@ -32,7 +33,7 @@ module Diagrams.Core.Style
          AttributeClass
        , Attribute(..)
        , _Attribute, _TAttribute, _GTAttribute
-       , mkAttr, mkTAttr, mkGTAttr, unwrapAttr, attr
+       , mkAttr, mkTAttr, mkGTAttr, unwrapAttr, attr, attr'
        , applyAttr, applyTAttr, applyGTAttr, applyAttr'
 
          -- * Styles
@@ -47,12 +48,13 @@ module Diagrams.Core.Style
 
        ) where
 
-import           Control.Applicative     ((<$>))
+import           Control.Applicative     (Applicative(..), (<$>))
 import           Control.Arrow           ((***))
 import           Control.Lens            hiding (Action, transform)
 import           Data.Data
 import           Data.Data.Lens          (template)
 import qualified Data.Map                as M
+import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
 import qualified Data.Set                as S
 import           Data.Typeable.Lens      (_cast)
@@ -131,8 +133,19 @@ _Attribute = prism' Attribute $ \case Attribute a -> cast a; _ -> Nothing
 _TAttribute :: (AttributeClass a, Transformable a, V a ~ v) => Prism' (Attribute v) a
 _TAttribute = prism' TAttribute $ \case TAttribute a -> cast a; _ -> Nothing
 
-_GTAttribute :: (AttributeClass a , Data a, Transformable a, V a ~ v) => Prism' (Attribute v) a
+_GTAttribute :: (AttributeClass a, Data a, Transformable a, V a ~ v) => Prism' (Attribute v) a
 _GTAttribute = prism' GTAttribute $ \case GTAttribute a -> cast a; _ -> Nothing
+
+-- | Traverse over an 'Attribute', if the types match.
+attribute :: forall f a v. (AttributeClass a, Applicative f) => (a -> f a) -> Attribute v -> f (Attribute v)
+attribute f a = case a of
+    Attribute   v -> Attribute   <$> f' v
+    TAttribute  v -> TAttribute  <$> f' v
+    GTAttribute v -> GTAttribute <$> f' v
+  where f' :: forall b. Typeable b => b -> f b
+        f' v = case eqT :: Maybe (a :~: b) of
+          Nothing -> pure v
+          Just Refl -> f v
 
 -- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
 --   safe) check on the type of the result.  If the required type
@@ -215,6 +228,11 @@ attr p = _Wrapped'.at ty.l
         -- Re-add the new value, if it exists, through this prism
         go Nothing = Nothing
         go (Just a) = Just $ review (clonePrism p) a
+
+-- | Traverse over a given attribute, if present.
+attr' :: forall a v. AttributeClass a => Traversal' (Style v) a
+attr' = _Wrapped'.ix ty.attribute
+  where ty = show . typeOf $ (undefined :: a)
 
 -- | Given a prism to form an attribute, create a style
 attrToStyle' :: AttributeClass a => AReview' (Attribute v) a -> a -> Style v
