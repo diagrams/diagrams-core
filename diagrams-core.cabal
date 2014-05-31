@@ -65,3 +65,4 @@ Library
                        UndecidableInstances
 
   Default-language:    Haskell2010
+  ghc-options: -Wall -Werror
