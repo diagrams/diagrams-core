@@ -23,8 +23,8 @@
 
 * **Dependency/version changes**
 
-    - Allow `semigroups-0.14`
-    - Allow `lens-4.1`
+    - Allow `semigroups-0.15`
+    - Allow `lens-4.2`
 
 * **API changes**
 
