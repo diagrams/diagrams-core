@@ -232,11 +232,11 @@ fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must
 
 --   Eventually we may use a GADT like:
 --
---   > data Measure o v where
---   > Output :: Scalar v -> Measure O v
---   > Normalized :: Scalar v -> Measure A v
---   > Global :: Scalar v -> Measure A v
---   > Local :: Scale v -> Measure A v
+--     data Measure o v where
+--       Output     :: Scalar v -> Measure O v
+--       Normalized :: Scalar v -> Measure A v
+--       Global     :: Scalar v -> Measure A v
+--       Local      :: Scale v  -> Measure A v
 --
 --   to check this at compile time. But for now we throw a runtime error.
 --
