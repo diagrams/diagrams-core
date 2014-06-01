@@ -13,7 +13,7 @@
 
     - New `extent` function, used in `diameter`.
 
-    - New `dimenson` function to return the dimension of a vector space.
+    - New `dimension` function to return the dimension of a vector space.
 
     - New `_relative` iso between points and vectors.
 
