@@ -181,9 +181,9 @@ styleToOutput
 styleToOutput globalToOutput normToOutput =
   gmapAttrs (toOutput globalToOutput normToOutput :: Measure v -> Measure v)
 
--- | Convert an aribrary 'Measure' to 'Output' units.
-toOutput :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
-  => Scalar v -> Scalar v -> Measure v -> Measure v
+-- | Convert an arbitrary 'Measure' to 'Output' units.
+toOutput :: forall d. (Data d, Ord d, Fractional d)
+  => d -> d -> MeasureX d -> MeasureX d
 toOutput g n m =
   case m of
      m'@(Output _) -> m'

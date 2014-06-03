@@ -87,7 +87,7 @@ module Diagrams.Core.Types
        , setTrace
 
          -- * Measurements
-       , Measure(..)
+       , MeasureX(..), Measure
        , fromOutput
        , atMost, atLeast
 
@@ -167,35 +167,32 @@ import           Diagrams.Core.V
 --  Measurement Units  -------------------------------------
 ------------------------------------------------------------
 -- | Type of measurement units for attributes.
-data Measure v = Output (Scalar v)
-               | Normalized (Scalar v)
-               | Local (Scalar v)
-               | Global (Scalar v)
+data MeasureX d = Output d
+               | Normalized d
+               | Local d
+               | Global d
 
-               | MinM (Measure v) (Measure v)
-               | MaxM (Measure v) (Measure v)
+               | MinM (MeasureX d) (MeasureX d)
+               | MaxM (MeasureX d) (MeasureX d)
                | ZeroM
-               | NegateM (Measure v)
-               | PlusM (Measure v) (Measure v)
-               | ScaleM (Scalar v) (Measure v)
-  deriving (Typeable)
+               | NegateM (MeasureX d)
+               | PlusM (MeasureX d) (MeasureX d)
+               | ScaleM d (MeasureX d)
+  deriving (Eq, Ord, Show, Data, Typeable)
 
-deriving instance (Eq (Scalar v)) => Eq (Measure v)
-deriving instance (Ord (Scalar v)) => Ord (Measure v)
-deriving instance (Show (Scalar v)) => Show (Measure v)
-deriving instance (Typeable v, Data v, Data (Scalar v)) => Data (Measure v)
+type Measure v = MeasureX (Scalar v)
 
 -- | Compute the larger of two 'Measure's.  Useful for setting lower
 --   bounds.
-atLeast :: Measure v -> Measure v -> Measure v
+atLeast :: MeasureX d -> MeasureX d -> MeasureX d
 atLeast = MaxM
 
 -- | Compute the smaller of two 'Measure's.  Useful for setting upper
 --   bounds.
-atMost :: Measure v -> Measure v -> Measure v
+atMost :: MeasureX d -> MeasureX d -> MeasureX d
 atMost = MinM
 
-instance AdditiveGroup (Measure v) where
+instance AdditiveGroup (MeasureX d) where
   zeroV = ZeroM
   negateV (NegateM m) = m
   negateV m = NegateM m
@@ -203,19 +200,19 @@ instance AdditiveGroup (Measure v) where
   m ^+^ ZeroM = m
   m1 ^+^ m2 = PlusM m1 m2
 
-instance VectorSpace (Measure v) where
-  type Scalar (Measure v) = Scalar v
+instance VectorSpace (MeasureX d) where
+  type Scalar (MeasureX d) = d
   s *^ m = ScaleM s m
 
-type instance V (Measure v) = v
+type instance V (MeasureX d) = d
 
-instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) where
-  transform tr (Local x) = Local (avgScale tr * x)
+instance (d ~ V d, Transformable d) => Transformable (MeasureX d) where
+  transform tr (Local x) = Local (transform tr x)
   transform _ y = y
 
 -- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
---   Only 'Ouput' measures should be left in the 'RTree' passed to the backend.
-fromOutput :: Measure v -> Scalar v
+--   Only 'Output' measures should be left in the 'RTree' passed to the backend.
+fromOutput :: MeasureX d -> d
 fromOutput (Output w)     = w
 fromOutput (Normalized _) = fromOutputErr "Normalized"
 fromOutput (Local _)      = fromOutputErr "Local"

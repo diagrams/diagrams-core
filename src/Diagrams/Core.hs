@@ -146,7 +146,7 @@ module Diagrams.Core
        , subPoint
 
          -- * Measurements
-       , Measure(..)
+       , MeasureX(..), Measure
        , fromOutput
        , toOutput
        , atMost
