@@ -1,3 +1,9 @@
+1.2.0.1 (4 June 2014)
+---------------------
+
+- Bug fix: `Measure` values using mini-DSL (`atLeast`, `atMost`,
+  *etc.*) are now properly transformed
+
 1.2 (27 May 2014)
 -----------------
 
