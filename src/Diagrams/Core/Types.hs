@@ -212,6 +212,11 @@ type instance V (Measure v) = v
 
 instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) where
   transform tr (Local x) = Local (avgScale tr * x)
+  transform tr (MinM m1 m2) = MinM (transform tr m1) (transform tr m2)
+  transform tr (MaxM m1 m2) = MaxM (transform tr m1) (transform tr m2)
+  transform tr (NegateM m') = NegateM (transform tr m')
+  transform tr (PlusM m1 m2) = PlusM (transform tr m1) (transform tr m2)
+  transform tr (ScaleM s m') = ScaleM s (transform tr m')
   transform _ y = y
 
 -- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
