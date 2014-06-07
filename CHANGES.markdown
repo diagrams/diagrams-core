@@ -1,3 +1,58 @@
+1.2.0.1 (4 June 2014)
+---------------------
+
+- Bug fix: `Measure` values using mini-DSL (`atLeast`, `atMost`,
+  *etc.*) are now properly transformed
+
+1.2 (27 May 2014)
+-----------------
+
+* **New features**
+
+    - New function `matrixHomRep` to convert a transformation to a
+      homogeneous matrix representation.
+
+    - New function `dropTransl` to drop the translation component
+      from a transformation.
+
+    - A mini-DSL for Measures.
+
+    - New `extent` function, used in `diameter`.
+
+    - New `dimension` function to return the dimension of a vector space.
+
+    - New `_relative` iso between points and vectors.
+
+    - `avgScale` function (for computing the average scaling factor of
+      a transformation) has been moved from `diagrams-lib` to
+      `diagrams-core` and generalized to work over any vector space.
+
+* **Dependency/version changes**
+
+    - Allow `semigroups-0.15`
+    - Allow `lens-4.2`
+
+* **API changes**
+
+    - Major refactoring which removes `freeze` (and hence `Split` transforms,
+      etc.) and adds units of `Measure`.
+
+    - Refactoring and simplification of the `Backend` class.
+
+    - Remove `Multibackend`.
+
+    - Remove `nullPrim`, `IsPrim` and simplify `RPrim` so that it does not
+      carry a transformation.
+
+    - Update `adjustDia` to return a transformation, not just a scale factor.
+      Add `renderDiaT` which returns a transformation (for use by end
+      users, e.g. to convert output coordinates back into local coordinates).
+
+1.1.0.3 (15 May 2014)
+----------------------
+
+    - Allow semigroups-0.14
+
 1.1.0.2 (10 April 2014)
 ----------------------
 

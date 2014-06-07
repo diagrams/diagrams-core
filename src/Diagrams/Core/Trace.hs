@@ -383,13 +383,13 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- > pointB = 1 ^& 1.2
 -- > pointC = 2.5 ^& 3.5
 -- >
--- > dot = circle 0.05 # lw 0
+-- > dot = circle 0.05 # lw none
 -- >
 -- > mkTraceDia :: TraceDiaOpts -> Diagram B R2
 -- > mkTraceDia tdo = mconcat
 -- >   [ mconcat $ map (place (dot # fc red)) pts
 -- >   , if drawV tdo then resultArrow else mempty
--- >   , arrowAt (basePt tdo) (dirV tdo) # lw 0.02 # lc blue
+-- >   , arrowAt (basePt tdo) (dirV tdo) # lc blue
 -- >   , dot # fc blue # moveTo (basePt tdo)
 -- >   , traceLine (basePt tdo) maxPosPt
 -- >   , traceLine (basePt tdo) minNegPt
@@ -405,7 +405,7 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- >     minNegPt = (mkPt <$>) . safeHead $ filter (<0) ss
 -- >     minPt = (mkPt <$>) . safeHead $ ss
 -- >     resultArrow = fromMaybe mempty (arrowBetween (basePt tdo) <$> minPt)
--- >       # lw 0.03 # lc green
+-- >       # lc green
 -- >
 -- > safeLast [] = Nothing
 -- > safeLast xs = Just $ last xs
@@ -415,7 +415,7 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- > dropAllBut1 xs = [last xs]
 -- >
 -- > traceLine _ Nothing = mempty
--- > traceLine p (Just q) = (p ~~ q) # dashing [0.1,0.1] 0
+-- > traceLine p (Just q) = (p ~~ q) # dashingG [0.1,0.1] 0
 -- >
 -- > mkTraceDias :: [TraceDiaOpts] -> Diagram B R2
 -- > mkTraceDias = hcat' (with & sep .~ 1) . map mkTraceDia

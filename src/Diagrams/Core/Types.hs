@@ -153,6 +153,7 @@ import           Diagrams.Core.Query
 import           Diagrams.Core.Style
 import           Diagrams.Core.Trace
 import           Diagrams.Core.Transform
+import           Diagrams.Core.Units
 import           Diagrams.Core.V
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
@@ -778,9 +779,11 @@ type RTree b v a = Tree (RNode b v a )
 --   /backends/.  Each backend/vector space combination must be an
 --   instance of the 'Backend' class.
 --
---   A minimal complete definition consists of 'Result', 'Options',
---   and 'renderRTree' (though most backends will want to implement
---   'adjustDia' as well; the default definition does nothing and is probably
+--   A minimal complete definition consists of 'Render', 'Result',
+--   'Options', and 'renderRTree'. However, most backends will want to
+--   implement 'adjustDia' as well; the default definition does
+--   nothing.  Some useful standard definitions are provided in the
+--   @Diagrams.TwoD.Adjust@ module from the @diagrams-lib@ package.
 class HasLinearMap v => Backend b v where
 
   -- | An intermediate representation used for rendering primitives.
