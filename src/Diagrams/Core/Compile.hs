@@ -41,7 +41,7 @@ import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 import           Diagrams.Core.Units
 
-import           Control.Lens              (review)
+import           Control.Lens              (review, APrism', clonePrism)
 import           Data.Data
 import qualified Data.List.NonEmpty        as NEL
 import           Data.Maybe                (fromMaybe)
@@ -146,12 +146,12 @@ fromDTree = fromDTree' mempty
 --   given function along the way.  Suitable for use by backends when
 --   implementing 'renderData'.  The first argument is the
 --   transformation used to convert the diagram from local to output
---   units.
+--   units. XXX fix me
 toRTree
   :: (HasLinearMap v, InnerSpace v, Data v, Data (Scalar v), OrderedField (Scalar v), Monoid m, Semigroup m)
-  => Transformation v -> QDiagram b v m -> RTree b v Annotation
-toRTree globalToOutput d
-  = (fmap . onRStyle) (styleToOutput gToO nToO)
+  => Transformation v -> APrism' (Physical (Scalar v)) (Scalar v) -> QDiagram b v m -> RTree b v Annotation
+toRTree globalToOutput units d
+  = (fmap . onRStyle) (styleToOutput gToO nToO units)
   . fromDTree
   . fromMaybe (Node DEmpty [])
   . toDTree gToO nToO
@@ -171,45 +171,46 @@ onRStyle :: (Style v -> Style v) -> (RNode b v a -> RNode b v a)
 onRStyle f (RStyle s) = RStyle (f s)
 onRStyle _ n          = n
 
--- | Convert all 'Measure' values to 'Output' units.  The arguments
---   are, respectively, the scaling factor from global units to output
---   units, and from normalized units to output units.  It is assumed
---   that local units are identical to output units (which will be the
---   case if all transformations have been fully pushed down and
---   applied). Normalized units are based on a logical diagram size of
---   1 x 1.
+-- | Convert all 'Measure' values to 'Output' units.  The 'Scalar'
+--   arguments are, respectively, the scaling factor from global units
+--   to output units, and from normalized units to output units; the
+--   'Physical' argument is the physical length corresponding to one
+--   output unit.  It is assumed that local units are identical to
+--   output units (which will be the case if all transformations have
+--   been fully pushed down and applied). Normalized units are based
+--   on a logical diagram size of 1 x 1.
 styleToOutput
   :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
-  => Scalar v -> Scalar v -> Style v -> Style v
-styleToOutput globalToOutput normToOutput =
-  gmapAttrs (toOutput globalToOutput normToOutput :: Measure v -> Measure v)
+  => Scalar v -> Scalar v -> APrism' (Physical (Scalar v)) (Scalar v) -> Style v -> Style v
+styleToOutput globalToOutput normToOutput units =
+  gmapAttrs (toOutput globalToOutput normToOutput units :: Measure v -> Measure v)
 
 -- | Convert an aribrary 'Measure' to 'Output' units.  The first two
 --   arguments represent the scaling factor from global to output and
 --   normalized to output coordinates, respectively; the 'Physical'
---   argument is the physical length corresponding to one output unit;
---   and the 'Double' argument specifies pixels per inch.
-toOutput :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
-  => Scalar v -> Scalar v -> Physical -> Double -> Measure v -> Measure v
-toOutput g n unit ppi m =
+--   argument is the physical length corresponding to one output unit.
+toOutput :: forall v. (Data v, Data (Scalar v), Ord (Scalar v), Fractional (Scalar v))
+  => Scalar v -> Scalar v -> APrism' (Physical (Scalar v)) (Scalar v) -> Measure v -> Measure v
+toOutput g n units m =
+  let units' = clonePrism units
+  in
   case m of
-     m'@(OutputPhys _) -> m'
-     OutputPx px       -> OutputPhys (review inches (px / ppi))
-     Local s           -> OutputPhys (s *^ unit)
-     Global s          -> OutputPhys ((g * s) *^ unit)
-     Normalized s      -> OutputPhys ((n * s) *^ unit)
+     m'@(Output _) -> m'
+     Local s       -> Output (review units' s)
+     Global s      -> Output (review units' (g * s))
+     Normalized s  -> Output (review units' (n * s))
 
      MinM m1 m2    -> outBin min (toOut m1) (toOut m2)
      MaxM m1 m2    -> outBin max (toOut m1) (toOut m2)
-     ZeroM         -> OutputPhys zeroV
+     ZeroM         -> Output (review units' 0)
      NegateM m'    -> outUn negate (toOut m')
      PlusM m1 m2   -> outBin (+) (toOut m1) (toOut m2)
      ScaleM s m'   -> outUn (s*^) (toOut m')
   where
-    toOut = toOutput g n unit ppi
-    outUn  op (OutputPhys o1) = OutputPhys (op o1)
+    toOut = toOutput g n units
+    outUn  op (Output o1) = Output (op o1)
     outUn  _  _ = error "outUn: The sky is falling!"
-    outBin op (OutputPhys o1) (OutputPhys o2) = OutputPhys (o1 `op` o2)
+    outBin op (Output o1) (Output o2) = Output (o1 `op` o2)
     outBin _ _ _ = error "outBin: Both skies are falling!"
 
 
@@ -221,13 +222,14 @@ toOutput g n unit ppi m =
 --   transformation can be used, for example, to convert output/screen
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
-  :: ( Backend b v
+  :: forall b v m.
+     ( Backend b v
      , HasLinearMap v, InnerSpace v, Data v
      , OrderedField (Scalar v), Data (Scalar v)
      , Monoid' m
      )
   => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
-renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
+renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o undefined $ d')  --- XXX FIX ME
   where (opts', g2o, d') = adjustDia b opts d
 
 -- | Render a diagram.

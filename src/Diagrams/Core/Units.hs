@@ -11,7 +11,7 @@ module Diagrams.Core.Units where
 import           Diagrams.Core.Transform
 import           Diagrams.Core.V
 
-import           Control.Lens            (Iso', iso)
+import           Control.Lens            (Prism', prism')
 import           Data.Data
 import           Data.VectorSpace
 
@@ -19,56 +19,64 @@ import           Data.VectorSpace
 --  Physical Units  ----------------------------------------
 ------------------------------------------------------------
 
-newtype Physical = Inches Double
-  deriving (Read, Show, Eq, Ord, Enum, AdditiveGroup, Typeable, Data)
+data Physical d = Inches d | Pixels d
+  deriving (Read, Show, Eq, Ord, Typeable, Data)
 
-instance VectorSpace Physical where
-  type Scalar Physical = Double
-  s *^ Inches m = Inches (s * m)
+scalePhysical :: Num d => d -> Physical d -> Physical d
+scalePhysical d (Inches d') = Inches (d * d')
+scalePhysical d (Pixels d') = Pixels (d * d')
 
 -- | The first argument is the conversion factor from inches, /i.e./
 --   what do you multiply inches by to obtain the unit in question?
 --   For example, 'mm' is defined as 'fromInches 25.4', since there
 --   are 25.4 millimeters in one inch.
-fromInches :: Double -> Iso' Physical Double
-fromInches f = iso (\(Inches m) -> m/f) (Inches . (*f))
+fromInches :: Fractional d => d -> Prism' (Physical d) d
+fromInches f = prism' (Inches . (*f)) (\phys -> case phys of
+                                                  Inches d -> Just (d/f)
+                                                  _        -> Nothing)
 
 -- | Inches.
-inches :: Iso' Physical Double
+inches :: Fractional d => Prism' (Physical d) d
 inches = fromInches 1
 
 -- | Millimeters.
-mm :: Iso' Physical Double
+mm :: Fractional d => Prism' (Physical d) d
 mm = fromInches 25.4
 
 -- | Centimeters.
-cm :: Iso' Physical Double
+cm :: Fractional d => Prism' (Physical d) d
 cm = fromInches 2.54
 
 -- | Points.  1 pt = 1/72 in.
-pt :: Iso' Physical Double
+pt :: Fractional d => Prism' (Physical d) d
 pt = fromInches (1/72)
 
 -- | Picas.  1 pc = 1/6 in.
-pc :: Iso' Physical Double
+pc :: Fractional d => Prism' (Physical d) d
 pc = fromInches (1/6)
+
+-- | Pixels.
+px :: Prism' (Physical d) d
+px = prism' Pixels (\phys -> case phys of
+                               Pixels p -> Just p
+                               _        -> Nothing)
 
 ------------------------------------------------------------
 --  Measurement Units  -------------------------------------
 ------------------------------------------------------------
 -- | Type of measurement units for attributes.
-data Measure v = OutputPx   Double
-               | OutputPhys Physical
-               | Normalized (Scalar v)
-               | Local      (Scalar v)
-               | Global     (Scalar v)
+data Measure v
+    = Output (Physical (Scalar v))
+    | Normalized (Scalar v)
+    | Local      (Scalar v)
+    | Global     (Scalar v)
 
-               | MinM (Measure v) (Measure v)
-               | MaxM (Measure v) (Measure v)
-               | ZeroM
-               | NegateM (Measure v)
-               | PlusM (Measure v) (Measure v)
-               | ScaleM (Scalar v) (Measure v)
+    | MinM (Measure v) (Measure v)
+    | MaxM (Measure v) (Measure v)
+    | ZeroM
+    | NegateM (Measure v)
+    | PlusM (Measure v) (Measure v)
+    | ScaleM (Scalar v) (Measure v)
   deriving (Typeable)
 
 deriving instance (Eq (Scalar v)) => Eq (Measure v)
@@ -102,6 +110,11 @@ type instance V (Measure v) = v
 
 instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) where
   transform tr (Local x) = Local (avgScale tr * x)
+  transform tr (MinM m1 m2) = MinM (transform tr m1) (transform tr m2)
+  transform tr (MaxM m1 m2) = MaxM (transform tr m1) (transform tr m2)
+  transform tr (NegateM m') = NegateM (transform tr m')
+  transform tr (PlusM m1 m2) = PlusM (transform tr m1) (transform tr m2)
+  transform tr (ScaleM s m') = ScaleM s (transform tr m')
   transform _ y = y
 
 -- | Retrieve the 'Output' value of a 'Measure v' or throw an
@@ -112,9 +125,8 @@ instance (HasLinearMap v, Floating (Scalar v)) => Transformable (Measure v) wher
 --   these, if necessary; typical scenarios might involve using some
 --   standard, default pixel resolution, or requiring the user to
 --   specify a resolution value manually.
-fromOutput :: Measure v -> Either Double Physical
-fromOutput (OutputPx o)   = Left o
-fromOutput (OutputPhys o) = Right o
+fromOutput :: Measure v -> Physical (Scalar v)
+fromOutput (Output o)     = o
 fromOutput (Normalized _) = fromOutputErr "Normalized"
 fromOutput (Local _)      = fromOutputErr "Local"
 fromOutput (Global _)     = fromOutputErr "Global"
@@ -130,11 +142,11 @@ fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must
 
 --   Eventually we may use a GADT like:
 --
---   > data Measure o v where
---   > Output :: Scalar v -> Measure O v
---   > Normalized :: Scalar v -> Measure A v
---   > Global :: Scalar v -> Measure A v
---   > Local :: Scale v -> Measure A v
+--     data Measure o v where
+--       Output     :: Scalar v -> Measure O v
+--       Normalized :: Scalar v -> Measure A v
+--       Global     :: Scalar v -> Measure A v
+--       Local      :: Scale v  -> Measure A v
 --
 --   to check this at compile time. But for now we throw a runtime error.
 --
