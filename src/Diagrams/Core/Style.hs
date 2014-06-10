@@ -301,6 +301,9 @@ instance Monoid (Style v) where
 instance HasLinearMap v => Transformable (Style v) where
   transform t = inStyle $ M.map (transform t)
 
+instance (v ~ v', HasLinearMap v) => Action (Transformation v) (Style v') where
+  act = transform
+
 -- | Styles have no action on other monoids.
 instance Action (Style v) m
 

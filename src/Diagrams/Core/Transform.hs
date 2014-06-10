@@ -179,11 +179,6 @@ instance HasLinearMap v => Monoid (Transformation v) where
   mempty = Transformation mempty mempty zeroV
   mappend = (<>)
 
--- | Transformations can act on transformable things.
-instance (HasLinearMap v, v ~ (V a), Transformable a)
-         => Action (Transformation v) a where
-  act = transform
-
 -- | Apply a transformation to a vector.  Note that any translational
 --   component of the transformation will not affect the vector, since
 --   vectors are invariant under translation.
@@ -356,6 +351,11 @@ instance Transformable Double where
 
 instance Transformable Rational where
   transform = apply
+
+-- Action instances
+
+instance Action (Transformation v) m => Action (Transformation v) (Deletable m) where
+  act = fmap . act
 
 ------------------------------------------------------------
 --  Translational invariance  ------------------------------

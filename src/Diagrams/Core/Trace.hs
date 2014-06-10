@@ -53,6 +53,7 @@ import           Control.Applicative
 import           Control.Lens            (Wrapped(..), Rewrapped, _Wrapping', iso, (%~), op)
 import           Data.List               (sort)
 import qualified Data.Map                as M
+import           Data.Monoid.Action      (Action(..))
 import           Data.Semigroup
 import qualified Data.Set                as S
 
@@ -173,6 +174,9 @@ instance Show (Trace v) where
 
 instance HasLinearMap v => Transformable (Trace v) where
   transform t = _Wrapped' %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
+
+instance (v ~ v', HasLinearMap v) => Action (Transformation v) (Trace v') where
+  act = transform
 
 ------------------------------------------------------------
 --  Traced class  ------------------------------------------

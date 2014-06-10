@@ -48,6 +48,7 @@ import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped,
                                           op, over, _Wrapping')
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
+import           Data.Monoid.Action      (Action(..))
 import           Data.Semigroup
 import qualified Data.Set                as S
 
@@ -160,6 +161,9 @@ instance ( HasLinearMap v, InnerSpace v, Floating (Scalar v))
           vi = apply (inv t) v
       in  f v' / (v' <.> vi)
     )
+
+instance (v ~ v', Transformable (Envelope v)) => Action (Transformation v) (Envelope v') where
+  act = transform
 
 ------------------------------------------------------------
 --  Enveloped class

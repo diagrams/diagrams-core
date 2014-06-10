@@ -23,7 +23,9 @@ module Diagrams.Core.Query
 import Control.Applicative
 import Control.Lens (Wrapped(..), Rewrapped, iso)
 import Data.Semigroup
+import Data.Monoid.Action (Action(..))
 
+import Data.Basis (HasBasis)
 import Data.AffineSpace
 import Data.VectorSpace
 
@@ -58,3 +60,6 @@ instance VectorSpace v => HasOrigin (Query v m) where
 
 instance HasLinearMap v => Transformable (Query v m) where
   transform t (Query f) = Query $ f . papply (inv t)
+
+instance (v ~ v', HasLinearMap v) => Action (Transformation v) (Query v' m) where
+  act = transform
