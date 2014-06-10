@@ -50,7 +50,7 @@ module Diagrams.Core.Trace
        ) where
 
 import           Control.Applicative
-import           Control.Lens
+import           Control.Lens            (Wrapped(..), Rewrapped, _Wrapping', iso, (%~), op)
 import           Data.List               (sort)
 import qualified Data.Map                as M
 import           Data.Semigroup
