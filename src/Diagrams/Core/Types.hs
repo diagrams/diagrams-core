@@ -317,7 +317,12 @@ href = applyAnnotation . Href
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
-type QDiagram b v m  = Contextual b v m (RTree b v Annotation, Summary b v m)
+newtype QDiagram b v m  = QD (Contextual b v m (RTree b v Annotation, Summary b v m))
+  deriving (Typeable)
+
+instance Wrapped (QDiagram b v m) where
+  type Unwrapped (QDiagram b v m) = Contextual b v m (RTree b v Annotation, Summary b v m)
+  _Wrapped' = iso (\(QD d) -> d) QD
 
 type instance V (QDiagram b v m) = v
 
@@ -328,20 +333,32 @@ type instance V (QDiagram b v m) = v
 --   the 'value' function.
 type Diagram b v = QDiagram b v Any
 
+(>>>=) :: Contextual b v m a -> (a -> QDiagram b v m) -> QDiagram b v m
+ca >>>= k = QD $ ca >>= \a -> unQD (k a)
+
+(=<<<) :: (a -> QDiagram b v m) ->  Contextual b v m a -> QDiagram b v m
+(=<<<) = flip (>>>=)
+
 -- | Create a \"leaf\" diagram with just a summary value and no
 --   diagrammatic content.
 leafS :: Summary b v m -> QDiagram b v m
-leafS s = return (emptyRTree, s)
+leafS s = QD $ return (emptyRTree, s)
 
 -- | Project out a component of the summary in a type-directed way.
 getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual b v m u
-getS = fmap (option mempty id . get . snd)
+getS = fmap (option mempty id . get . snd) . unQD
 
-applySpre :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
-applySpre s = (fmap . second) (s<>)
+applySpre :: Summary b v m -> QDiagram b v m -> QDiagram b v m
+applySpre = over _Wrapped . applySpre'
 
-applySpost :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
-applySpost s = (fmap . second) (<>s)
+applySpre' :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
+applySpre' s = (fmap . second) (s<>)
+
+applySpost :: Summary b v m -> QDiagram b v m -> QDiagram b v m
+applySpost = over _Wrapped . applySpost'
+
+applySpost' :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
+applySpost' s = (fmap . second) (<>s)
 
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
@@ -353,7 +370,7 @@ pointDiagram p = leafS (inj . toDeletable $ pointEnvelope p)
 envelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Monoid' m)
          => Lens' (QDiagram b v m) (Contextual b v m (Envelope v))
-envelope = lens (fmap unDelete . getS) ((=<<) . flip setEnvelope)
+envelope = lens (fmap unDelete . getS)  ((=<<<) . flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
@@ -373,19 +390,16 @@ trace = lens (fmap unDelete . getS) ((=<<) . flip setTrace)
 setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Semigroup m)
          => Trace v -> QDiagram b v m -> QDiagram b v m
-setTrace t 
-  =  applySpre (inj . toDeletable $ t)
+setTrace t
+  = applySpre (inj . toDeletable $ t)
   . applySpre (inj (deleteL :: Deletable (Trace v)))
   . applySpost (inj (deleteR :: Deletable (Trace v)))
 
--- -- | Get the subdiagram map (/i.e./ an association from names to
--- --   subdiagrams) of a diagram.
--- subMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
---           Lens' (QDiagram b v m) (SubMap b v m)
--- subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap) where
---   setMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
---             SubMap b v m -> QDiagram b v m -> QDiagram b v m
---   setMap m = over _Wrapped' ( D.applyUpre . inj . toDeletable $ m)
+-- | Get the subdiagram map (/i.e./ an association from names to
+--   subdiagrams) of a diagram.
+subMap :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v)) =>
+          QDiagram b v m -> Contextual b v m (SubMap b v m)
+subMap = fmap unDelete . getS
 
 -- -- | Get a list of names of subdiagrams and their locations.
 -- names :: (HasLinearMap v, InnerSpace v, Semigroup m, OrderedField (Scalar v))
@@ -622,28 +636,29 @@ setTrace t
 --   paired with any accumulated information from the larger context
 --   (transformations, attributes, etc.).
 
-data Subdiagram b v m = Subdiagram (QDiagram b v m) (Context b v m)
+data Subdiagram b v m = Subdiagram (QDiagram b v m) (Transformation v) (Context b v m)
 
 type instance V (Subdiagram b v m) = v
 
 -- | Turn a diagram into a subdiagram with no accumulated context.
-mkSubdiagram :: QDiagram b v m -> Subdiagram b v m
-mkSubdiagram d = Subdiagram d empty
+mkSubdiagram :: HasLinearMap v => QDiagram b v m -> Subdiagram b v m
+mkSubdiagram d = Subdiagram d mempty empty
 
--- -- | Create a \"point subdiagram\", that is, a 'pointDiagram' (with no
--- --   content and a point envelope) treated as a subdiagram with local
--- --   origin at the given point.  Note this is not the same as
--- --   @mkSubdiagram . pointDiagram@, which would result in a subdiagram
--- --   with local origin at the parent origin, rather than at the given
--- --   point.
--- subPoint :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
---          => Point v -> Subdiagram b v m
--- subPoint p = Subdiagram
---                (pointDiagram origin)
---                (transfToAnnot $ translation (p .-. origin))
+-- | Create a \"point subdiagram\", that is, a 'pointDiagram' (with no
+--   content and a point envelope) treated as a subdiagram with local
+--   origin at the given point.  Note this is not the same as
+--   @mkSubdiagram . pointDiagram@, which would result in a subdiagram
+--   with local origin at the parent origin, rather than at the given
+--   point.
+subPoint :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+         => Point v -> Subdiagram b v m
+subPoint p = Subdiagram
+               (pointDiagram origin)
+               (translation (p .-. origin))
+               empty
 
--- instance Functor (Subdiagram b v) where
---   fmap f (Subdiagram d a) = Subdiagram (fmap f d) a
+instance Functor (Subdiagram b v) where
+  fmap f (Subdiagram d t c) = Subdiagram (fmap f d) t ((second . second . first . fmap) f c)
 
 -- instance (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid' m)
 --       => Enveloped (Subdiagram b v m) where
