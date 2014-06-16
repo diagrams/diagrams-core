@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -127,7 +128,7 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, over, view, (^.), _Wrapped,
                                             _Wrapping, Setter', sets, Ixed(..),
                                             At(..), Index, IxValue, Contains(..),
-                                            (&), (.~))
+                                            (&), (.~), Traversal')
 import           Control.Monad             (mplus)
 import           Control.Monad.Reader
 import           Data.AffineSpace          ((.-.))
@@ -141,6 +142,7 @@ import qualified Data.Set                  as S
 import qualified Data.Set.Lens             as S
 import qualified Data.Traversable          as T
 import           Data.Tree
+import           Data.Tree.Lens            (branches)
 import           Data.VectorSpace
 
 import           Data.Monoid.Action
@@ -782,6 +784,11 @@ lookupSub a (SubMap m)
 type Path = [Int]
 
 -- instance Monoid Path
+
+-- Index a tree based on a 'Path' into it.
+ixPath :: Path -> Traversal' (Tree a) (Tree a)
+ixPath []     = id
+ixPath (i:is) = branches.ix i.ixPath is
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
