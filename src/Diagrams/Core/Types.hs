@@ -125,7 +125,8 @@ import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, over, view, (^.), _Wrapped,
                                             _Wrapping, Setter', sets, Ixed(..),
-                                            At(..), Index, IxValue, (&), (<>~))
+                                            At(..), Index, IxValue, Contains(..),
+                                            (&), (.~))
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.Data
@@ -133,6 +134,8 @@ import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
+import qualified Data.Set                  as S
+import qualified Data.Set.Lens             as S
 import qualified Data.Traversable          as T
 import           Data.Tree
 import           Data.VectorSpace
@@ -738,50 +741,29 @@ rawSub (Subdiagram d _) = d
 
 -- | A 'SubMap' is a map associating names to subdiagrams. There can
 --   be multiple associations for any given name.
-newtype SubMap = SubMap (M.Map Name [Path])
-  -- See Note [SubMap Set vs list]
+newtype SubMap = SubMap (S.Set Name)
+  deriving (Semigroup, Monoid)
 
 instance Wrapped SubMap where
-    type Unwrapped SubMap = M.Map Name [Path]
+    type Unwrapped SubMap = S.Set Name
     _Wrapped' = iso (\(SubMap m) -> m) SubMap
 
 type instance Index SubMap = Name
-type instance IxValue SubMap = [Path]
+type instance IxValue SubMap = ()
 
-instance Ixed SubMap where ix i = _Wrapped'.ix i
-instance At   SubMap where at i = _Wrapped'.at i
-
--- Trivial representation of a path, for now
-type Path = [Int]
-
--- Note: Path is a Monoid
-
--- ~~~~ [SubMap Set vs list]
--- In some sense it would be nicer to use
--- Sets instead of a list, but then we would have to put Ord
--- constraints on v everywhere. =P
-
-instance Semigroup SubMap where
-  SubMap s1 <> SubMap s2 = SubMap $ M.unionWith (++) s1 s2
+instance Ixed     SubMap where ix i       = _Wrapped'.ix i
+instance At       SubMap where at i       = _Wrapped'.at i
+instance Contains SubMap where contains i = _Wrapped'.contains i
 
 -- Transformations have no action on SubMaps
 instance Action (Transformation v) SubMap where
   act _ = id
 
--- | 'SubMap's form a monoid with the empty map as the identity, and
---   map union as the binary operation.  No information is ever lost:
---   if two maps have the same name in their domain, the resulting map
---   will associate that name to the concatenation of the information
---   associated with that name.
-instance Monoid SubMap where
-  mempty  = SubMap M.empty
-  mappend = (<>)
-
 -- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a |>
 --   ns@ is the same 'SubMap' except with every name qualified by
 --   @a@.
 instance Qualifiable SubMap where
-  (|>) a = over (_Wrapped'.sets M.mapKeys) (a |>)
+  (|>) a = _Wrapped'.S.setmapped |>~ a
 
 -- | Construct a 'SubMap' from a list of associations between names
 --   and subdiagrams.
@@ -797,7 +779,7 @@ rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 -- | A name acts on a name map by qualifying every name in it, and adding a new
 --   association.
 instance Action Name SubMap where
-  act n s = (n |> s) & at n <>~ Just [mempty]
+  act n s = (n |> s) & contains n .~ True
 
 instance Action Name a => Action Name (Deletable a) where
   act n (Deletable l a r) = Deletable l (act n a) r
@@ -822,6 +804,15 @@ lookupSub a (SubMap m)
         flattenNames xs = Just . concatMap snd $ xs
         n = toName a
 -}
+
+------------------------------------------------------------
+--  Paths  -------------------------------------------------
+------------------------------------------------------------
+
+-- Trivial representation of a path, for now
+type Path = [Int]
+
+-- instance Monoid Path
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
