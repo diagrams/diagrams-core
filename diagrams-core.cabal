@@ -36,6 +36,8 @@ Library
                        Diagrams.Core.Query
 
   Build-depends:       base >= 4.2 && < 4.8,
+                       mtl >= 2.1 && < 2.3,
+                       transformers >= 0.3 && < 0.5,
                        containers >= 0.4.2 && < 0.6,
                        semigroups >= 0.8.4 && < 0.16,
                        vector-space >= 0.8.4 && < 0.9,
