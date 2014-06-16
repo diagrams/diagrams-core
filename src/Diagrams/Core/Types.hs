@@ -139,7 +139,7 @@ import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Set                  as S
-import qualified Data.Set.Lens             as S
+import           Data.Set.Lens             (setmapped)
 import qualified Data.Traversable          as T
 import           Data.Tree
 import           Data.Tree.Lens            (branches)
@@ -734,7 +734,7 @@ instance Action (Transformation v) SubMap where
 --   ns@ is the same 'SubMap' except with every name qualified by
 --   @a@.
 instance Qualifiable SubMap where
-  (|>) a = _Wrapped'.S.setmapped |>~ a
+  (|>) a = _Wrapped'.setmapped |>~ a
 
 -- | Construct a 'SubMap' from a list of associations between names
 --   and subdiagrams.
