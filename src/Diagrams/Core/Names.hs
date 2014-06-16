@@ -28,11 +28,13 @@ module Diagrams.Core.Names
        , Name(..), IsName(..), _Name, (.>)
 
         -- ** Qualifiable
-       , Qualifiable(..)
+       , Qualifiable(..), (|>~)
 
        ) where
 
-import           Control.Lens            (over, Wrapped(..), Rewrapped, iso, _Unwrapping', Prism', prism', Traversal')
+import           Control.Lens            (over, Wrapped(..), Rewrapped, iso,
+                                          _Unwrapping', Prism', prism',
+                                          Traversal', ASetter)
 import           Data.List               (intercalate)
 import qualified Data.Map                as M
 import           Data.Semigroup
@@ -159,3 +161,13 @@ instance Qualifiable a => Qualifiable (b -> a) where
 
 infixr 5 |>
 infixr 5 .>
+
+-- | Qualify the target of a 'Lens' or all the targets of a 'Setter' or
+--   'Traversal'.
+--
+--   @l |>~ n = 'over' l  (n '|>')@
+(|>~) :: (Qualifiable q, IsName a) => ASetter s t q q -> a -> s -> t
+l |>~ n = over l (n |>)
+{-# INLINE (|>~) #-}
+
+infixr 4 |>~
