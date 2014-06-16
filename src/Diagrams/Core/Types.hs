@@ -124,7 +124,8 @@ module Diagrams.Core.Types
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, over, view, (^.), _Wrapped,
-                                            _Wrapping, Setter', sets)
+                                            _Wrapping, Setter', sets, Ixed(..),
+                                            At(..), Index, IxValue, (&), (<>~))
 import           Control.Monad             (mplus)
 import           Data.AffineSpace          ((.-.))
 import           Data.Data
@@ -744,8 +745,16 @@ instance Wrapped SubMap where
     type Unwrapped SubMap = M.Map Name [Path]
     _Wrapped' = iso (\(SubMap m) -> m) SubMap
 
+type instance Index SubMap = Name
+type instance IxValue SubMap = [Path]
+
+instance Ixed SubMap where ix i = _Wrapped'.ix i
+instance At   SubMap where at i = _Wrapped'.at i
+
 -- Trivial representation of a path, for now
 type Path = [Int]
+
+-- Note: Path is a Monoid
 
 -- ~~~~ [SubMap Set vs list]
 -- In some sense it would be nicer to use
@@ -788,7 +797,7 @@ rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 -- | A name acts on a name map by qualifying every name in it, and adding a new
 --   association.
 instance Action Name SubMap where
-  act = (|>)
+  act n s = (n |> s) & at n <>~ Just [mempty]
 
 instance Action Name a => Action Name (Deletable a) where
   act n (Deletable l a r) = Deletable l (act n a) r
