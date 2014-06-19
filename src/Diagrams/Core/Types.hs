@@ -130,8 +130,8 @@ module Diagrams.Core.Types
 
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
-                                            lens, over, view, (^.), _Wrapped,
-                                            _Wrapping)
+                                            lens, op, over, view, (^.),
+                                            _Wrapped, _Wrapping)
 import           Control.Monad             (mplus)
 import           Control.Monad.Reader
 import           Data.AffineSpace          ((.-.))
@@ -324,6 +324,8 @@ instance Wrapped (QDiagram b v m) where
   type Unwrapped (QDiagram b v m) = Contextual b v m (RTree b v Annotation, Summary b v m)
   _Wrapped' = iso (\(QD d) -> d) QD
 
+instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
+
 type instance V (QDiagram b v m) = v
 
 -- | The default sort of diagram is one where querying at a point
@@ -334,7 +336,7 @@ type instance V (QDiagram b v m) = v
 type Diagram b v = QDiagram b v Any
 
 (>>>=) :: Contextual b v m a -> (a -> QDiagram b v m) -> QDiagram b v m
-ca >>>= k = QD $ ca >>= \a -> unQD (k a)
+ca >>>= k = QD $ ca >>= \a -> (op QD) (k a)
 
 (=<<<) :: (a -> QDiagram b v m) ->  Contextual b v m a -> QDiagram b v m
 (=<<<) = flip (>>>=)
@@ -348,13 +350,13 @@ leafS s = QD $ return (emptyRTree, s)
 getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual b v m u
 getS = fmap (option mempty id . get . snd) . unQD
 
-applySpre :: Summary b v m -> QDiagram b v m -> QDiagram b v m
+applySpre :: (Semigroup m, Ord (Scalar v)) => Summary b v m -> QDiagram b v m -> QDiagram b v m
 applySpre = over _Wrapped . applySpre'
 
 applySpre' :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
 applySpre' s = (fmap . second) (s<>)
 
-applySpost :: Summary b v m -> QDiagram b v m -> QDiagram b v m
+applySpost :: (Semigroup m, Ord (Scalar v)) => Summary b v m -> QDiagram b v m -> QDiagram b v m
 applySpost = over _Wrapped . applySpost'
 
 applySpost' :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
@@ -384,7 +386,7 @@ setEnvelope e
 -- | Get the trace of a diagram.
 trace :: (InnerSpace v, HasLinearMap v, OrderedField (Scalar v), Semigroup m) =>
          Lens' (QDiagram b v m) (Contextual b v m (Trace v))
-trace = lens (fmap unDelete . getS) ((=<<) . flip setTrace)
+trace = lens (fmap unDelete . getS) ((=<<<) . flip setTrace)
 
 -- | Replace the trace of a diagram.
 setTrace :: forall b v m. (OrderedField (Scalar v), InnerSpace v
@@ -509,43 +511,43 @@ subMap = fmap unDelete . getS
 -- mkQD' l e t n q
 --   = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
 
--- ------------------------------------------------------------
--- --  Instances
--- ------------------------------------------------------------
+------------------------------------------------------------
+--  Instances
+------------------------------------------------------------
 
--- ---- Monoid
+---- Monoid
 
--- -- | Diagrams form a monoid since each of their components do: the
--- --   empty diagram has no primitives, an empty envelope, an empty
--- --   trace, no named subdiagrams, and a constantly empty query
--- --   function.
--- --
--- --   Diagrams compose by aligning their respective local origins.  The
--- --   new diagram has all the primitives and all the names from the two
--- --   diagrams combined, and query functions are combined pointwise.
--- --   The first diagram goes on top of the second.  \"On top of\"
--- --   probably only makes sense in vector spaces of dimension lower
--- --   than 3, but in theory it could make sense for, say, 3-dimensional
--- --   diagrams when viewed by 4-dimensional beings.
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
---   => Monoid (QDiagram b v m) where
---   mempty  = QD D.empty
---   mappend = (<>)
+-- | Diagrams form a monoid since each of their components do: the
+--   empty diagram has no primitives, an empty envelope, an empty
+--   trace, no named subdiagrams, and a constantly empty query
+--   function.
+--
+--   Diagrams compose by aligning their respective local origins.  The
+--   new diagram has all the primitives and all the names from the two
+--   diagrams combined, and query functions are combined pointwise.
+--   The first diagram goes on top of the second.  \"On top of\"
+--   probably only makes sense in vector spaces of dimension lower
+--   than 3, but in theory it could make sense for, say, 3-dimensional
+--   diagrams when viewed by 4-dimensional beings.
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+  => Monoid (QDiagram b v m) where
+  mempty  = QD (return (emptyRTree, mempty))
+  mappend = (<>)
 
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
---   => Semigroup (QDiagram b v m) where
---   (QD d1) <> (QD d2) = QD (d2 <> d1)
---     -- swap order so that primitives of d2 come first, i.e. will be
---     -- rendered first, i.e. will be on the bottom.
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+  => Semigroup (QDiagram b v m) where
+  (QD d1) <> (QD d2) = QD (d2 <> d1)
+    -- swap order so that primitives of d2 come first, i.e. will be
+    -- rendered first, i.e. will be on the bottom.
 
--- -- | A convenient synonym for 'mappend' on diagrams, designed to be
--- --   used infix (to help remember which diagram goes on top of which
--- --   when combining them, namely, the first on top of the second).
--- atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
---      => QDiagram b v m -> QDiagram b v m -> QDiagram b v m
--- atop = (<>)
+-- | A convenient synonym for 'mappend' on diagrams, designed to be
+--   used infix (to help remember which diagram goes on top of which
+--   when combining them, namely, the first on top of the second).
+atop :: (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
+     => QDiagram b v m -> QDiagram b v m -> QDiagram b v m
+atop = (<>)
 
--- infixl 6 `atop`
+infixl 6 `atop`
 
 -- ---- Functor
 
@@ -658,7 +660,7 @@ subPoint p = Subdiagram
                empty
 
 instance Functor (Subdiagram b v) where
-  fmap f (Subdiagram d t c) = Subdiagram (fmap f d) t ((second . second . first . fmap) f c)
+  fmap f (Subdiagram d t c) = Subdiagram (fmap f d) t ((second . second . first . fmap . fmap) f c)
 
 -- instance (OrderedField (Scalar v), InnerSpace v, HasLinearMap v, Monoid' m)
 --       => Enveloped (Subdiagram b v m) where
@@ -668,9 +670,9 @@ instance Functor (Subdiagram b v) where
 --       => Traced (Subdiagram b v m) where
 --   getTrace (Subdiagram d a) = transform (transfFromAnnot a) $ getTrace d
 
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
---       => HasOrigin (Subdiagram b v m) where
---   moveOriginTo = translate . (origin .-.)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v))
+      => HasOrigin (Subdiagram b v m) where
+  moveOriginTo = translate . (origin .-.)
 
 -- instance ( HasLinearMap v, InnerSpace v, Floating (Scalar v))
 --     => Transformable (Subdiagram b v m) where
@@ -756,10 +758,6 @@ instance Qualifiable (SubMap b v m) where
 --   and subdiagrams.
 fromNames :: IsName a => [(a, Subdiagram b v m)] -> SubMap b v m
 fromNames = SubMap . M.fromListWith (++) . map (toName *** (:[]))
-
--- | Add a name/diagram association to a submap.
-rememberAs :: IsName a => a -> QDiagram b v m -> SubMap b v m -> SubMap b v m
-rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (SubMap b v m) where
