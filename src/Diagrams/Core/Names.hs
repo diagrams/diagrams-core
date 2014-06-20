@@ -49,6 +49,26 @@ import           Diagrams.Core.Transform
 --   support 'Typeable' (to facilitate extracting them from
 --   existential wrappers), 'Ord' (for comparison and efficient
 --   storage) and 'Show'.
+--
+--   To make an instance of 'IsName', you need not define any methods,
+--   just declare it.
+--
+--   WARNING: it is not recommended to use
+--   @GeneralizedNewtypeDeriving@ in conjunction with @IsName@, since
+--   in that case the underlying type and the @newtype@ will be
+--   considered equivalent when comparing names.  For example:
+--
+--   @
+--     newtype WordN = WordN Int deriving (Show, Ord, Eq, Typeable, IsName)
+--   @
+--
+--   is unlikely to work as intended, since @(1 :: Int)@ and @(WordN 1)@
+--   will be considered equal as names.  Instead, use
+--
+--   @
+--     newtype WordN = WordN Int deriving (Show, Ord, Eq, Typeable, IsName)
+--     instance IsName WordN
+--   @
 class (Typeable a, Ord a, Show a) => IsName a where
   toName :: a -> Name
   toName = Name . (:[]) . AName
