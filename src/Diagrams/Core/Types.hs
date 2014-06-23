@@ -128,6 +128,7 @@ module Diagrams.Core.Types
 
        ) where
 
+import           Control.Applicative       (Applicative)
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, op, over, view, (^.),
@@ -292,25 +293,18 @@ type Context b v m = Style v
 --------------------------------------------------
 -- Context monad
 
-type ContextualT b v m = ReaderT (Context b v m)
-type Contextual b v m = ContextualT b v m Identity
+newtype Contextual b v m a = Contextual (Reader (Context b v m) a)
+  deriving (Functor, Applicative, Monad, MonadReader (Context b v m))
 
--- | Static annotations which can be placed at a particular node of a
---   diagram tree.
-data Annotation
-  = Href String    -- ^ Hyperlink
-  deriving Show
+instance Semigroup a => Semigroup (Contextual b v m a) where
+  Contextual r1 <> Contextual r2 = Contextual . reader $ \ctx -> runReader r1 ctx <> runReader r2 ctx
 
--- | Apply a static annotation at the root of a diagram.
-applyAnnotation
-  :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
-  => Annotation -> QDiagram b v m -> QDiagram b v m
-applyAnnotation an = fmap (first (Node (RAnnot an) . (: [])))
+instance (Semigroup a, Monoid a) => Monoid (Contextual b v m a) where
+  mappend = (<>)
+  mempty  = Contextual . reader $ const mempty
 
--- | Make a diagram into a hyperlink.  Note that only some backends
---   will honor hyperlink annotations.
-href :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) => String -> QDiagram b v m -> QDiagram b v m
-href = applyAnnotation . Href
+--------------------------------------------------
+-- QDiagram
 
 -- | The fundamental diagram type is represented by trees of
 --   primitives with various monoidal annotations.  The @Q@ in
@@ -335,9 +329,11 @@ type instance V (QDiagram b v m) = v
 --   the 'value' function.
 type Diagram b v = QDiagram b v Any
 
+-- | XXX comment me
 (>>>=) :: Contextual b v m a -> (a -> QDiagram b v m) -> QDiagram b v m
 ca >>>= k = QD $ ca >>= \a -> (op QD) (k a)
 
+-- | XXX comment me
 (=<<<) :: (a -> QDiagram b v m) ->  Contextual b v m a -> QDiagram b v m
 (=<<<) = flip (>>>=)
 
@@ -348,7 +344,7 @@ leafS s = QD $ return (emptyRTree, s)
 
 -- | Project out a component of the summary in a type-directed way.
 getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual b v m u
-getS = fmap (option mempty id . get . snd) . unQD
+getS = fmap (option mempty id . get . snd) . op QD
 
 applySpre :: (Semigroup m, Ord (Scalar v)) => Summary b v m -> QDiagram b v m -> QDiagram b v m
 applySpre = over _Wrapped . applySpre'
@@ -361,6 +357,23 @@ applySpost = over _Wrapped . applySpost'
 
 applySpost' :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
 applySpost' s = (fmap . second) (<>s)
+
+-- | Static annotations which can be placed at a particular node of a
+--   diagram tree.
+data Annotation
+  = Href String    -- ^ Hyperlink
+  deriving Show
+
+-- | Apply a static annotation at the root of a diagram.
+applyAnnotation
+  :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+  => Annotation -> QDiagram b v m -> QDiagram b v m
+applyAnnotation an = over _Wrapped . fmap . first $ Node (RAnnot an) . (: [])
+
+-- | Make a diagram into a hyperlink.  Note that only some backends
+--   will honor hyperlink annotations.
+href :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) => String -> QDiagram b v m -> QDiagram b v m
+href = applyAnnotation . Href
 
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
