@@ -287,11 +287,7 @@ type Summary b v m = Deletable (Envelope v)
 --   leaf:
 --
 --   * styles (see "Diagrams.Core.Style")
---
---   * names (see "Diagrams.Core.Names")
 type Context b v m = Style v
-                 ::: Name
-                 ::: SubMap
                  ::: ()
 
 --------------------------------------------------
@@ -746,20 +742,6 @@ instance Qualifiable SubMap where
 rememberAs :: IsName a => a -> QDiagram b v m -> SubMap b v m -> SubMap b v m
 rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 -}
-
--- | A name acts on a name map by qualifying every name in it, and adding a new
---   association.
-instance Action Name SubMap where
-  act n s = (n |> s) & contains n .~ True
-
-instance Action Name a => Action Name (Deletable a) where
-  act n (Deletable l a r) = Deletable l (act n a) r
-
--- Names do not act on other things.
-
-instance Action Name (Query v m)
-instance Action Name (Envelope v)
-instance Action Name (Trace v)
 
 -- | Look for the given name in a name map, returning a list of
 --   subdiagrams associated with that name.  If no names match the
