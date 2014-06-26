@@ -772,6 +772,15 @@ ixPath :: Path -> Traversal' (Tree a) (Tree a)
 ixPath []     = id
 ixPath (i:is) = branches.ix i.ixPath is
 
+-- Find tree nodes using a 'Getter'. It will return paths into the topmost
+-- nodes that first satisfy it.
+findPath :: Getting Any s t a b -> Tree s -> [Path]
+findPath l (Node x ts)
+  | has l x   = [mempty]
+  | otherwise = do
+      (i,t) <- zip [0..] ts
+      map (i:) $ findPath l t
+
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
 ------------------------------------------------------------
