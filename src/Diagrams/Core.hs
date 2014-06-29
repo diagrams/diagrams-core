@@ -155,14 +155,9 @@ module Diagrams.Core
          -- * Backends
 
        , Backend(..)
-       , Renderable(..)
 
        , renderDia
        , renderDiaT
-
-         -- ** The null backend
-
-       , NullBackend, D
 
          -- * Convenience classes
 
