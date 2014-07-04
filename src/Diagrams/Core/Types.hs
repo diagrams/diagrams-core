@@ -299,12 +299,16 @@ instance (Semigroup a, Monoid a) => Monoid (Contextual v a) where
 
 -- Environments
 
-newtype Environment b v a = Environment [([RTree b v a],[RTree b v a])]
+newtype Environment b v a = Environment { getEnvironment :: [([RTree b v a],[RTree b v a])] }
   deriving (Semigroup, Monoid)
 
 stepRight, stepLeft :: RTree b v a -> Environment b v a
 stepRight t = Environment [([t],[])]
 stepLeft  t = Environment [([],[t])]
+
+above, below :: Environment b v a -> RTree b v a
+above = foldMap (mconcat . fst) ts . getEnvironment
+below = foldMap (mconcat . snd) ts . getEnvironment
 
 --------------------------------------------------
 -- QDiagram
