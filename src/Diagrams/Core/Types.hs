@@ -710,14 +710,28 @@ ixPath :: Path -> Traversal' (Tree a) (Tree a)
 ixPath []     = id
 ixPath (i:is) = branches.ix i.ixPath is
 
+-- Path construction DSL
+
+newtype PathM s a = PathM (ReaderT (Tree s) a)
+  deriving (Functor, Applicative, Monad, MonadReader (Tree s))
+
+runPathM :: PathM s [Path] -> Tree s -> [Path]
+runPathM (PathM r) = runReaderT r
+
+here :: PathM s [Path]
+here = return [mempty]
+
 -- Find tree nodes using a 'Getter'. It will return paths into the topmost
 -- nodes that first satisfy it.
-findPath :: Getting Any s t a b -> Tree s -> [Path]
-findPath l (Node x ts)
+findPath :: Getting Any s t a b -> PathM s [Path]
+findPath l = reader $ \(Node x ts) -> case
   | has l x   = [mempty]
   | otherwise = do
       (i,t) <- zip [0..] ts
       map (i:) $ findPath l t
+
+editTree :: PathM s [Path] -> (Tree s -> Tree s) -> Tree s -> Tree s
+editTree pm f t = foldr (\p -> ixPath p %~ f) t $ runPathM pm t
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
