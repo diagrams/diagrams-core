@@ -281,6 +281,7 @@ type Summary b v m = Deletable (Envelope v)
 --
 --   * styles (see "Diagrams.Core.Style")
 type Context b v m = Style v
+                 ::: Environment b v a
                  ::: ()
 
 --------------------------------------------------
@@ -295,6 +296,15 @@ instance Semigroup a => Semigroup (Contextual v a) where
 instance (Semigroup a, Monoid a) => Monoid (Contextual v a) where
   mappend = (<>)
   mempty  = Contextual . reader $ const mempty
+
+-- Environments
+
+newtype Environment b v a = Environment [([RTree b v a],[RTree b v a])]
+  deriving (Semigroup, Monoid)
+
+stepRight, stepLeft :: RTree b v a -> Environment b v a
+stepRight t = Environment [([t],[])]
+stepLeft  t = Environment [([],[t])]
 
 --------------------------------------------------
 -- QDiagram
@@ -468,7 +478,10 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
   => Semigroup (QDiagram b v m) where
-  (QD d1) <> (QD d2) = QD (d2 <> d1)
+  (QD d1) <> (QD d2) = QD $ \c ->
+    let (t1,s1) = d1 $ c & val' <>~ stepLeft  t2
+        (t2,s2) = d2 $ c & val' <>~ stepRight t1
+    in  (t2 <> t1, s2 <> s2)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
 
