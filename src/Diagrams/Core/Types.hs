@@ -345,11 +345,33 @@ applyAnnotation an (QD dt) = QD (D.annot an dt)
 href :: (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m) => String -> QDiagram b v m -> QDiagram b v m
 href = applyAnnotation . Href
 
--- | The fundamental diagram type is represented by trees of
---   primitives with various monoidal annotations.  The @Q@ in
---   @QDiagram@ stands for \"Queriable\", as distinguished from
---   'Diagram', a synonym for @QDiagram@ with the query type
---   specialized to 'Any'.
+-- | The fundamental diagram type.  The type variables are as follows:
+--
+--   * @b@ represents the backend, such as @SVG@ or @Cairo@.  Note
+--     that each backend also exports a type synonym @B@ for itself,
+--     so the type variable @b@ may also typically be instantiated by
+--     @B@, meaning \"use whatever backend is in scope\".
+--
+--   * @v@ represents the vector space of the diagram.  Typical
+--     instantiations include @R2@ (for a two-dimensional diagram) or
+--     @R3@ (for a three-dimensional diagram).
+--
+--   * @m@ is the monoidal type of \"query annotations\": each point
+--     in the diagram has a value of type @m@ associated to it, and
+--     these values are combined according to the 'Monoid' instance
+--     for @m@.  Most often, @m@ is simply instantiated to 'Any',
+--     associating a simple @Bool@ value to each point indicating
+--     whether the point is inside the diagram; 'Diagram' is a synonym
+--     for @QDiagram@ with @m@ thus instantiated to @Any@.
+--
+--   Diagrams can be combined via their 'Monoid' instance, transformed
+--   via their 'Transformable' instance, and assigned attributes via
+--   their 'HasStyle' instance.
+--
+--   Note that the @Q@ in @QDiagram@ stands for \"Queriable\", as
+--   distinguished from 'Diagram', where @m@ is fixed to @Any@.  This
+--   is not really a very good name, but it's probably not worth
+--   changing it at this point.
 newtype QDiagram b v m
   = QD (D.DUALTree (DownAnnots v) (UpAnnots b v m) Annotation (QDiaLeaf b v m))
   deriving (Typeable)
@@ -363,7 +385,8 @@ instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
 
 type instance V (QDiagram b v m) = v
 
--- | The default sort of diagram is one where querying at a point
+-- | @Diagram b v@ is a synonym for @'QDiagram' b v 'Any'@.  That is,
+--   the default sort of diagram is one where querying at a point
 --   simply tells you whether the diagram contains that point or not.
 --   Transforming a default diagram into one with a more interesting
 --   query can be done via the 'Functor' instance of @'QDiagram' b@ or
