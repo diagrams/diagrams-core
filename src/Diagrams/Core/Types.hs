@@ -60,11 +60,11 @@ module Diagrams.Core.Types
          -- * Operations on diagrams
          -- ** Creating diagrams
        , leafS
-       , mkQD, mkQD', pointDiagram
+--       , mkQD, mkQD', pointDiagram
 
          -- ** Extracting information
-       , envelope, trace, subMap, names, query, sample
-       , value, resetValue, clearValue
+--       , envelope, trace, subMap, names, query, sample
+--       , value, resetValue, clearValue
 
          -- ** Combining diagrams
 
@@ -86,15 +86,15 @@ module Diagrams.Core.Types
          -- * Subdiagrams
 
        , Subdiagram(..), mkSubdiagram
-       , getSub, rawSub
-       , location
+--       , getSub, rawSub
+--       , location
        , subPoint
 
          -- * Subdiagram maps
 
        , SubMap(..)
 
-       , fromNames, rememberAs, lookupSub
+       , fromNames, lookupSub
 
          -- * Primtives
          -- $prim
@@ -126,6 +126,7 @@ import           Control.Monad             (mplus)
 import           Control.Monad.Reader
 import           Data.AffineSpace          ((.-.))
 import           Data.Data
+import           Data.Functor              ((<$>))
 import           Data.Functor.Identity
 import           Data.List                 (isSuffixOf)
 import qualified Data.List.NonEmpty        as NEL
@@ -398,45 +399,38 @@ setTrace t
   . applySpre (inj (deleteL :: Deletable (Trace v)))
   . applySpost (inj (deleteR :: Deletable (Trace v)))
 
--- -- | Get the query function associated with a diagram.
--- query :: Monoid m => QDiagram b v m -> Query v m
--- query = getU' . view _Wrapped'
+-- | Get the query function associated with a diagram.
+query :: Monoid m => QDiagram b v m -> Contextual v (Query v m)
+query = getS
 
--- -- | Sample a diagram's query function at a given point.
--- sample :: Monoid m => QDiagram b v m -> Point v -> m
--- sample = runQuery . query
+-- | Sample a diagram's query function at a given point.
+sample :: Monoid m => QDiagram b v m -> Point v -> Contextual v m
+sample d p = flip runQuery p <$> query d
 
--- -- | Set the query value for 'True' points in a diagram (/i.e./ points
--- --   \"inside\" the diagram); 'False' points will be set to 'mempty'.
--- value :: Monoid m => m -> QDiagram b v Any -> QDiagram b v m
--- value m = fmap fromAny
---   where fromAny (Any True)  = m
---         fromAny (Any False) = mempty
+-- | Set the query value for 'True' points in a diagram (/i.e./ points
+--   \"inside\" the diagram); 'False' points will be set to 'mempty'.
+value :: Monoid m => m -> QDiagram b v Any -> QDiagram b v m
+value m = fmap fromAny
+  where fromAny (Any True)  = m
+        fromAny (Any False) = mempty
 
--- -- | Reset the query values of a diagram to @True@/@False@: any values
--- --   equal to 'mempty' are set to 'False'; any other values are set to
--- --   'True'.
--- resetValue :: (Eq m, Monoid m) => QDiagram b v m -> QDiagram b v Any
--- resetValue = fmap toAny
---   where toAny m | m == mempty = Any False
---                 | otherwise   = Any True
+-- | Reset the query values of a diagram to @True@/@False@: any values
+--   equal to 'mempty' are set to 'False'; any other values are set to
+--   'True'.
+resetValue :: (Eq m, Monoid m) => QDiagram b v m -> QDiagram b v Any
+resetValue = fmap toAny
+  where toAny m | m == mempty = Any False
+                | otherwise   = Any True
 
--- -- | Set all the query values of a diagram to 'False'.
--- clearValue :: QDiagram b v m -> QDiagram b v Any
--- clearValue = fmap (const (Any False))
+-- | Set all the query values of a diagram to 'False'.
+clearValue :: QDiagram b v m -> QDiagram b v Any
+clearValue = fmap (const (Any False))
 
--- -- | Create a diagram from a single primitive, along with an envelope,
--- --   trace, subdiagram map, and query function.
--- mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m -> Query v m
---      -> QDiagram b v m
--- mkQD p = mkQD' (PrimLeaf p)
-
--- -- | Create a diagram from a generic QDiaLeaf, along with an envelope,
--- --   trace, subdiagram map, and query function.
--- mkQD' :: QDiaLeaf b v m -> Envelope v -> Trace v -> SubMap b v m -> Query v m
---       -> QDiagram b v m
--- mkQD' l e t n q
---   = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
+-- | Create a diagram from a single primitive, along with an envelope,
+--   trace, subdiagram map, and query function.
+mkQD :: Prim b v -> Envelope v -> Trace v -> Query v m
+     -> QDiagram b v m
+mkQD p e t q = QD . Contextual . reader $ const (RTree (Node (RPrim p) []), toDeletable e *: toDeletable t *: q *: ())
 
 ------------------------------------------------------------
 --  Instances
