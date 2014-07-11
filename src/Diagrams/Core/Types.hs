@@ -280,35 +280,56 @@ type Summary b v m = Deletable (Envelope v)
 --   leaf:
 --
 --   * styles (see "Diagrams.Core.Style")
-type Context b v m = Style v
-                 ::: Environment b v a
-                 ::: ()
+type Context b v = Style v
+               ::: Environment b v
+               ::: ()
 
 --------------------------------------------------
 -- Context monad
 
-newtype Contextual v a = Contextual (Reader (Context v) a)
-  deriving (Functor, Applicative, Monad, MonadReader (Context v))
+newtype Contextual b v a = Contextual (Reader (Context b v) a)
+  deriving (Functor, Applicative, Monad, MonadReader (Context b v))
 
-instance Semigroup a => Semigroup (Contextual v a) where
+instance Semigroup a => Semigroup (Contextual b v a) where
   Contextual r1 <> Contextual r2 = Contextual . reader $ \ctx -> runReader r1 ctx <> runReader r2 ctx
 
-instance (Semigroup a, Monoid a) => Monoid (Contextual v a) where
+instance (Semigroup a, Monoid a) => Monoid (Contextual b v a) where
   mappend = (<>)
   mempty  = Contextual . reader $ const mempty
 
 -- Environments
 
-newtype Environment b v a = Environment { getEnvironment :: [([RTree b v a],[RTree b v a])] }
-  deriving (Semigroup, Monoid)
+data Environment b v
+  = Top
+  | Step !Int                 -- ^ Index of branch stepped into
+         [RTree b v]        -- ^ Left subtrees
+         [RTree b v]        -- ^ Right subtrees
+         !(Environment b v) -- ^ Parent
 
-stepRight, stepLeft :: RTree b v a -> Environment b v a
-stepRight t = Environment [([t],[])]
-stepLeft  t = Environment [([],[t])]
+-- The environment is "inside out" and accumulated left to right, so
+-- stepping through e1 <> e2 <> e3 goes from right to left.
+instance Semigroup (Environment b v) where
+  e <> Top = e
+  e <> Step l r p = Step l r (e <> p)
 
-above, below :: Environment b v a -> RTree b v a
+instance Monoid (Environment b v) where
+  mempty  = Top
+  mappend = (<>)
+
+stepRight, stepLeft :: RTree b v -> Environment b v
+stepRight t = Step [t] [ ] Top
+stepLeft  t = Step [ ] [t] Top
+
+{-
+above, below :: Environment b v -> RTree b v
 above = foldMap (mconcat . fst) ts . getEnvironment
 below = foldMap (mconcat . snd) ts . getEnvironment
+-}
+
+-- Get the steps taken by an environment
+environmentPath :: Environment b v -> Path
+environmentPath Top = mempty
+environmentPath (Step n _ _ p) = environmentPath p <> step n
 
 --------------------------------------------------
 -- QDiagram
@@ -318,11 +339,11 @@ below = foldMap (mconcat . snd) ts . getEnvironment
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
-newtype QDiagram b v m  = QD (Contextual v (RTree b v Annotation, Summary b v m))
+newtype QDiagram b v m  = QD (Contextual b v (RTree b v, Summary b v m))
   deriving (Typeable)
 
 instance Wrapped (QDiagram b v m) where
-  type Unwrapped (QDiagram b v m) = Contextual v (RTree b v Annotation, Summary b v m)
+  type Unwrapped (QDiagram b v m) = Contextual b v (RTree b v, Summary b v m)
   _Wrapped' = iso (\(QD d) -> d) QD
 
 instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
@@ -337,11 +358,11 @@ type instance V (QDiagram b v m) = v
 type Diagram b v = QDiagram b v Any
 
 -- | XXX comment me
-(>>>=) :: Contextual v a -> (a -> QDiagram b v m) -> QDiagram b v m
+(>>>=) :: Contextual b v a -> (a -> QDiagram b v m) -> QDiagram b v m
 ca >>>= k = QD $ ca >>= \a -> (op QD) (k a)
 
 -- | XXX comment me
-(=<<<) :: (a -> QDiagram b v m) ->  Contextual v a -> QDiagram b v m
+(=<<<) :: (a -> QDiagram b v m) -> Contextual b v a -> QDiagram b v m
 (=<<<) = flip (>>>=)
 
 -- | Create a \"leaf\" diagram with just a summary value and no
@@ -350,7 +371,7 @@ leafS :: Summary b v m -> QDiagram b v m
 leafS s = QD $ return (emptyRTree, s)
 
 -- | Project out a component of the summary in a type-directed way.
-getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual v u
+getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual b v u
 getS = fmap (option mempty id . get . snd) . op QD
 
 applySpre :: (Semigroup m, Ord (Scalar v)) => Summary b v m -> QDiagram b v m -> QDiagram b v m
@@ -581,7 +602,7 @@ instance Functor (QDiagram b v) where
 --   paired with any accumulated information from the larger context
 --   (transformations, attributes, etc.).
 
-data Subdiagram b v m = Subdiagram (QDiagram b v m) (Transformation v) (Context v)
+data Subdiagram b v m = Subdiagram (QDiagram b v m) (Transformation v) (Context b v)
 
 type instance V (Subdiagram b v m) = v
 
@@ -703,7 +724,11 @@ lookupSub a (SubMap m)
 -- Trivial representation of a path, for now
 type Path = [Int]
 
--- instance Monoid Path
+-- instance (Semigroup Path, Monoid Path)
+
+-- Construct a trivial path consisting of a single step to index n
+step :: Int -> Path
+step n = [n]
 
 -- Index a tree based on a 'Path' into it.
 ixPath :: Path -> Traversal' (Tree a) (Tree a)
@@ -712,11 +737,8 @@ ixPath (i:is) = branches.ix i.ixPath is
 
 -- Path construction DSL
 
-newtype PathM s a = PathM (ReaderT (Tree s) a)
-  deriving (Functor, Applicative, Monad, MonadReader (Tree s))
-
-runPathM :: PathM s [Path] -> Tree s -> [Path]
-runPathM (PathM r) = runReaderT r
+newtype PathM b v m a = PathM (ReaderT (RTree b v m) (Contextual b v) a)
+  deriving (Functor, Applicative, Monad, MonadReader (RTree b v m))
 
 here :: PathM s [Path]
 here = return [mempty]
@@ -728,10 +750,13 @@ findPath l = reader $ \(Node x ts) -> case
   | has l x   = [mempty]
   | otherwise = do
       (i,t) <- zip [0..] ts
-      map (i:) $ findPath l t
+      map (step i <>) $ findPath l t
 
-editTree :: PathM s [Path] -> (Tree s -> Tree s) -> Tree s -> Tree s
-editTree pm f t = foldr (\p -> ixPath p %~ f) t $ runPathM pm t
+editTree :: PathM b v m [Path] -> (QDiagram b v m -> QDiagram b v m) -> QDiagram b v m -> QDiagram b v m
+editTree pm f (QD qd) = QD $ do
+  (t,c) <- qd
+  let ps = runPathM t c pm
+-- editTree pm f t = foldr (\p -> ixPath p %~ f) t $ runPathM pm t
 
 ------------------------------------------------------------
 --  Primitives  --------------------------------------------
@@ -765,32 +790,32 @@ instance HasLinearMap v => Renderable (Prim b v) b where
 -- -- Backends  -----------------------------------------------
 -- ------------------------------------------------------------
 
-data RNode b v a =  RStyle (Style v)
-                    -- ^ A style node.
-                  | RAnnot a
-                  | RPrim (Prim b v)
-                    -- ^ A primitive.
-                  | REmpty
+data RNode b v =  RStyle (Style v)
+                  -- ^ A style node.
+                | RAnnot Annotation
+                | RPrim (Prim b v)
+                  -- ^ A primitive.
+                | REmpty
 
 -- | An 'RTree' is a compiled and optimized representation of a
 --   'QDiagram', which can be used by backends.  They have the
 --   following invariant which backends may rely upon:
 --
 --   * @RPrim@ nodes never have any children.
-newtype RTree b v a = RTree (Tree (RNode b v a ))
+newtype RTree b v = RTree (Tree (RNode b v))
 
-instance Wrapped (RTree b v a) where
-  type Unwrapped (RTree b v a) = Tree (RNode b v a)
+instance Wrapped (RTree b v) where
+  type Unwrapped (RTree b v) = Tree (RNode b v)
   _Wrapped' = iso (\(RTree t) -> t) RTree
 
-instance Rewrapped (RTree b v a) (RTree b' v' a')
+instance Rewrapped (RTree b v) (RTree b' v')
 
-instance Semigroup (RTree b v a) where
+instance Semigroup (RTree b v) where
   RTree t1 <> RTree t2 = RTree (Node REmpty [t1,t2])
   sconcat ts = RTree (Node REmpty . map (op RTree) . NEL.toList $ ts)
 
 -- | The empty @RTree@.
-emptyRTree :: RTree b v a
+emptyRTree :: RTree b v
 emptyRTree = RTree (Node REmpty [])
 
 -- | Abstract diagrams are rendered to particular formats by
@@ -835,7 +860,7 @@ class HasLinearMap v => Backend b v where
   -- | Given some options, take a representation of a diagram as a
   --   tree and render it.  The 'RTree' has already been simplified
   --   and has all measurements converted to @Output@ units.
-  renderRTree :: b -> Options b v -> RTree b v Annotation -> Result b v
+  renderRTree :: b -> Options b v -> RTree b v -> Result b v
 
   -- See Note [backend token]
 
