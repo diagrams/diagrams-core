@@ -501,15 +501,18 @@ instance Functor (QDiagram b v) where
 
 -- ---- Juxtaposable
 
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
---       => Juxtaposable (QDiagram b v m) where
---   juxtapose = juxtaposeDefault
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+      => Juxtaposable (QDiagram b v m) where
+  juxtapose = juxtaposeDefault
 
 -- ---- Enveloped
 
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
---          => Enveloped (QDiagram b v m) where
---   getEnvelope = view envelope
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+         => Enveloped (QDiagram b v m) where
+  getEnvelope = undefined
+  -- XXX hmm, this is a real problem.  We *can't* just return an
+  -- Envelope for a diagram, we can only return a Contextual Envelope.
+  -- Maybe the type of getEnvelope needs to change??
 
 -- ---- Traced
 
@@ -518,22 +521,22 @@ instance Functor (QDiagram b v) where
 --          => Traced (QDiagram b v m) where
 --   getTrace = view trace
 
--- ---- HasOrigin
+---- HasOrigin
 
--- -- | Every diagram has an intrinsic \"local origin\" which is the
--- --   basis for all combining operations.
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
---       => HasOrigin (QDiagram b v m) where
+-- | Every diagram has an intrinsic \"local origin\" which is the
+--   basis for all combining operations.
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+      => HasOrigin (QDiagram b v m) where
 
---   moveOriginTo = translate . (origin .-.)
+  moveOriginTo = translate . (origin .-.)
 
--- ---- Transformable
+---- Transformable
 
--- -- | Diagrams can be transformed by transforming each of their
--- --   components appropriately.
--- instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
---       => Transformable (QDiagram b v m) where
---   transform = over _Wrapped' . D.applyD . transfToAnnot
+-- | Diagrams can be transformed by transforming each of their
+--   components appropriately.
+instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
+      => Transformable (QDiagram b v m) where
+  transform = undefined -- over _Wrapped' . D.applyD . transfToAnnot
 
 -- ---- Qualifiable
 
