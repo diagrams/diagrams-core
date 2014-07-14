@@ -513,6 +513,13 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
   -- XXX hmm, this is a real problem.  We *can't* just return an
   -- Envelope for a diagram, we can only return a Contextual Envelope.
   -- Maybe the type of getEnvelope needs to change??
+  --
+  -- Note, simply changing the type of getEnvelope to Contextual would
+  -- (unsurprisingly, perhaps) introduce an import loop, since
+  -- Contextual is defined in Diagrams.Core.Types which imports
+  -- Diagrams.Core.Envelope.  However, it looks like we could split
+  -- the Context type and Contextual monad out into a new module;
+  -- Context itself does not mention Envelope, only Summary.
 
 -- ---- Traced
 
