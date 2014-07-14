@@ -523,10 +523,12 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
 
 -- ---- Traced
 
--- instance (HasLinearMap v, VectorSpace v, Ord (Scalar v), InnerSpace v
---          , Semigroup m, Fractional (Scalar v), Floating (Scalar v))
---          => Traced (QDiagram b v m) where
---   getTrace = view trace
+instance (HasLinearMap v, VectorSpace v, Ord (Scalar v), InnerSpace v
+         , Semigroup m, Fractional (Scalar v), Floating (Scalar v))
+         => Traced (QDiagram b v m) where
+  getTrace = undefined  -- view trace
+ -- XXX of course Traced has the same problem as Enveloped, described
+  -- above
 
 ---- HasOrigin
 
