@@ -120,7 +120,7 @@ module Diagrams.Core.Types
 import           Control.Applicative       (Applicative)
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
-                                            lens, op, over, view, (^.),
+                                            lens, op, over, review, view, (^.),
                                             _Wrapped, _Wrapping)
 import           Control.Monad             (mplus)
 import           Control.Monad.Reader
@@ -285,12 +285,23 @@ type Context v = Style v
 newtype Contextual v a = Contextual (Reader (Context v) a)
   deriving (Functor, Applicative, Monad, MonadReader (Context v))
 
+instance Wrapped (Contextual v a) where
+  type Unwrapped (Contextual v a) = Context v -> a
+  _Wrapped' = iso (\(Contextual r) -> runReader r) (Contextual . reader)
+
+instance Rewrapped (Contextual v a) (Contextual v' a')
+
+type instance V (Contextual v a) = V a
+
 instance Semigroup a => Semigroup (Contextual v a) where
   Contextual r1 <> Contextual r2 = Contextual . reader $ \ctx -> runReader r1 ctx <> runReader r2 ctx
 
 instance (Semigroup a, Monoid a) => Monoid (Contextual v a) where
   mappend = (<>)
   mempty  = Contextual . reader $ const mempty
+
+instance Transformable a => Transformable (Contextual v a) where
+  transform = over _Wrapped' . fmap . transform
 
 --------------------------------------------------
 -- QDiagram
@@ -430,7 +441,7 @@ clearValue = fmap (const (Any False))
 --   trace, subdiagram map, and query function.
 mkQD :: Prim b v -> Envelope v -> Trace v -> Query v m
      -> QDiagram b v m
-mkQD p e t q = QD . Contextual . reader $ const (RTree (Node (RPrim p) []), toDeletable e *: toDeletable t *: q *: ())
+mkQD p e t q = QD . review _Wrapped' $ const (RTree (Node (RPrim p) []), toDeletable e *: toDeletable t *: q *: ())
 
 ------------------------------------------------------------
 --  Instances
@@ -545,7 +556,8 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
       => Transformable (QDiagram b v m) where
-  transform = undefined -- over _Wrapped' . D.applyD . transfToAnnot
+  transform t = undefined -- (over _Wrapped' . transform) t
+  -- XXX not sure why (over _Wrapped' . transform) doesn't type check
 
 -- ---- Qualifiable
 
@@ -763,6 +775,8 @@ instance Wrapped (RTree b v a) where
   _Wrapped' = iso (\(RTree t) -> t) RTree
 
 instance Rewrapped (RTree b v a) (RTree b' v' a')
+
+type instance V (RTree b v a) = v
 
 instance Semigroup (RTree b v a) where
   RTree t1 <> RTree t2 = RTree (Node REmpty [t1,t2])
