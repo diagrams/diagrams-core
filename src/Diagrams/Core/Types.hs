@@ -486,7 +486,7 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
          => Enveloped (QDiagram b v m) where
-  getEnvelope = undefined
+  getEnvelope = view envelope
   -- XXX hmm, this is a real problem.  We *can't* just return an
   -- Envelope for a diagram, we can only return a Contextual Envelope.
   -- Maybe the type of getEnvelope needs to change??
