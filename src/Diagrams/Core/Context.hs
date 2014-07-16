@@ -16,6 +16,8 @@
 module Diagrams.Core.Context
   ( Context
   , Contextual (..)
+  , contextual
+  , runContextual
   )
   where
 
@@ -25,7 +27,8 @@ import           Diagrams.Core.Transform
 import           Diagrams.Core.V
 
 import           Control.Applicative
-import           Control.Lens            (Rewrapped, Wrapped (..), iso, over)
+import           Control.Lens            (Rewrapped, Wrapped (..), iso, over,
+                                          view)
 import           Control.Monad.Reader
 import           Data.Monoid.MList
 import           Data.Semigroup
@@ -50,6 +53,15 @@ newtype Contextual v a = Contextual (Reader (Context v) a)
 instance Wrapped (Contextual v a) where
   type Unwrapped (Contextual v a) = Context v -> a
   _Wrapped' = iso (\(Contextual r) -> runReader r) (Contextual . reader)
+
+-- | Smart constructor for 'Contextual' values.
+--
+--   Note @contextual = review _Wrapped'@.
+contextual :: (Context v -> a) -> Contextual v a
+contextual = Contextual . reader
+
+runContextual :: Contextual v a -> (Context v -> a)
+runContextual = view _Wrapped'
 
 instance Rewrapped (Contextual v a) (Contextual v' a')
 

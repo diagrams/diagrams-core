@@ -18,7 +18,7 @@ module Diagrams.Core.Juxtapose
        ) where
 
 import           Control.Applicative
-import           Control.Lens            (review)
+import           Control.Lens            (view)
 import           Data.Functor            ((<$>))
 import qualified Data.Map                as M
 import qualified Data.Set                as S
@@ -70,7 +70,4 @@ instance (Enveloped b, HasOrigin b, Ord b) => Juxtaposable (S.Set b) where
   juxtapose = juxtaposeDefault
 
 instance Juxtaposable a => Juxtaposable (b -> a) where
-  juxtapose v f1 f2 = undefined
-  -- XXX how to implement this?
-
-  -- old code:  juxtapose v (f1 b) (f2 b)
+  juxtapose v f1 f2 = contextual $ \ctx b -> runContextual (juxtapose v (f1 b) (f2 b)) ctx
