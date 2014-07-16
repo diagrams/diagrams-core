@@ -143,6 +143,7 @@ import           Data.Monoid.Deletable
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
 
+import           Diagrams.Core.Context
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
@@ -267,41 +268,6 @@ type Summary b v m = Deletable (Envelope v)
                  ::: Deletable (Trace v)
                  ::: Query v m
                  ::: ()
-
--- | The (monoidal) context in which a diagram is interpreted.
---   Contexts can be thought of as accumulating along each path to a
---   leaf:
---
---   * styles (see "Diagrams.Core.Style")
---
---   * names (see "Diagrams.Core.Names")
-type Context v = Style v
-             ::: Name
-             ::: ()
-
---------------------------------------------------
--- Context monad
-
-newtype Contextual v a = Contextual (Reader (Context v) a)
-  deriving (Functor, Applicative, Monad, MonadReader (Context v))
-
-instance Wrapped (Contextual v a) where
-  type Unwrapped (Contextual v a) = Context v -> a
-  _Wrapped' = iso (\(Contextual r) -> runReader r) (Contextual . reader)
-
-instance Rewrapped (Contextual v a) (Contextual v' a')
-
-type instance V (Contextual v a) = V a
-
-instance Semigroup a => Semigroup (Contextual v a) where
-  Contextual r1 <> Contextual r2 = Contextual . reader $ \ctx -> runReader r1 ctx <> runReader r2 ctx
-
-instance (Semigroup a, Monoid a) => Monoid (Contextual v a) where
-  mappend = (<>)
-  mempty  = Contextual . reader $ const mempty
-
-instance Transformable a => Transformable (Contextual v a) where
-  transform = over _Wrapped' . fmap . transform
 
 --------------------------------------------------
 -- QDiagram
