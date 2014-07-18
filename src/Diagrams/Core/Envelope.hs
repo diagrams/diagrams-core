@@ -54,6 +54,7 @@ import qualified Data.Set                as S
 
 import           Data.VectorSpace
 
+import           Diagrams.Core.Context
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Points
 import           Diagrams.Core.Transform
@@ -184,13 +185,13 @@ class (InnerSpace (V a), OrderedField (Scalar (V a))) => Enveloped a where
   --   Other types (e.g. 'Trail') may have some other default
   --   reference point at which the envelope will be based; their
   --   instances should document what it is.
-  getEnvelope :: a -> Envelope (V a)
+  getEnvelope :: a -> Contextual (V a) (Envelope (V a))
 
 instance (InnerSpace v, OrderedField (Scalar v)) => Enveloped (Envelope v) where
-  getEnvelope = id
+  getEnvelope = return
 
 instance (OrderedField (Scalar v), InnerSpace v) => Enveloped (Point v) where
-  getEnvelope p = moveTo p . mkEnvelope $ const zeroV
+  getEnvelope p = return . moveTo p . mkEnvelope $ const zeroV
 
 instance Enveloped t => Enveloped (TransInv t) where
   getEnvelope = getEnvelope . op TransInv
@@ -214,24 +215,24 @@ instance (Enveloped b) => Enveloped (S.Set b) where
 -- | Compute the vector from the local origin to a separating
 --   hyperplane in the given direction, or @Nothing@ for the empty
 --   envelope.
-envelopeVMay :: Enveloped a => V a -> a -> Maybe (V a)
-envelopeVMay v = fmap ((*^ v) . ($ v)) . appEnvelope . getEnvelope
+envelopeVMay :: Enveloped a => V a -> a -> Contextual (V a) (Maybe (V a))
+envelopeVMay v = fmap (fmap ((*^ v) . ($ v)) . appEnvelope) . getEnvelope
 
 -- | Compute the vector from the local origin to a separating
 --   hyperplane in the given direction.  Returns the zero vector for
 --   the empty envelope.
-envelopeV :: Enveloped a => V a -> a -> V a
-envelopeV v = fromMaybe zeroV . envelopeVMay v
+envelopeV :: Enveloped a => V a -> a -> Contextual (V a) (V a)
+envelopeV v = fmap (fromMaybe zeroV) . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction, or @Nothing@ for the empty envelope.
-envelopePMay :: Enveloped a => V a -> a -> Maybe (Point (V a))
-envelopePMay v = fmap P . envelopeVMay v
+envelopePMay :: Enveloped a => V a -> a -> Contextual (V a) (Maybe (Point (V a)))
+envelopePMay v = fmap (fmap P) . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction.  Returns the origin for the empty envelope.
-envelopeP :: Enveloped a => V a -> a -> Point (V a)
-envelopeP v = P . envelopeV v
+envelopeP :: Enveloped a => V a -> a -> Contextual (V a) (Point (V a))
+envelopeP v = fmap P . envelopeV v
 
 -- | Equivalent to the magnitude of 'envelopeVMay':
 --
@@ -242,8 +243,8 @@ envelopeP v = P . envelopeV v
 --   Note that the 'envelopeVMay' / 'envelopePMay' functions above should be
 --   preferred, as this requires a call to magnitude.  However, it is more
 --   efficient than calling magnitude on the results of those functions.
-envelopeSMay :: Enveloped a => V a -> a -> Maybe (Scalar (V a))
-envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
+envelopeSMay :: Enveloped a => V a -> a -> Contextual (V a) (Maybe (Scalar (V a)))
+envelopeSMay v = fmap (fmap ((* magnitude v) . ($ v)) . appEnvelope) . getEnvelope
 
 -- | Equivalent to the magnitude of 'envelopeV':
 --
@@ -254,22 +255,23 @@ envelopeSMay v = fmap ((* magnitude v) . ($ v)) . appEnvelope . getEnvelope
 --   Note that the 'envelopeV' / 'envelopeP' functions above should be
 --   preferred, as this requires a call to magnitude. However, it is more
 --   efficient than calling magnitude on the results of those functions.
-envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> a -> Scalar (V a)
-envelopeS v = fromMaybe 0 . envelopeSMay v
+envelopeS :: (Enveloped a, Num (Scalar (V a))) => V a -> a -> Contextual (V a) (Scalar (V a))
+envelopeS v = fmap (fromMaybe 0) . envelopeSMay v
 
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
-diameter :: Enveloped a => V a -> a -> Scalar (V a)
-diameter v a = maybe 0 (\(lo,hi) -> (hi - lo) * magnitude v) (extent v a)
+diameter :: Enveloped a => V a -> a -> Contextual (V a) (Scalar (V a))
+diameter v = fmap (maybe 0 (\(lo,hi) -> (hi - lo) * magnitude v)) . extent v
 
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
 --   along a particular vector.
-radius :: Enveloped a => V a -> a -> Scalar (V a)
-radius v = (0.5*) . diameter v
+radius :: Enveloped a => V a -> a -> Contextual (V a) (Scalar (V a))
+radius v = fmap (0.5*) . diameter v
 
 -- | Compute the range of an enveloped object along a certain
 --   direction.  Returns a pair of scalars @(lo,hi)@ such that the
 --   object extends from @(lo *^ v)@ to @(hi *^ v)@. Returns @Nothing@
 --   for objects with an empty envelope.
-extent :: Enveloped a => V a -> a -> Maybe (Scalar (V a), Scalar (V a))
-extent v a = (\f -> (-f (negateV v), f v)) <$> (appEnvelope . getEnvelope $ a)
+extent :: Enveloped a => V a -> a -> Contextual (V a) (Maybe (Scalar (V a), Scalar (V a)))
+extent v a = (fmap ((fmap (\f -> (-f (negateV v), f v))) . appEnvelope)) (getEnvelope a)
+

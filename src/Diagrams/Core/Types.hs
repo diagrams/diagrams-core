@@ -61,11 +61,11 @@ module Diagrams.Core.Types
          -- * Operations on diagrams
          -- ** Creating diagrams
        , leafS
-       , mkQD, mkQD', pointDiagram
+--       , mkQD, mkQD', pointDiagram
 
          -- ** Extracting information
-       , envelope, trace, query, sample
-       , value, resetValue, clearValue
+--       , envelope, trace, query, sample
+--       , value, resetValue, clearValue
 
          -- ** Combining diagrams
 
@@ -86,8 +86,8 @@ module Diagrams.Core.Types
          -- * Subdiagrams
 
        , Subdiagram(..), mkSubdiagram
-       , getSub, rawSub
-       , location
+--       , getSub, rawSub
+--       , location
        , subPoint
 
          -- * Subdiagram maps
@@ -121,11 +121,12 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, over, view, (^.), _Wrapped,
                                             _Wrapping, Setter', sets, Ixed(..),
                                             At(..), Index, IxValue, Contains(..),
-                                            (&), (.~), Traversal')
+                                            (&), (.~), Traversal', review, op)
 import           Control.Monad             (mplus)
 import           Control.Monad.Reader
 import           Data.AffineSpace          ((.-.))
 import           Data.Data
+import           Data.Functor              ((<$>))
 import           Data.Functor.Identity
 import           Data.List                 (isSuffixOf)
 import qualified Data.List.NonEmpty        as NEL
@@ -145,6 +146,7 @@ import           Data.Monoid.Deletable
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
 
+import           Diagrams.Core.Context
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
@@ -438,45 +440,38 @@ setTrace t
   . applySpre (inj (deleteL :: Deletable (Trace v)))
   . applySpost (inj (deleteR :: Deletable (Trace v)))
 
--- -- | Get the query function associated with a diagram.
--- query :: Monoid m => QDiagram b v m -> Query v m
--- query = getU' . view _Wrapped'
+-- | Get the query function associated with a diagram.
+query :: Monoid m => QDiagram b v m -> Contextual v (Query v m)
+query = getS
 
--- -- | Sample a diagram's query function at a given point.
--- sample :: Monoid m => QDiagram b v m -> Point v -> m
--- sample = runQuery . query
+-- | Sample a diagram's query function at a given point.
+sample :: Monoid m => QDiagram b v m -> Point v -> Contextual v m
+sample d p = flip runQuery p <$> query d
 
--- -- | Set the query value for 'True' points in a diagram (/i.e./ points
--- --   \"inside\" the diagram); 'False' points will be set to 'mempty'.
--- value :: Monoid m => m -> QDiagram b v Any -> QDiagram b v m
--- value m = fmap fromAny
---   where fromAny (Any True)  = m
---         fromAny (Any False) = mempty
+-- | Set the query value for 'True' points in a diagram (/i.e./ points
+--   \"inside\" the diagram); 'False' points will be set to 'mempty'.
+value :: Monoid m => m -> QDiagram b v Any -> QDiagram b v m
+value m = fmap fromAny
+  where fromAny (Any True)  = m
+        fromAny (Any False) = mempty
 
--- -- | Reset the query values of a diagram to @True@/@False@: any values
--- --   equal to 'mempty' are set to 'False'; any other values are set to
--- --   'True'.
--- resetValue :: (Eq m, Monoid m) => QDiagram b v m -> QDiagram b v Any
--- resetValue = fmap toAny
---   where toAny m | m == mempty = Any False
---                 | otherwise   = Any True
+-- | Reset the query values of a diagram to @True@/@False@: any values
+--   equal to 'mempty' are set to 'False'; any other values are set to
+--   'True'.
+resetValue :: (Eq m, Monoid m) => QDiagram b v m -> QDiagram b v Any
+resetValue = fmap toAny
+  where toAny m | m == mempty = Any False
+                | otherwise   = Any True
 
--- -- | Set all the query values of a diagram to 'False'.
--- clearValue :: QDiagram b v m -> QDiagram b v Any
--- clearValue = fmap (const (Any False))
+-- | Set all the query values of a diagram to 'False'.
+clearValue :: QDiagram b v m -> QDiagram b v Any
+clearValue = fmap (const (Any False))
 
--- -- | Create a diagram from a single primitive, along with an envelope,
--- --   trace, subdiagram map, and query function.
--- mkQD :: Prim b v -> Envelope v -> Trace v -> SubMap b v m -> Query v m
---      -> QDiagram b v m
--- mkQD p = mkQD' (PrimLeaf p)
-
--- -- | Create a diagram from a generic QDiaLeaf, along with an envelope,
--- --   trace, subdiagram map, and query function.
--- mkQD' :: QDiaLeaf b v m -> Envelope v -> Trace v -> SubMap b v m -> Query v m
---       -> QDiagram b v m
--- mkQD' l e t n q
---   = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
+-- | Create a diagram from a single primitive, along with an envelope,
+--   trace, subdiagram map, and query function.
+mkQD :: Prim b v -> Envelope v -> Trace v -> Query v m
+     -> QDiagram b v m
+mkQD p e t q = QD . review _Wrapped' $ const (RTree (Node (RPrim p) []), toDeletable e *: toDeletable t *: q *: ())
 
 ------------------------------------------------------------
 --  Instances
@@ -550,39 +545,52 @@ instance Functor (QDiagram b v) where
 
 -- ---- Juxtaposable
 
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
---       => Juxtaposable (QDiagram b v m) where
---   juxtapose = juxtaposeDefault
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+      => Juxtaposable (QDiagram b v m) where
+  juxtapose = juxtaposeDefault
 
 -- ---- Enveloped
 
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
---          => Enveloped (QDiagram b v m) where
---   getEnvelope = view envelope
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Monoid' m)
+         => Enveloped (QDiagram b v m) where
+  getEnvelope = view envelope
+  -- XXX hmm, this is a real problem.  We *can't* just return an
+  -- Envelope for a diagram, we can only return a Contextual Envelope.
+  -- Maybe the type of getEnvelope needs to change??
+  --
+  -- Note, simply changing the type of getEnvelope to Contextual would
+  -- (unsurprisingly, perhaps) introduce an import loop, since
+  -- Contextual is defined in Diagrams.Core.Types which imports
+  -- Diagrams.Core.Envelope.  However, it looks like we could split
+  -- the Context type and Contextual monad out into a new module;
+  -- Context itself does not mention Envelope, only Summary.
 
 -- ---- Traced
 
--- instance (HasLinearMap v, VectorSpace v, Ord (Scalar v), InnerSpace v
---          , Semigroup m, Fractional (Scalar v), Floating (Scalar v))
---          => Traced (QDiagram b v m) where
---   getTrace = view trace
+instance (HasLinearMap v, VectorSpace v, Ord (Scalar v), InnerSpace v
+         , Semigroup m, Fractional (Scalar v), Floating (Scalar v))
+         => Traced (QDiagram b v m) where
+  getTrace = undefined  -- view trace
+ -- XXX of course Traced has the same problem as Enveloped, described
+  -- above
 
--- ---- HasOrigin
+---- HasOrigin
 
--- -- | Every diagram has an intrinsic \"local origin\" which is the
--- --   basis for all combining operations.
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
---       => HasOrigin (QDiagram b v m) where
+-- | Every diagram has an intrinsic \"local origin\" which is the
+--   basis for all combining operations.
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+      => HasOrigin (QDiagram b v m) where
 
---   moveOriginTo = translate . (origin .-.)
+  moveOriginTo = translate . (origin .-.)
 
--- ---- Transformable
+---- Transformable
 
--- -- | Diagrams can be transformed by transforming each of their
--- --   components appropriately.
--- instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
---       => Transformable (QDiagram b v m) where
---   transform = over _Wrapped' . D.applyD . transfToAnnot
+-- | Diagrams can be transformed by transforming each of their
+--   components appropriately.
+instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
+      => Transformable (QDiagram b v m) where
+  transform t = undefined -- (over _Wrapped' . transform) t
+  -- XXX not sure why (over _Wrapped' . transform) doesn't type check
 
 -- ---- Qualifiable
 
@@ -809,6 +817,8 @@ instance Wrapped (RTree b v) where
   _Wrapped' = iso (\(RTree t) -> t) RTree
 
 instance Rewrapped (RTree b v) (RTree b' v')
+
+type instance V (RTree b v) = v
 
 instance Semigroup (RTree b v) where
   RTree t1 <> RTree t2 = RTree (Node REmpty [t1,t2])
