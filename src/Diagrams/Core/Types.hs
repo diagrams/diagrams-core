@@ -289,15 +289,17 @@ type Context b v m = Style v
 --------------------------------------------------
 -- Context monad
 
-newtype Contextual v a = Contextual (Reader (Context v) a)
+{-
+newtype Contextual (Context b v) a = Contextual (Reader (Context v) a)
   deriving (Functor, Applicative, Monad, MonadReader (Context v))
 
-instance Semigroup a => Semigroup (Contextual v a) where
+instance Semigroup a => Semigroup (Contextual (Context b v) a) where
   Contextual r1 <> Contextual r2 = Contextual . reader $ \ctx -> runReader r1 ctx <> runReader r2 ctx
 
-instance (Semigroup a, Monoid a) => Monoid (Contextual v a) where
+instance (Semigroup a, Monoid a) => Monoid (Contextual (Context b v) a) where
   mappend = (<>)
   mempty  = Contextual . reader $ const mempty
+-}
 
 -- Environments
 
@@ -320,11 +322,11 @@ below = foldMap (mconcat . snd) ts . getEnvironment
 --   @QDiagram@ stands for \"Queriable\", as distinguished from
 --   'Diagram', a synonym for @QDiagram@ with the query type
 --   specialized to 'Any'.
-newtype QDiagram b v m  = QD (Contextual v (RTree b v Annotation, Summary b v m))
+newtype QDiagram b v m = QD (Contextual (Context b v) (RTree b v, Summary b v m))
   deriving (Typeable)
 
 instance Wrapped (QDiagram b v m) where
-  type Unwrapped (QDiagram b v m) = Contextual v (RTree b v Annotation, Summary b v m)
+  type Unwrapped (QDiagram b v m) = Contextual (Context b v) (RTree b v, Summary b v m)
   _Wrapped' = iso (\(QD d) -> d) QD
 
 instance Rewrapped (QDiagram b v m) (QDiagram b' v' m')
@@ -339,11 +341,11 @@ type instance V (QDiagram b v m) = v
 type Diagram b v = QDiagram b v Any
 
 -- | XXX comment me
-(>>>=) :: Contextual v a -> (a -> QDiagram b v m) -> QDiagram b v m
+(>>>=) :: Contextual (Context b v) a -> (a -> QDiagram b v m) -> QDiagram b v m
 ca >>>= k = QD $ ca >>= \a -> (op QD) (k a)
 
 -- | XXX comment me
-(=<<<) :: (a -> QDiagram b v m) ->  Contextual v a -> QDiagram b v m
+(=<<<) :: (a -> QDiagram b v m) ->  Contextual (Context b v) a -> QDiagram b v m
 (=<<<) = flip (>>>=)
 
 -- | Create a \"leaf\" diagram with just a summary value and no
@@ -352,7 +354,7 @@ leafS :: Summary b v m -> QDiagram b v m
 leafS s = QD $ return (emptyRTree, s)
 
 -- | Project out a component of the summary in a type-directed way.
-getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual v u
+getS :: (Monoid u, Summary b v m :>: u) => QDiagram b v m -> Contextual (Context b v) u
 getS = fmap (option mempty id . get . snd) . op QD
 
 applySpre :: (Semigroup m, Ord (Scalar v)) => Summary b v m -> QDiagram b v m -> QDiagram b v m
@@ -393,7 +395,7 @@ pointDiagram p = leafS (inj . toDeletable $ pointEnvelope p)
 -- | Get the envelope of a diagram.
 envelope :: forall b v m. (OrderedField (Scalar v), InnerSpace v
                           , HasLinearMap v, Monoid' m)
-         => Lens' (QDiagram b v m) (Contextual v (Envelope v))
+         => Lens' (QDiagram b v m) (Contextual (Context b v) (Envelope v))
 envelope = lens (fmap unDelete . getS)  ((=<<<) . flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
@@ -407,7 +409,7 @@ setEnvelope e
 
 -- | Get the trace of a diagram.
 trace :: (InnerSpace v, HasLinearMap v, OrderedField (Scalar v), Semigroup m) =>
-         Lens' (QDiagram b v m) (Contextual v (Trace v))
+         Lens' (QDiagram b v m) (Contextual (Context b v) (Trace v))
 trace = lens (fmap unDelete . getS) ((=<<<) . flip setTrace)
 
 -- | Replace the trace of a diagram.
@@ -420,11 +422,11 @@ setTrace t
   . applySpost (inj (deleteR :: Deletable (Trace v)))
 
 -- | Get the query function associated with a diagram.
-query :: Monoid m => QDiagram b v m -> Contextual v (Query v m)
+query :: Monoid m => QDiagram b v m -> Contextual (Context b v) (Query v m)
 query = getS
 
 -- | Sample a diagram's query function at a given point.
-sample :: Monoid m => QDiagram b v m -> Point v -> Contextual v m
+sample :: Monoid m => QDiagram b v m -> Point v -> Contextual (Context b v) m
 sample d p = flip runQuery p <$> query d
 
 -- | Set the query value for 'True' points in a diagram (/i.e./ points
@@ -589,7 +591,7 @@ instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
 --   paired with any accumulated information from the larger context
 --   (transformations, attributes, etc.).
 
-data Subdiagram b v m = Subdiagram (QDiagram b v m) (Transformation v) (Context v)
+data Subdiagram b v m = Subdiagram (QDiagram b v m) (Transformation v) (Context b v)
 
 type instance V (Subdiagram b v m) = v
 

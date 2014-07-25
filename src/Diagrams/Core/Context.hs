@@ -14,8 +14,8 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Context
-  ( Context
-  , Contextual (..)
+  ( Contextual (..)
+--, Context
   , contextual
   , runContextual
   )
@@ -33,6 +33,7 @@ import           Control.Monad.Reader
 import           Data.Monoid.MList
 import           Data.Semigroup
 
+{-
 -- | The (monoidal) context in which a diagram is interpreted.
 --   Contexts can be thought of as accumulating along each path to a
 --   leaf:
@@ -43,36 +44,37 @@ import           Data.Semigroup
 type Context v = Style v
              ::: Name
              ::: ()
+-}
 
 --------------------------------------------------
 -- Context monad
 
-newtype Contextual v a = Contextual (Reader (Context v) a)
-  deriving (Functor, Applicative, Monad, MonadReader (Context v))
+newtype Contextual c a = Contextual (Reader c a)
+  deriving (Functor, Applicative, Monad, MonadReader c)
 
-instance Wrapped (Contextual v a) where
-  type Unwrapped (Contextual v a) = Context v -> a
+instance Wrapped (Contextual c a) where
+  type Unwrapped (Contextual c a) = c -> a
   _Wrapped' = iso (\(Contextual r) -> runReader r) (Contextual . reader)
 
 -- | Smart constructor for 'Contextual' values.
 --
 --   Note @contextual = review _Wrapped'@.
-contextual :: (Context v -> a) -> Contextual v a
+contextual :: (c -> a) -> Contextual c a
 contextual = Contextual . reader
 
-runContextual :: Contextual v a -> (Context v -> a)
+runContextual :: Contextual c a -> (c -> a)
 runContextual = view _Wrapped'
 
-instance Rewrapped (Contextual v a) (Contextual v' a')
+instance Rewrapped (Contextual c a) (Contextual c' a')
 
-type instance V (Contextual v a) = V a
+type instance V (Contextual c a) = V a
 
-instance Semigroup a => Semigroup (Contextual v a) where
+instance Semigroup a => Semigroup (Contextual c a) where
   Contextual r1 <> Contextual r2 = Contextual . reader $ \ctx -> runReader r1 ctx <> runReader r2 ctx
 
-instance (Semigroup a, Monoid a) => Monoid (Contextual v a) where
+instance (Semigroup a, Monoid a) => Monoid (Contextual c a) where
   mappend = (<>)
   mempty  = Contextual . reader $ const mempty
 
-instance Transformable a => Transformable (Contextual v a) where
+instance Transformable a => Transformable (Contextual c a) where
   transform = over _Wrapped' . fmap . transform
