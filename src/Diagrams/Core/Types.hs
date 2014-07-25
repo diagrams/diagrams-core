@@ -121,11 +121,14 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             lens, over, view, (^.), _Wrapped,
                                             _Wrapping, Setter', sets, Ixed(..),
                                             At(..), Index, IxValue, Contains(..),
-                                            (&), (.~), Traversal', review, op)
+                                            (&), (.~), Traversal', review, op,
+                                            Getting, has, (%~), (<>~), mapped,
+                                            _1, _2)
 import           Control.Monad             (mplus)
 import           Control.Monad.Reader
 import           Data.AffineSpace          ((.-.))
 import           Data.Data
+import           Data.Foldable             (foldMap)
 import           Data.Functor              ((<$>))
 import           Data.Functor.Identity
 import           Data.List                 (isSuffixOf)
@@ -479,9 +482,9 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
 
 instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
   => Semigroup (QDiagram b v m) where
-  (QD d1) <> (QD d2) = QD $ \c ->
-    let (t1,s1) = d1 $ c & val' <>~ stepLeft  t2
-        (t2,s2) = d2 $ c & val' <>~ stepRight t1
+  (QD d1) <> (QD d2) = QD . contextual $ \c ->
+    let (t1,s1) = runContextual d1 $ c & val' <>~ stepLeft  t2
+        (t2,s2) = runContextual d2 $ c & val' <>~ stepRight t1
     in  (t2 <> t1, s2 <> s2)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
@@ -498,7 +501,7 @@ infixl 6 `atop`
 ---- Functor
 
 instance Functor (QDiagram b v) where
-  fmap = over (_Wrapping QD) . fmap . second . fmap . second . first . fmap . fmap
+  fmap = over (_Wrapping QD . mapped.mapped._2._2._1.mapped.mapped)
 
 -- ---- Applicative
 
@@ -722,23 +725,23 @@ ixPath (i:is) = branches.ix i.ixPath is
 
 -- Path construction DSL
 
-newtype PathM s a = PathM (ReaderT (Tree s) a)
+newtype PathM s a = PathM (Reader (Tree s) a)
   deriving (Functor, Applicative, Monad, MonadReader (Tree s))
 
 runPathM :: PathM s [Path] -> Tree s -> [Path]
-runPathM (PathM r) = runReaderT r
+runPathM (PathM r) = runReader r
 
 here :: PathM s [Path]
 here = return [mempty]
 
 -- Find tree nodes using a 'Getter'. It will return paths into the topmost
 -- nodes that first satisfy it.
-findPath :: Getting Any s t a b -> PathM s [Path]
-findPath l = reader $ \(Node x ts) -> case
-  | has l x   = [mempty]
-  | otherwise = do
+findPath :: Getting Any s a -> PathM s [Path]
+findPath l = reader $ \(Node x ts) ->
+  if has l x then [mempty]
+             else do
       (i,t) <- zip [0..] ts
-      map (i:) $ findPath l t
+      map (i:) $ runPathM (findPath l) t
 
 editTree :: PathM s [Path] -> (Tree s -> Tree s) -> Tree s -> Tree s
 editTree pm f t = foldr (\p -> ixPath p %~ f) t $ runPathM pm t
@@ -804,6 +807,12 @@ instance Semigroup (RTree b v) where
 -- | The empty @RTree@.
 emptyRTree :: RTree b v
 emptyRTree = RTree (Node REmpty [])
+
+-- | This Monoid instance is only legal if you treat t and Node mempty t
+--   the same. (Same for Node t mempty)
+instance Monoid (RTree b v) where
+  mappend = (<>)
+  mempty = emptyRTree
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
