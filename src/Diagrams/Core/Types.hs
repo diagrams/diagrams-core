@@ -123,7 +123,7 @@ import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
                                             At(..), Index, IxValue, Contains(..),
                                             (&), (.~), Traversal', review, op,
                                             Getting, has, (%~), (<>~), mapped,
-                                            _1, _2)
+                                            _1, _2, _Unwrapped')
 import           Control.Monad             (mplus)
 import           Control.Monad.Reader
 import           Data.AffineSpace          ((.-.))
@@ -718,32 +718,39 @@ type Path = [Int]
 
 -- instance Monoid Path
 
--- Index a tree based on a 'Path' into it.
-ixPath :: Path -> Traversal' (Tree a) (Tree a)
-ixPath []     = id
-ixPath (i:is) = branches.ix i.ixPath is
+-- Index an RTree based on a 'Path' into it.
+ixPath :: Path -> Traversal' (RTree b v) (RTree b v)
+ixPath p = _Wrapped'.ixPath' p._Unwrapped'
+  where ixPath' []     = id
+        ixPath' (i:is) = branches.ix i.ixPath' is
 
 -- Path construction DSL
 
-newtype PathM s a = PathM (Reader (Tree s) a)
-  deriving (Functor, Applicative, Monad, MonadReader (Tree s))
+newtype PathM b v a = PathM (Reader (RTree b v) a)
+  deriving (Functor, Applicative, Monad, MonadReader (RTree b v))
 
-runPathM :: PathM s [Path] -> Tree s -> [Path]
+runPathM :: PathM b v [Path] -> RTree b v -> [Path]
 runPathM (PathM r) = runReader r
 
-here :: PathM s [Path]
+here :: PathM b v [Path]
 here = return [mempty]
 
 -- Find tree nodes using a 'Getter'. It will return paths into the topmost
 -- nodes that first satisfy it.
-findPath :: Getting Any s a -> PathM s [Path]
-findPath l = reader $ \(Node x ts) ->
+findPath :: Getting Any (RNode b v) a -> PathM b v [Path]
+findPath l = reader $ \(RTree (Node x ts)) ->
   if has l x then [mempty]
              else do
       (i,t) <- zip [0..] ts
-      map (i:) $ runPathM (findPath l) t
+      map (i:) $ runPathM (findPath l) (RTree t)
 
-editTree :: PathM s [Path] -> (Tree s -> Tree s) -> Tree s -> Tree s
+-- Restrict a set of paths by applying some boolean predicate on nodes
+filterPathM :: (RTree b v -> Bool) -> [Path] -> PathM b v [Path]
+filterPathM f ps = reader $ \t ->
+  let pst = map (\p -> (p, t ^. ixPath p)) ps
+  in  map fst $ filter (f . snd) pst
+
+editTree :: PathM b v [Path] -> (RTree b v -> RTree b v) -> RTree b v -> RTree b v
 editTree pm f t = foldr (\p -> ixPath p %~ f) t $ runPathM pm t
 
 ------------------------------------------------------------
@@ -800,6 +807,7 @@ instance Rewrapped (RTree b v) (RTree b' v')
 
 type instance V (RTree b v) = v
 
+-- | This Semigroup instance is only legal if you ignore tree association.
 instance Semigroup (RTree b v) where
   RTree t1 <> RTree t2 = RTree (Node REmpty [t1,t2])
   sconcat ts = RTree (Node REmpty . map (op RTree) . NEL.toList $ ts)
