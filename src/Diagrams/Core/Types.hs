@@ -282,9 +282,9 @@ type Summary b v m = Deletable (Envelope v)
 --   leaf:
 --
 --   * styles (see "Diagrams.Core.Style")
-type Context b v m = Style v
-                 ::: Environment b v a
-                 ::: ()
+type Context b v = Style v
+               ::: Environment b v
+               ::: ()
 
 --------------------------------------------------
 -- Context monad
@@ -303,16 +303,16 @@ instance (Semigroup a, Monoid a) => Monoid (Contextual (Context b v) a) where
 
 -- Environments
 
-newtype Environment b v a = Environment { getEnvironment :: [([RTree b v a],[RTree b v a])] }
+newtype Environment b v = Environment { getEnvironment :: [([RTree b v],[RTree b v])] }
   deriving (Semigroup, Monoid)
 
-stepRight, stepLeft :: RTree b v a -> Environment b v a
+stepRight, stepLeft :: RTree b v -> Environment b v
 stepRight t = Environment [([t],[])]
 stepLeft  t = Environment [([],[t])]
 
-above, below :: Environment b v a -> RTree b v a
-above = foldMap (mconcat . fst) ts . getEnvironment
-below = foldMap (mconcat . snd) ts . getEnvironment
+above, below :: Environment b v -> RTree b v
+above = foldMap (mconcat . fst) . getEnvironment
+below = foldMap (mconcat . snd) . getEnvironment
 
 --------------------------------------------------
 -- QDiagram
@@ -775,34 +775,34 @@ instance HasLinearMap v => Renderable (Prim b v) b where
 -- -- Backends  -----------------------------------------------
 -- ------------------------------------------------------------
 
-data RNode b v a =  RStyle (Style v)
-                    -- ^ A style node.
-                  | RAnnot a
-                  | RPrim (Prim b v)
-                    -- ^ A primitive.
-                  | REmpty
+data RNode b v =  RStyle (Style v)
+                  -- ^ A style node.
+                | RAnnot Annotation
+                | RPrim (Prim b v)
+                  -- ^ A primitive.
+                | REmpty
 
 -- | An 'RTree' is a compiled and optimized representation of a
 --   'QDiagram', which can be used by backends.  They have the
 --   following invariant which backends may rely upon:
 --
 --   * @RPrim@ nodes never have any children.
-newtype RTree b v a = RTree (Tree (RNode b v a ))
+newtype RTree b v = RTree (Tree (RNode b v))
 
-instance Wrapped (RTree b v a) where
-  type Unwrapped (RTree b v a) = Tree (RNode b v a)
+instance Wrapped (RTree b v) where
+  type Unwrapped (RTree b v) = Tree (RNode b v)
   _Wrapped' = iso (\(RTree t) -> t) RTree
 
-instance Rewrapped (RTree b v a) (RTree b' v' a')
+instance Rewrapped (RTree b v) (RTree b' v')
 
-type instance V (RTree b v a) = v
+type instance V (RTree b v) = v
 
-instance Semigroup (RTree b v a) where
+instance Semigroup (RTree b v) where
   RTree t1 <> RTree t2 = RTree (Node REmpty [t1,t2])
   sconcat ts = RTree (Node REmpty . map (op RTree) . NEL.toList $ ts)
 
 -- | The empty @RTree@.
-emptyRTree :: RTree b v a
+emptyRTree :: RTree b v
 emptyRTree = RTree (Node REmpty [])
 
 -- | Abstract diagrams are rendered to particular formats by
@@ -847,7 +847,7 @@ class HasLinearMap v => Backend b v where
   -- | Given some options, take a representation of a diagram as a
   --   tree and render it.  The 'RTree' has already been simplified
   --   and has all measurements converted to @Output@ units.
-  renderRTree :: b -> Options b v -> RTree b v Annotation -> Result b v
+  renderRTree :: b -> Options b v -> RTree b v -> Result b v
 
   -- See Note [backend token]
 
