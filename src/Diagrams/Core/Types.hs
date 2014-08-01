@@ -60,11 +60,11 @@ module Diagrams.Core.Types
          -- * Operations on diagrams
          -- ** Creating diagrams
        , leafS
---       , mkQD, mkQD', pointDiagram
+       , mkQD, pointDiagram
 
          -- ** Extracting information
---       , envelope, trace, subMap, names, query, sample
---       , value, resetValue, clearValue
+       , envelope, trace, query, sample
+       , value, resetValue, clearValue
 
          -- ** Combining diagrams
 
@@ -469,12 +469,11 @@ instance Functor (QDiagram b v) where
 -- --   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
 -- --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
--- ---- HasStyle
+---- HasStyle
 
--- instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
---       => HasStyle (QDiagram b v m) where
---   applyStyle = over _Wrapped' . D.applyD . inj
---              . (inR :: Style v -> Transformation v :+: Style v)
+instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
+      => HasStyle (QDiagram b v m) where
+  applyStyle s = (over (_Wrapping QD) . fmap . first . over (_Wrapping RTree)) (\t -> (Node (RStyle s) [t]))
 
 -- ---- Juxtaposable
 
