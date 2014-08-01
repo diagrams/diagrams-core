@@ -521,8 +521,14 @@ instance (HasLinearMap v, InnerSpace v, OrderedField (Scalar v), Semigroup m)
 --   components appropriately.
 instance (HasLinearMap v, OrderedField (Scalar v), InnerSpace v, Semigroup m)
       => Transformable (QDiagram b v m) where
-  transform t = undefined -- (over _Wrapped' . transform) t
-  -- XXX not sure why (over _Wrapped' . transform) doesn't type check
+  transform = undefined -- over _Wrapped' . transform
+  --- XXX not sure why (over _Wrapped' . transform) doesn't type check.
+  --
+  -- Yields the error "Could not deduce (v ~ V ())".  Not sure where
+  -- the () is coming from.  Ah, I think it's coming from Summary,
+  -- perhaps?  Anyway, I am no longer convinced this implementation
+  -- even makes sense... Need to think about it more carefully.  How
+  -- to transform a diagram under the new fixpoint semantics scheme?
 
 -- ---- Qualifiable
 
