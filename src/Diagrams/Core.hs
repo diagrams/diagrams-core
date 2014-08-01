@@ -19,6 +19,74 @@
 -- occasionally find it useful to directly import one of the
 -- constituent core modules.
 --
+-- The diagrams library relies heavily on custom types and classes. Many
+-- of the relevant definitions are in the "Diagrams.Core.Types" module.
+-- Indeed the definition of the diagram type @QDiagram@ is contained in:
+-- 'Diagrams.Core.Types.QDiagram'. 
+--
+-- The best place to start when learning
+-- about diagrams\' types is the user manual:
+-- <http://projects.haskell.org/diagrams/doc/manual.html#type-reference>
+-- The following list shows which types are contained in each module of
+-- "Diagrams.Core".
+--
+-- * "Diagrams.Core.Types"
+--
+--     * @Annotation@, 
+--     * @UpAnnots b v m@, @DownAnnots v@,
+--     * @QDiaLeaf b v m@, @Measure v@,
+--     * @Subdiagram b v m@,  @SubMap b v m@,
+--     * @Prim b v@, @Backend b v@, 
+--     * @DNode b v a@, @DTree b v a@,
+--     * @RNode b v a@, @RTree b v a@,
+--     * @NullBackend@, @Renderable t b@,
+--     * @D v@.
+--
+-- * "Diagrams.Core.Envelope"
+--
+--     * @Envelope v@, @Enveloped v@,
+--     * @OrderedField s@.
+--
+-- * "Diagrams.Core.Juxtapose"
+--
+--     * @Juxtaposable a@.
+--
+-- * "Diagrams.Core.Names"
+--
+--     * @AName@, @Name@, @IsName a@,
+--     * @Qualifiable q@.
+--
+-- * "Diagrams.Core.HasOrigin"
+--
+--     * @HasOrigin t@.
+--
+-- * "Diagrams.Core.Points"
+--
+--     * @Point v@.
+--
+-- * "Diagrams.Core.Query"
+--
+--     * @Query v m@.
+--
+-- *  "Diagrams.Core.Style"
+--
+--     * @AttributeClass a@, @Attribute v@,
+--     * @Style v@, @HasStyle@.
+--
+-- * "Diagrams.Core.Trace"
+--
+--     * @SortedList a@,
+--     * @Trace v@, @Traced a@.
+--
+-- * "Diagrams.Core.Transform"
+--
+--     * @u :-: v@, @HasLinearMap@,
+--     * @Transformation v@, @Transformable t@,
+--     * @TransInv t@.
+--
+-- * "Diagrams.Core.V"
+--
+--     * @V a@.
 -----------------------------------------------------------------------------
 
 module Diagrams.Core
