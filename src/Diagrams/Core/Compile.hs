@@ -35,7 +35,7 @@ module Diagrams.Core.Compile
   )
   where
 
-import           Data.Data
+import           Data.Typeable
 import qualified Data.List.NonEmpty        as NEL
 import           Data.Maybe                (fromMaybe)
 import           Data.Monoid.Coproduct
@@ -145,7 +145,7 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (HasLinearMap v, InnerSpace v, Data v, Data (Scalar v), OrderedField (Scalar v), Monoid m, Semigroup m)
+  :: (HasLinearMap v, InnerSpace v, Typeable v, OrderedField (Scalar v), Monoid m, Semigroup m)
   => Transformation v -> QDiagram b v m -> RTree b v Annotation
 toRTree globalToOutput d
   = (fmap . onRStyle) (styleToOutput gToO nToO)
@@ -176,13 +176,13 @@ onRStyle _ n          = n
 --   applied). Normalized units are based on a logical diagram size of
 --   1 x 1.
 styleToOutput
-  :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
+  :: forall v. (Typeable v, Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
   => Scalar v -> Scalar v -> Style v -> Style v
 styleToOutput globalToOutput normToOutput =
   gmapAttrs (toOutput globalToOutput normToOutput :: Measure v -> Measure v)
 
 -- | Convert an aribrary 'Measure' to 'Output' units.
-toOutput :: forall v. (Data v, Data (Scalar v), Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
+toOutput :: forall v. (Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
   => Scalar v -> Scalar v -> Measure v -> Measure v
 toOutput g n m =
   case m of
@@ -213,8 +213,8 @@ toOutput g n m =
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
   :: ( Backend b v
-     , HasLinearMap v, InnerSpace v, Data v
-     , OrderedField (Scalar v), Data (Scalar v)
+     , HasLinearMap v, InnerSpace v, Typeable v
+     , OrderedField (Scalar v)
      , Monoid' m
      )
   => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
@@ -224,8 +224,8 @@ renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
 -- | Render a diagram.
 renderDia
   :: ( Backend b v
-     , InnerSpace v, Data v
-     , OrderedField (Scalar v), Data (Scalar v)
+     , InnerSpace v, Typeable v
+     , OrderedField (Scalar v)
      , Monoid' m
      )
           => b -> Options b v -> QDiagram b v m -> Result b v
