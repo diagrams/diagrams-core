@@ -97,7 +97,7 @@ module Diagrams.Core
          -- * Points
 
        , Point, origin, (*.)
-       , _relative
+       -- , _relative
 
          -- * Transformations
 

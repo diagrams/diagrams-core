@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -56,11 +55,13 @@ import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
 
-import           Data.AffineSpace
-import           Data.VectorSpace
+-- import           Data.AffineSpace
+-- import           Data.VectorSpace
+import Linear.Affine
+import Linear.Vector
 
 import           Diagrams.Core.HasOrigin
-import           Diagrams.Core.Points
+-- import           Diagrams.Core.Points
 import           Diagrams.Core.Transform
 import           Diagrams.Core.V
 
@@ -90,12 +91,12 @@ getSortedList (SortedList as) = as
 -- | Apply a list function to a 'SortedList'.  The function need not
 --   result in a sorted list; the result will be sorted before being
 --   rewrapped as a 'SortedList'.
-onSortedList :: Ord b => ([a] -> [b]) -> (SortedList a -> SortedList b)
+onSortedList :: Ord b => ([a] -> [b]) -> SortedList a -> SortedList b
 onSortedList f = unsafeOnSortedList (sort . f)
 
 -- | Apply an /order-preserving/ list function to a 'SortedList'.  No
 --   sorts or checks are done.
-unsafeOnSortedList :: ([a] -> [b]) -> (SortedList a -> SortedList b)
+unsafeOnSortedList :: ([a] -> [b]) -> SortedList a -> SortedList b
 unsafeOnSortedList f (SortedList as) = SortedList (f as)
 
 -- | Merge two sorted lists.  The result is the sorted list containing
@@ -139,15 +140,15 @@ instance Ord a => Monoid (SortedList a) where
 --
 --   <<diagrams/src_Diagrams_Core_Trace_traceEx.svg#diagram=traceEx&width=200>>
 
-newtype Trace v = Trace { appTrace :: Point v -> v -> SortedList (Scalar v) }
+newtype Trace v n = Trace { appTrace :: Point v n -> v n -> SortedList n }
 
-instance Wrapped (Trace v) where
-    type Unwrapped (Trace v) = Point v -> v -> SortedList (Scalar v)
+instance Wrapped (Trace v n) where
+    type Unwrapped (Trace v n) = Point v n -> v n -> SortedList n
     _Wrapped' = iso appTrace Trace
 
-instance Rewrapped (Trace v) (Trace v')
+instance Rewrapped (Trace v n) (Trace v' n')
 
-mkTrace :: (Point v -> v -> SortedList (Scalar v)) -> Trace v
+mkTrace :: (Point v n -> v n -> SortedList n) -> Trace v n
 mkTrace = Trace
 
 -- | Traces form a semigroup with pointwise minimum as composition.
@@ -155,23 +156,24 @@ mkTrace = Trace
 --   @e2@ is the trace for @d2@, then @e1 \`mappend\` e2@
 --   is the trace for @d1 \`atop\` d2@.
 
-deriving instance (Ord (Scalar v)) => Semigroup (Trace v)
+deriving instance (Ord n) => Semigroup (Trace v n)
 
-deriving instance (Ord (Scalar v)) => Monoid (Trace v)
+deriving instance (Ord n) => Monoid (Trace v n)
 
-type instance V (Trace v) = v
+type instance V (Trace v n) = v
+type instance N (Trace v n) = n
 
-instance (VectorSpace v) => HasOrigin (Trace v) where
-  moveOriginTo (P u) = (_Wrapping' Trace) %~ \f p -> f (p .+^ u)
+instance (Num n, Additive v) => HasOrigin (Trace v n) where
+  moveOriginTo (P u) = _Wrapping' Trace %~ \f p -> f (p .+^ u)
 
-instance Show (Trace v) where
+instance Show (Trace v n) where
   show _ = "<trace>"
 
 ------------------------------------------------------------
 --  Transforming traces  -----------------------------------
 ------------------------------------------------------------
 
-instance HasLinearMap v => Transformable (Trace v) where
+instance (Num n, Additive v, Functor v) => Transformable (Trace v n) where
   transform t = _Wrapped' %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
 
 ------------------------------------------------------------
@@ -179,12 +181,12 @@ instance HasLinearMap v => Transformable (Trace v) where
 ------------------------------------------------------------
 
 -- | @Traced@ abstracts over things which have a trace.
-class (Ord (Scalar (V a)), VectorSpace (V a)) => Traced a where
+class (Ord (N a), Additive (V a)) => Traced a where
 
   -- | Compute the trace of an object.
-  getTrace :: a -> Trace (V a)
+  getTrace :: a -> Trace (V a) (N a)
 
-instance (Ord (Scalar v), VectorSpace v) => Traced (Trace v) where
+instance (Ord n, Additive v) => Traced (Trace v n) where
   getTrace = id
 
 -- | The trace of a single point is the empty trace, /i.e./ the one
@@ -193,13 +195,13 @@ instance (Ord (Scalar v), VectorSpace v) => Traced (Trace v) where
 --   directly at the given point, but due to floating-point inaccuracy
 --   this is problematic.  Note that the envelope for a single point
 --   is /not/ the empty envelope (see "Diagrams.Core.Envelope").
-instance (Ord (Scalar v), VectorSpace v) => Traced (Point v) where
+instance (Ord n, Additive v) => Traced (Point v n) where
   getTrace = const mempty
 
 instance Traced t => Traced (TransInv t) where
   getTrace = getTrace . op TransInv
 
-instance (Traced a, Traced b, V a ~ V b) => Traced (a,b) where
+instance (Traced a, Traced b, V a ~ V b, N a ~ N b) => Traced (a,b) where
   getTrace (x,y) = getTrace x <> getTrace y
 
 instance (Traced b) => Traced [b] where
@@ -226,7 +228,7 @@ instance (Traced b) => Traced (S.Set b) where
 --   intersection, which is often more intuitive behavior.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_traceVEx.svg#diagram=traceVEx&width=600>>
-traceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
+traceV :: (n ~ N a, Num n, Traced a) => Point (V a) n -> V a n -> a -> Maybe (V a n)
 traceV p v a = case getSortedList $ op Trace (getTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
@@ -244,7 +246,7 @@ traceV p v a = case getSortedList $ op Trace (getTrace a) p v of
 --   intersection, which is often more intuitive behavior.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_tracePEx.svg#diagram=tracePEx&width=600>>
-traceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
+traceP :: (n ~ N a, Traced a, Num n) => Point (V a) n -> V a n -> a -> Maybe (Point (V a) n)
 traceP p v a = (p .+^) <$> traceV p v a
 
 -- > tracePEx = mkTraceDiasABC def { sFilter = take 1 }
@@ -257,8 +259,8 @@ traceP p v a = (p .+^) <$> traceV p v a
 --   example shown below.)
 --
 --   <<diagrams/src_Diagrams_Core_Trace_maxTraceVEx.svg#diagram=maxTraceVEx&width=600>>
-maxTraceV :: Traced a => Point (V a) -> V a -> a -> Maybe (V a)
-maxTraceV p = traceV p . negateV
+maxTraceV :: (n ~ N a, Num n, Traced a) => Point (V a) n -> V a n -> a -> Maybe (V a n)
+maxTraceV p = traceV p . negated
 
 -- > maxTraceVEx = mkTraceDiasABC def { drawV = True, sFilter = dropAllBut1 }
 
@@ -269,7 +271,7 @@ maxTraceV p = traceV p . negateV
 --   vector, if all the boundary points are.)
 --
 --   <<diagrams/src_Diagrams_Core_Trace_maxTracePEx.svg#diagram=maxTracePEx&width=600>>
-maxTraceP :: Traced a => Point (V a) -> V a -> a -> Maybe (Point (V a))
+maxTraceP :: (n ~ N a, Num n, Traced a) => Point (V a) n -> V a n -> a -> Maybe (Point (V a) n)
 maxTraceP p v a = (p .+^) <$> maxTraceV p v a
 
 -- > maxTracePEx = mkTraceDiasABC def { sFilter = dropAllBut1 }
@@ -279,7 +281,7 @@ maxTraceP p v a = (p .+^) <$> maxTraceV p v a
 --   boundary points, /i.e./ those boundary points given by a positive
 --   scalar multiple of the direction vector.  Note, this property
 --   will be destroyed if the resulting 'Trace' is translated at all.
-getRayTrace :: (Traced a, Num (Scalar (V a))) => a -> Trace (V a)
+getRayTrace :: (n ~ N a, Traced a, Num n) => a -> Trace (V a) n
 getRayTrace a = Trace $ \p v -> unsafeOnSortedList (dropWhile (<0)) $ appTrace (getTrace a) p v
 
 -- | Compute the vector from the given point to the closest boundary
@@ -294,8 +296,8 @@ getRayTrace a = Trace $ \p v -> unsafeOnSortedList (dropWhile (<0)) $ appTrace (
 --   'traceV'.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_rayTraceVEx.svg#diagram=rayTraceVEx&width=600>>
-rayTraceV :: (Traced a, Num (Scalar (V a)))
-           => Point (V a) -> V a -> a -> Maybe (V a)
+rayTraceV :: (n ~ N a, Traced a, Num n)
+           => Point (V a) n -> V a n -> a -> Maybe (V a n)
 rayTraceV p v a = case getSortedList $ op Trace (getRayTrace a) p v of
                  (s:_) -> Just (s *^ v)
                  []    -> Nothing
@@ -313,8 +315,8 @@ rayTraceV p v a = case getSortedList $ op Trace (getRayTrace a) p v of
 --   camera.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_rayTracePEx.svg#diagram=rayTracePEx&width=600>>
-rayTraceP :: (Traced a, Num (Scalar (V a)))
-           => Point (V a) -> V a -> a -> Maybe (Point (V a))
+rayTraceP :: (n ~ N a, Traced a, Num n)
+           => Point (V a) n -> V a n -> a -> Maybe (Point (V a) n)
 rayTraceP p v a = (p .+^) <$> rayTraceV p v a
 
 -- > rayTracePEx = mkTraceDiasABC def { sFilter = take 1 . filter (>0) }
@@ -325,12 +327,12 @@ rayTraceP p v a = (p .+^) <$> rayTraceV p v a
 --   /positive/ boundary points.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_maxRayTraceVEx.svg#diagram=maxRayTraceVEx&width=600>>
-maxRayTraceV :: (Traced a, Num (Scalar (V a)))
-              => Point (V a) -> V a -> a -> Maybe (V a)
+maxRayTraceV :: (n ~ N a, Traced a, Num n)
+              => Point (V a) n -> V a n -> a -> Maybe (V a n)
 maxRayTraceV p v a =
   case getSortedList $ op Trace (getRayTrace a) p v of
     [] -> Nothing
-    xs -> Just ((last xs) *^ v)
+    xs -> Just (last xs *^ v)
 
 -- > maxRayTraceVEx = mkTraceDiasABC def { drawV = True, sFilter = dropAllBut1 . filter (>0) }
 
@@ -340,8 +342,8 @@ maxRayTraceV p v a =
 --   points.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_maxRayTracePEx.svg#diagram=maxRayTracePEx&width=600>>
-maxRayTraceP :: (Traced a, Num (Scalar (V a)))
-              => Point (V a) -> V a -> a -> Maybe (Point (V a))
+maxRayTraceP :: (n ~ N a, Traced a, Num n)
+              => Point (V a) n -> V a n -> a -> Maybe (Point (V a) n)
 maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 
 -- > maxRayTracePEx = mkTraceDiasABC def { sFilter = dropAllBut1 . filter (>0) }
