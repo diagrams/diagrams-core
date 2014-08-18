@@ -241,8 +241,8 @@ instance Additive Measure where
 --   type Scalar (Measure v) = Scalar v
 --   s *^ m = ScaleM s m
 
-type instance N (Measure n) = n
 type instance V (Measure n) = Measure
+type instance N (Measure n) = n
 
 -- instance (Floating n) => Transformable (Measure n) where
 --   transform tr (Local x) = Local (avgScale tr * x)
@@ -535,7 +535,7 @@ withNames :: (IsName nm, HasLinearMap v, Metric v
 withNames ns f d = maybe id f ns' d
   where
     nd = d^.subMap
-    ns' = T.sequence (map ((listToMaybe=<<) . ($nd) . lookupSub . toName) ns)
+    ns' = T.sequence (map ((listToMaybe=<<) . ($ nd) . lookupSub . toName) ns)
 
 -- | \"Localize\" a diagram by hiding all the names, so they are no
 --   longer visible to the outside.

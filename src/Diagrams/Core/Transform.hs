@@ -46,6 +46,7 @@ module Diagrams.Core.Transform
        , matrixHomRep
        , determinant
        , avgScale
+       , eye
 
          -- * The Transformable class
 
@@ -157,10 +158,9 @@ data Transformation f a = Transformation (f a :-: f a) (f a :-: f a) (f a)
 type instance V (Transformation v a) = v
 type instance N (Transformation v a) = a
 
-eye :: (Num a, Rep t ~ E t, Representable t, Applicative t) => t (t a)
-eye = tabulate f
-  where f (E e) = unit e
-
+-- | Identity matrix.
+eye :: (Rep t ~ E t, Representable t, Applicative t, Num a) => t (t a)
+eye = tabulate $ \(E e) -> unit e
 
 -- | Invert a transformation.
 inv :: (Num a, Functor t) => Transformation t a -> Transformation t a
@@ -367,7 +367,7 @@ instance (Transformable t, Transformable s, Transformable u, V s ~ V t, V s ~ V 
 
 -- instance ( HasBasis (V b), HasTrie (Basis (V b))
 --          , Transformable a, Transformable b, V b ~ V a) =>
-instance (Num (N t), V t ~ V s, N s ~ N t, Functor (V s), Transformable t, Transformable s) => Transformable (s -> t) where
+instance (Num (N t), VN t ~ VN s, Functor (V s), Transformable t, Transformable s) => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
 
 instance Transformable t => Transformable [t] where

@@ -92,7 +92,7 @@
 module Diagrams.Core
        ( -- * Associated vector spaces
 
-         V
+         V, N, VN
 
          -- * Points
 
@@ -129,6 +129,7 @@ module Diagrams.Core
          -- ** Translational invariance
 
        , TransInv(TransInv)
+       , eye
 
          -- * Names
 
