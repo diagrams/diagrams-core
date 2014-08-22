@@ -100,11 +100,6 @@ import           Diagrams.Core.V
 --   Sebastian Setzer; see
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://www.cis.upenn.edu/~byorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
 newtype Envelope v n = Envelope (Option (v n -> Max n))
--- newtype Envelope v = Envelope (Option (v -> Max (Scalar v)))
-
-
-(<.>) :: (Metric f, Num a) => f a -> f a -> a
-(<.>) = dot
 
 instance Wrapped (Envelope v n) where
     type Unwrapped (Envelope v n) = Option (v n -> Max n)
@@ -122,9 +117,8 @@ mkEnvelope :: (v n -> n) -> Envelope v n
 mkEnvelope = Envelope . Option . Just . (Max .)
 
 -- | Create an envelope for the given point.
-pointEnvelope :: (Fractional n, Metric v)
-              => Point v n -> Envelope v n
-pointEnvelope p = moveTo p (mkEnvelope (const 0))
+pointEnvelope :: (Fractional n, Metric v) => Point v n -> Envelope v n
+pointEnvelope p = moveTo p (mkEnvelope $ const 0)
 
 
 -- pointEnvelope :: (Fractional (Scalar v), InnerSpace v)
@@ -153,7 +147,7 @@ type instance N (Envelope v n) = n
 --   which bounding queries are made, /i.e./ the point from which the
 --   input vectors are taken to originate.
 instance (Metric v, Fractional n) => HasOrigin (Envelope v n) where
-  moveOriginTo (P u) = onEnvelope $ \f v -> f v - ((u ^/ (v <.> v)) <.> v)
+  moveOriginTo (P u) = onEnvelope $ \f v -> f v - ((u ^/ (v `dot` v)) `dot` v)
 
 instance Show (Envelope v n) where
   show _ = "<envelope>"
@@ -168,9 +162,9 @@ instance Show (Envelope v n) where
 instance ( Additive v, Metric v, Floating n, Epsilon n)
     => Transformable (Envelope v n) where
   transform t =
-    moveOriginTo (P . negated . transl $ t) .  onEnvelope g
+    moveOriginTo (P . negated . transl $ t) . onEnvelope g
       where
-        g f v = f v' / (v' <.> vi)
+        g f v = f v' / (v' `dot` vi)
           where
             v' = normalize $ lapp (transp t) v
             vi = apply (inv t) v
@@ -180,7 +174,7 @@ instance ( Additive v, Metric v, Floating n, Epsilon n)
     -- (onEnvelope $ \f v ->
     --   let v' = normalize $ lapp (transp t) v
     --       vi = apply (inv t) v
-    --   in  f v' / (v' <.> vi)
+    --   in  f v' / (v' `dot` vi)
     -- )
 
 ------------------------------------------------------------
@@ -191,8 +185,8 @@ instance ( Additive v, Metric v, Floating n, Epsilon n)
 --   ordered field (i.e. support all four arithmetic operations and be
 --   totally ordered) so we introduce this class as a convenient
 --   shorthand.
-class (Fractional s, Floating s, Ord s, Epsilon s) => OrderedField s
-instance (Fractional s, Floating s, Ord s, Epsilon s) => OrderedField s
+class (Floating s, Ord s, Epsilon s) => OrderedField s
+instance (Floating s, Ord s, Epsilon s) => OrderedField s
 
 -- | @Enveloped@ abstracts over things which have an envelope.
 class (Metric (V a), OrderedField (N a)) => Enveloped a where
@@ -232,23 +226,23 @@ instance Enveloped b => Enveloped (S.Set b) where
 -- | Compute the vector from the local origin to a separating
 --   hyperplane in the given direction, or @Nothing@ for the empty
 --   envelope.
-envelopeVMay :: Enveloped a => V a (N a) -> a -> Maybe (V a (N a))
+envelopeVMay :: Enveloped a => Vn a -> a -> Maybe (Vn a)
 envelopeVMay v = fmap ((*^ v) . ($ v)) . appEnvelope . getEnvelope
 
 -- | Compute the vector from the local origin to a separating
 --   hyperplane in the given direction.  Returns the zero vector for
 --   the empty envelope.
-envelopeV :: Enveloped a => V a (N a) -> a -> V a (N a)
+envelopeV :: Enveloped a => Vn a -> a -> Vn a
 envelopeV v = fromMaybe zero . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction, or @Nothing@ for the empty envelope.
-envelopePMay :: Enveloped a => V a (N a) -> a -> Maybe (Point (V a) (N a))
+envelopePMay :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe (Point v n)
 envelopePMay v = fmap P . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction.  Returns the origin for the empty envelope.
-envelopeP :: Enveloped a => V a (N a) -> a -> Point (V a) (N a)
+envelopeP :: (Vn a ~ v n, Enveloped a) => v n -> a -> Point v n
 envelopeP v = P . envelopeV v
 
 -- | Equivalent to the norm of 'envelopeVMay':
@@ -260,7 +254,7 @@ envelopeP v = P . envelopeV v
 --   Note that the 'envelopeVMay' / 'envelopePMay' functions above should be
 --   preferred, as this requires a call to norm.  However, it is more
 --   efficient than calling norm on the results of those functions.
-envelopeSMay :: Enveloped a => V a (N a) -> a -> Maybe (N a)
+envelopeSMay :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe n
 envelopeSMay v = fmap ((* norm v) . ($ v)) . appEnvelope . getEnvelope
 
 -- | Equivalent to the norm of 'envelopeV':
@@ -272,23 +266,23 @@ envelopeSMay v = fmap ((* norm v) . ($ v)) . appEnvelope . getEnvelope
 --   Note that the 'envelopeV' / 'envelopeP' functions above should be
 --   preferred, as this requires a call to norm. However, it is more
 --   efficient than calling norm on the results of those functions.
-envelopeS :: (n ~ N a, Enveloped a, Num n) => V a n -> a -> n
+envelopeS :: (Vn a ~ v n, Enveloped a, Num n) => v n -> a -> n
 envelopeS v = fromMaybe 0 . envelopeSMay v
 
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
-diameter :: (n ~ N a, Enveloped a) => V a n -> a -> n
+diameter :: (Vn a ~ v n, Enveloped a) => v n -> a -> n
 diameter v a = maybe 0 (\(lo,hi) -> (hi - lo) * norm v) (extent v a)
 
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
 --   along a particular vector.
-radius :: (n ~ N a, Enveloped a) => V a n -> a -> n
+radius :: (Vn a ~ v n, Enveloped a) => v n -> a -> n
 radius v = (0.5*) . diameter v
 
 -- | Compute the range of an enveloped object along a certain
 --   direction.  Returns a pair of scalars @(lo,hi)@ such that the
 --   object extends from @(lo *^ v)@ to @(hi *^ v)@. Returns @Nothing@
 --   for objects with an empty envelope.
-extent :: (n ~ N a, Enveloped a) => V a n -> a -> Maybe (n, n)
+extent :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe (n, n)
 extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
 

@@ -41,12 +41,12 @@ class Juxtaposable a where
   --   @a2@; @a1@'s local origin becomes @a2@'s new local origin.  The
   --   result is just a translated version of @a2@.  (In particular,
   --   this operation does not /combine/ @a1@ and @a2@ in any way.)
-  juxtapose :: V a (N a) -> a -> a -> a
+  juxtapose :: Vn a -> a -> a -> a
 
 -- | Default implementation of 'juxtapose' for things which are
 --   instances of 'Enveloped' and 'HasOrigin'.  If either envelope is
 --   empty, the second object is returned unchanged.
-juxtaposeDefault :: (Enveloped a, HasOrigin a) => V a (N a) -> a -> a -> a
+juxtaposeDefault :: (Enveloped a, HasOrigin a) => Vn a -> a -> a -> a
 juxtaposeDefault v a1 a2 =
   case (mv1, mv2) of
     (Just v1, Just v2) -> moveOriginBy (v1 ^+^ v2) a2
@@ -57,7 +57,7 @@ juxtaposeDefault v a1 a2 =
 instance (Metric v, OrderedField n) => Juxtaposable (Envelope v n) where
   juxtapose = juxtaposeDefault
 
-instance (Enveloped a, HasOrigin a, Enveloped b, HasOrigin b, V a ~ V b, N a ~ N b)
+instance (Enveloped a, HasOrigin a, Enveloped b, HasOrigin b, Vn a ~ Vn b)
          => Juxtaposable (a,b) where
   juxtapose = juxtaposeDefault
 
@@ -72,3 +72,4 @@ instance (Enveloped b, HasOrigin b, Ord b) => Juxtaposable (S.Set b) where
 
 instance Juxtaposable a => Juxtaposable (b -> a) where
   juxtapose v f1 f2 b = juxtapose v (f1 b) (f2 b)
+

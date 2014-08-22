@@ -187,12 +187,11 @@ data Measure n = Output n
                | ZeroM
                | NegateM (Measure n)
                | PlusM (Measure n) (Measure n)
-               -- | ScaleM n (Measure n)
   deriving (Typeable, Functor, Foldable, Traversable)
 
-deriving instance (Eq n) => Eq (Measure n)
-deriving instance (Ord n) => Ord (Measure n)
-deriving instance (Show n) => Show (Measure n)
+deriving instance (Eq n)               => Eq (Measure n)
+deriving instance (Ord n)              => Ord (Measure n)
+deriving instance (Show n)             => Show (Measure n)
 deriving instance (Typeable n, Data n) => Data (Measure n)
 
 -- bogus applicative instance
@@ -208,7 +207,6 @@ instance Applicative Measure where
   (ZeroM)        <*> _  = ZeroM
   (NegateM w)    <*> m2 = NegateM (w <*> m2)
   (PlusM w1 w2)  <*> m2 = PlusM (w1 <*> m2) (w2 <*> m2)
-  -- (ScaleM w1 w2) <*> m2 = ScaleM (fmap w1 m2) (w2 <*> m2)
 
 
 -- | Compute the larger of two 'Measure's.  Useful for setting lower
@@ -228,30 +226,8 @@ instance Additive Measure where
   m     ^+^ ZeroM = m
   m1    ^+^ m2    = PlusM m1 m2
 
-
--- instance VS.AdditiveGroup (Measure n) where
---   zeroV = ZeroM
---   negateV (NegateM m) = m
---   negateV m = NegateM m
---   ZeroM VS.^+^ m = m
---   m VS.^+^ ZeroM = m
---   m1 VS.^+^ m2 = PlusM m1 m2
--- 
--- instance VS.Additive (Measure v) where
---   type Scalar (Measure v) = Scalar v
---   s *^ m = ScaleM s m
-
 type instance V (Measure n) = Measure
 type instance N (Measure n) = n
-
--- instance (Floating n) => Transformable (Measure n) where
---   transform tr (Local x) = Local (avgScale tr * x)
---   transform tr (MinM m1 m2) = MinM (transform tr m1) (transform tr m2)
---   transform tr (MaxM m1 m2) = MaxM (transform tr m1) (transform tr m2)
---   transform tr (NegateM m') = NegateM (transform tr m')
---   transform tr (PlusM m1 m2) = PlusM (transform tr m1) (transform tr m2)
---   -- transform tr (ScaleM s m') = ScaleM s (transform tr m')
---   transform _ y = y
 
 -- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
 --   Only 'Ouput' measures should be left in the 'RTree' passed to the backend.
@@ -265,7 +241,6 @@ fromOutput (MaxM _ _)     = fromOutputErr "MaxM"
 fromOutput (ZeroM)        = fromOutputErr "ZeroM"
 fromOutput (NegateM _)    = fromOutputErr "NegateM"
 fromOutput (PlusM _ _)    = fromOutputErr "PlusM"
--- fromOutput (ScaleM _ _)   = fromOutputErr "ScaleM"
 
 fromOutputErr :: String -> a
 fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must be Output."
@@ -413,9 +388,9 @@ newtype QDiagram b v n m
   deriving (Typeable)
 
 instance Wrapped (QDiagram b v n m) where
-    type Unwrapped (QDiagram b v n m) =
+  type Unwrapped (QDiagram b v n m) =
         D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m)
-    _Wrapped' = iso (\(QD d) -> d) QD
+  _Wrapped' = iso (\(QD d) -> d) QD
 
 instance Rewrapped (QDiagram b v n m) (QDiagram b' v' n' m')
 
@@ -442,14 +417,14 @@ getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
 getU' = maybe mempty (option mempty id . get) . D.getU
 
 -- | Get the envelope of a diagram.
-envelope :: forall b v n m. (OrderedField n, Metric v
-                          , HasLinearMap v, Monoid' m)
+envelope :: forall b v n m. ( OrderedField n, Metric v
+                            , HasLinearMap v, Monoid' m)
          => Lens' (QDiagram b v n m) (Envelope v n)
 envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
-setEnvelope :: forall b v n m. (OrderedField n, Metric v
-                             , HasLinearMap v, Monoid' m, Epsilon n)
+setEnvelope :: forall b v n m. ( OrderedField n, Metric v
+                               , HasLinearMap v, Monoid' m, Epsilon n)
           => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
 setEnvelope e =
     over _Wrapped' ( D.applyUpre (inj . toDeletable $ e)
@@ -463,8 +438,8 @@ trace :: (Metric v, HasLinearMap v, OrderedField n, Semigroup m) =>
 trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
-setTrace :: forall b v n m. (OrderedField n, Metric v
-                          , HasLinearMap v, Semigroup m, Epsilon n)
+setTrace :: forall b v n m. ( OrderedField n, Metric v
+                            , HasLinearMap v, Semigroup m, Epsilon n)
          => Trace v n -> QDiagram b v n m -> QDiagram b v n m
 setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
                          . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
@@ -473,8 +448,8 @@ setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
 
 -- | Get the subdiagram map (/i.e./ an association from names to
 --   subdiagrams) of a diagram.
-subMap :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n, Epsilon n) =>
-          Lens' (QDiagram b v n m) (SubMap b v n m)
+subMap :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n, Epsilon n)
+       => Lens' (QDiagram b v n m) (SubMap b v n m)
 subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
   where
     setMap :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n) =>
@@ -483,7 +458,7 @@ subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
 
 -- | Get a list of names of subdiagrams and their locations.
 names :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n)
-         => QDiagram b v n m -> [(Name, [Point v n])]
+      => QDiagram b v n m -> [(Name, [Point v n])]
 names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 
 -- | Attach an atomic name to a certain subdiagram, computed from the
@@ -500,7 +475,7 @@ nameSub s n d = d'
 -- | Lookup the most recent diagram associated with (some
 --   qualification of) the given name.
 lookupName :: (IsName nm, HasLinearMap v, Metric v, Semigroup m, OrderedField n)
-  => nm -> QDiagram b v n m -> Maybe (Subdiagram b v n m)
+           => nm -> QDiagram b v n m -> Maybe (Subdiagram b v n m)
 lookupName n d = lookupSub (toName n) (d^.subMap) >>= listToMaybe
 
 -- | Given a name and a diagram transformation indexed by a
@@ -1063,6 +1038,7 @@ type D v n = Diagram NullBackend v n
 --   This ensures that the trick with 'D' annotations can be used for
 --   diagrams containing your primitive.
 data NullBackend
+  deriving Typeable
 
 -- Note: we can't make a once-and-for-all instance
 --

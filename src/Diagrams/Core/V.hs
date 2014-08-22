@@ -14,7 +14,7 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.V
-       ( V, N, VN
+       ( V, N, Vn
 
        ) where
 
@@ -52,11 +52,7 @@ type instance V (Deletable m) = V m
 type instance V (Split m)     = V m
 type instance V (m :+: n)     = V m
 
-
 type family N a :: *
-
--- type instance N Double = Double
--- type instance N Float  = Float
 
 type instance N (a,b)   = N a
 type instance N (a,b,c) = N a
@@ -71,7 +67,5 @@ type instance N (Deletable m) = N m
 type instance N (Split m)     = N m
 type instance N (m :+: n)     = N m
 
-type VN a = V a (N a)
-
--- type family VN a :: (* -> *, *)
+type Vn a = V a (N a)
 

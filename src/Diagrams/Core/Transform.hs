@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -38,6 +39,8 @@ module Diagrams.Core.Transform
        , apply
        , papply
        , fromLinear
+       , fromOrthogonal
+       , fromSymmetric
        , basis
        , dimension
        , onBasis
@@ -46,6 +49,7 @@ module Diagrams.Core.Transform
        , matrixHomRep
        , determinant
        , avgScale
+       , scaleFromTransform
        , eye
 
          -- * The Transformable class
@@ -212,6 +216,15 @@ papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 fromLinear :: (Num a, Additive v) => (v a :-: v a) -> (v a :-: v a) -> Transformation v a
 fromLinear l1 l2 = Transformation l1 l2 zero
 
+-- | An orthogonal linear map is one whose inverse is also its transpose.
+fromOrthogonal :: (Additive v, Num n) => (v n :-: v n) -> Transformation v n
+fromOrthogonal t = fromLinear t (linv t)
+
+-- | A symmetric linear map is one whose transpose is equal to its self.
+fromSymmetric :: (Additive v, Num n) => (v n :-: v n) -> Transformation v n
+fromSymmetric t = fromLinear t t
+
+
 -- | Get the matrix equivalent of the basis of the vector space v as
 --   a list of columns.
 -- basis :: (Applicative t, Traversable t, Num a) => [t a]
@@ -290,6 +303,11 @@ determinant t = det . matrixRep $ t
 avgScale :: (Floating n, HasLinearMap v) => Transformation v n -> n
 avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
 
+-- | Scale a functor with the average scale of a transform.
+scaleFromTransform :: (HasLinearMap v, Floating n, Functor f)
+  => Transformation v n -> f n -> f n
+scaleFromTransform t = fmap (* avgScale t)
+
 {-
 
 avgScale is computed as the nth root of the positive determinant.
@@ -367,7 +385,7 @@ instance (Transformable t, Transformable s, Transformable u, V s ~ V t, V s ~ V 
 
 -- instance ( HasBasis (V b), HasTrie (Basis (V b))
 --          , Transformable a, Transformable b, V b ~ V a) =>
-instance (Num (N t), VN t ~ VN s, Functor (V s), Transformable t, Transformable s) => Transformable (s -> t) where
+instance (Num (N t), Vn t ~ Vn s, Functor (V s), Transformable t, Transformable s) => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
 
 instance Transformable t => Transformable [t] where

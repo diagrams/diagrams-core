@@ -92,7 +92,7 @@
 module Diagrams.Core
        ( -- * Associated vector spaces
 
-         V, N, VN
+         V, N, Vn
 
          -- * Points
 
@@ -120,7 +120,7 @@ module Diagrams.Core
          -- ** Some specific transformations
        , translation, translate, moveTo, place
        , scaling, scale
-       , avgScale
+       , avgScale, scaleFromTransform
 
          -- ** The Transformable class
 
