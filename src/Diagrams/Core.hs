@@ -237,6 +237,8 @@ module Diagrams.Core
 
        , HasLinearMap
        , OrderedField
+       , TypeableFloat
+       , DataFloat
        , Monoid'
 
        ) where

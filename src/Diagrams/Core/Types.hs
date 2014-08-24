@@ -122,6 +122,10 @@ module Diagrams.Core.Types
          -- ** Null backend
 
        , NullBackend, D
+       
+         -- ** Number classes
+       , TypeableFloat
+       , DataFloat
 
          -- * Renderable
 
@@ -241,6 +245,15 @@ fromOutput (PlusM _ _)    = fromOutputErr "PlusM"
 
 fromOutputErr :: String -> a
 fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must be Output."
+
+-- | Class of numbers that are 'RealFloat' and 'Typeable'.
+class (RealFloat n, Typeable n) => TypeableFloat n
+instance (RealFloat n, Typeable n) => TypeableFloat n
+-- use class instead of type constaint so users don't need constaint kinds pragma
+
+-- | Class of numbers that are 'RealFloat', 'Typeable' and 'Data'.
+class (TypeableFloat n, Data n) => DataFloat n
+instance (TypeableFloat n, Typeable n, Data n) => DataFloat n
 
 --   Eventually we may use a GADT like:
 --
@@ -382,7 +395,7 @@ href = applyAnnotation . Href
 --   changing it at this point.
 newtype QDiagram b v n m
   = QD (D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m))
-  deriving (Typeable)
+  deriving Typeable
 
 instance Wrapped (QDiagram b v n m) where
   type Unwrapped (QDiagram b v n m) =
