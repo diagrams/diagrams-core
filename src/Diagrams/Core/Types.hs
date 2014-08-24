@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveFoldable             #-}
 {-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -13,8 +15,6 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE DeriveTraversable       #-}
-{-# LANGUAGE DeriveFoldable       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans       #-}
 -- We have some orphan Action instances here, but since Action is a multi-param
@@ -129,18 +129,16 @@ module Diagrams.Core.Types
 
        ) where
 
-import           Control.Arrow             (first, second, (***))
-import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso,
-                                            lens, over, view, (^.), _Wrapped,
-                                            _Wrapping)
-import           Control.Monad             (mplus)
--- import           Data.AffineSpace          ((.-.))
+import Control.Arrow (first, second, (***))
+import Control.Lens  (Lens', Rewrapped, Wrapped (..), iso, lens, over,
+                      view, (^.), _Wrapped, _Wrapping)
+import Control.Monad (mplus)
 import           Data.Data
-import           Data.List                 (isSuffixOf)
-import qualified Data.Map                  as M
-import           Data.Maybe                (fromMaybe, listToMaybe)
+import           Data.List        (isSuffixOf)
+import qualified Data.Map         as M
+import           Data.Maybe       (fromMaybe, listToMaybe)
 import           Data.Semigroup
-import qualified Data.Traversable          as T
+import qualified Data.Traversable as T
 import           Data.Tree
 
 import           Data.Monoid.Action
@@ -150,25 +148,24 @@ import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
 import qualified Data.Tree.DUAL            as D
 
-import           Diagrams.Core.Envelope
-import           Diagrams.Core.HasOrigin
-import           Diagrams.Core.Juxtapose
-import           Diagrams.Core.Names
-import           Diagrams.Core.Points
-import           Diagrams.Core.Query
-import           Diagrams.Core.Style
-import           Diagrams.Core.Trace
-import           Diagrams.Core.Transform
-import           Diagrams.Core.V
+import Diagrams.Core.Envelope
+import Diagrams.Core.HasOrigin
+import Diagrams.Core.Juxtapose
+import Diagrams.Core.Names
+import Diagrams.Core.Points
+import Diagrams.Core.Query
+import Diagrams.Core.Style
+import Diagrams.Core.Trace
+import Diagrams.Core.Transform
+import Diagrams.Core.V
 
-import Linear.Vector
 import Linear.Affine
 import Linear.Metric
-import Linear.Epsilon
+import Linear.Vector
 
-import Data.Traversable
-import Data.Foldable (Foldable)
 import Control.Applicative hiding (empty)
+import Data.Foldable       (Foldable)
+import Data.Traversable
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -346,13 +343,13 @@ data Annotation
 
 -- | Apply a static annotation at the root of a diagram.
 applyAnnotation
-  :: (HasLinearMap v, Metric v, OrderedField n, Semigroup m, Epsilon n)
+  :: (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
   => Annotation -> QDiagram b v n m -> QDiagram b v n m
 applyAnnotation an (QD dt) = QD (D.annot an dt)
 
 -- | Make a diagram into a hyperlink.  Note that only some backends
 --   will honor hyperlink annotations.
-href :: (HasLinearMap v, Metric v, OrderedField n, Semigroup m, Epsilon n)
+href :: (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
   => String -> QDiagram b v n m -> QDiagram b v n m
 href = applyAnnotation . Href
 
@@ -424,7 +421,7 @@ envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v n m. ( OrderedField n, Metric v
-                               , HasLinearMap v, Monoid' m, Epsilon n)
+                               , HasLinearMap v, Monoid' m)
           => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
 setEnvelope e =
     over _Wrapped' ( D.applyUpre (inj . toDeletable $ e)
@@ -439,7 +436,7 @@ trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
 setTrace :: forall b v n m. ( OrderedField n, Metric v
-                            , HasLinearMap v, Semigroup m, Epsilon n)
+                            , HasLinearMap v, Semigroup m)
          => Trace v n -> QDiagram b v n m -> QDiagram b v n m
 setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
                          . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
@@ -448,7 +445,7 @@ setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
 
 -- | Get the subdiagram map (/i.e./ an association from names to
 --   subdiagrams) of a diagram.
-subMap :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n, Epsilon n)
+subMap :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n)
        => Lens' (QDiagram b v n m) (SubMap b v n m)
 subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
   where
@@ -650,8 +647,7 @@ instance (HasLinearMap v, Metric v, OrderedField n, Monoid' m)
 
 ---- Traced
 
-instance (HasLinearMap v, Additive v, Ord n, Metric v
-         , Semigroup m, Fractional n, Floating n, Epsilon n)
+instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
          => Traced (QDiagram b v n m) where
   getTrace = view trace
 
@@ -745,7 +741,7 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 --   diagram.
 getSub :: ( HasLinearMap v, Metric v
           , Floating n, Ord n
-          , Semigroup m, Epsilon n
+          , Semigroup m
           )
        => Subdiagram b v n m -> QDiagram b v n m
 getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d

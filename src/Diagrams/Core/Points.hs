@@ -23,19 +23,11 @@ module Diagrams.Core.Points
          Point(..), origin, (*.)
        , _relative
 
-       -- vector-space-points
-         , relative, reflectThrough, mirror
-         , relative2, relative3
+       , relative, reflectThrough, mirror
+       , relative2, relative3
        ) where
 
--- We import from Data.AffineSpace.Point (defined in the
--- vector-space-points package) and re-export.  We also define an
--- instance of V for Point here.
-
 import Control.Lens (Iso', iso)
-
--- import Data.AffineSpace.Point
--- import Data.AffineSpace
 
 import Data.Data
 import Linear

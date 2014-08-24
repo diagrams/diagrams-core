@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -71,31 +70,24 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens hiding (Action, transform)
+import           Control.Lens   hiding (Action, transform)
 import qualified Data.Map       as M
 import           Data.Semigroup
 import qualified Data.Set       as S
 
--- import           Data.AdditiveGroup
--- import           Data.AffineSpace ((.-.))
--- import           Data.Basis
--- import           Data.LinearMap
--- import           Data.MemoTrie
 import Data.Monoid.Action
 import Data.Monoid.Deletable
--- import           Data.VectorSpace
 
 import Linear.Affine
 import Linear.Vector
 
-import Data.Functor.Rep
--- import Data.Traversable
-import Data.Foldable (Foldable, toList)
 import Control.Applicative
 import Data.Distributive
+import Data.Foldable       (Foldable, toList)
+import Data.Functor.Rep
 
 import Diagrams.Core.HasOrigin
-import Diagrams.Core.Points ()
+import Diagrams.Core.Points    ()
 import Diagrams.Core.V
 
 ------------------------------------------------------------
@@ -196,8 +188,7 @@ instance (Num a, Additive t) => Monoid (Transformation t a) where
   mappend = (<>)
 
 -- | Transformations can act on transformable things.
-instance (v ~ V a, n ~ N a,  Transformable a)
-         => Action (Transformation v n) a where
+instance (Vn a ~ v n, Transformable a) => Action (Transformation v n) a where
   act = transform
 
 -- | Apply a transformation to a vector.  Note that any translational
@@ -207,13 +198,13 @@ apply :: Transformation v a -> v a -> v a
 apply (Transformation (t :-: _) _ _) = t
 
 -- | Apply a transformation to a point.
-papply :: (Num a, Additive v) => Transformation v a -> Point v a -> Point v a
+papply :: (Additive v, Num a) => Transformation v a -> Point v a -> Point v a
 papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 
 -- | Create a general affine transformation from an invertible linear
 --   transformation and its transpose.  The translational component is
 --   assumed to be zero.
-fromLinear :: (Num a, Additive v) => (v a :-: v a) -> (v a :-: v a) -> Transformation v a
+fromLinear :: (Additive v, Num a) => (v a :-: v a) -> (v a :-: v a) -> Transformation v a
 fromLinear l1 l2 = Transformation l1 l2 zero
 
 -- | An orthogonal linear map is one whose inverse is also its transpose.
@@ -275,7 +266,7 @@ listRep = toList
 matrixRep :: (Num a, HasLinearMap v)  => Transformation v a -> [[a]]
 matrixRep (Transformation (f :-: _) _ _) = eye ^.. traversed . to (toList . f)
 -- matrixRep t = map listRep (fst . onBasis $ t)
--- 
+--
 
 -- | Convert a `Transformation v` to a homogeneous matrix representation.
 --   The final list is the translation.
@@ -335,20 +326,16 @@ class (Rep f ~ E f,
        Applicative f,
        Distributive f,
        Foldable f,
-       FoldableWithIndex (E f) f,
        Representable f,
-       Traversable f,
-       TraversableWithIndex (E f) f
+       Traversable f
        ) => HasLinearMap f
 instance (Rep f ~ E f,
           Additive f,
           Applicative f,
           Distributive f,
           Foldable f,
-          FoldableWithIndex (E f) f,
           Representable f,
-          Traversable f,
-          TraversableWithIndex (E f) f
+          Traversable f
           ) => HasLinearMap f
 
 -- | Type class for things @t@ which can be transformed.
@@ -369,7 +356,7 @@ instance (Transformable t, Transformable s, V t ~ V s, N t ~ N s)
                        , transform t y
                        )
 
-instance (Transformable t, Transformable s, Transformable u, V s ~ V t, V s ~ V u, N s ~ N t, N s ~ N u)
+instance (Transformable t, Transformable s, Transformable u, Vn s ~ Vn t, Vn s ~ Vn u)
       => Transformable (t,s,u) where
   transform t (x,y,z) = ( transform t x
                         , transform t y
@@ -385,7 +372,7 @@ instance (Transformable t, Transformable s, Transformable u, V s ~ V t, V s ~ V 
 
 -- instance ( HasBasis (V b), HasTrie (Basis (V b))
 --          , Transformable a, Transformable b, V b ~ V a) =>
-instance (Num (N t), Vn t ~ Vn s, Functor (V s), Transformable t, Transformable s) => Transformable (s -> t) where
+instance (Vn t ~ v n, Vn t ~ Vn s, Functor v, Num n, Transformable t, Transformable s) => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
 
 instance Transformable t => Transformable [t] where

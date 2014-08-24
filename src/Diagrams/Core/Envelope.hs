@@ -2,10 +2,10 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE RankNTypes       #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.Diagrams.Envelope
@@ -43,23 +43,22 @@ module Diagrams.Core.Envelope
        , OrderedField
        ) where
 
-import           Control.Applicative     ((<$>))
-import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped,
-                                          op, over, _Wrapping')
-import qualified Data.Map                as M
-import           Data.Maybe              (fromMaybe)
+import           Control.Applicative ((<$>))
+import           Control.Lens        (Rewrapped, Wrapped (..), iso,
+                                      mapped, op, over, _Wrapping')
+import qualified Data.Map            as M
+import           Data.Maybe          (fromMaybe)
 import           Data.Semigroup
-import qualified Data.Set                as S
+import qualified Data.Set            as S
 
--- import           Data.VectorSpace
+import Diagrams.Core.HasOrigin
+import Diagrams.Core.Points
+import Diagrams.Core.Transform
+import Diagrams.Core.V
+
 import Linear.Metric
 import Linear.Vector
-import Linear.Epsilon
 
-import           Diagrams.Core.HasOrigin
-import           Diagrams.Core.Points
-import           Diagrams.Core.Transform
-import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Envelopes  ---------------------------------------------
@@ -157,22 +156,22 @@ instance Show (Envelope v n) where
 ------------------------------------------------------------
 
 -- XXX can we get away with removing this Floating constraint? It's the
---   call to normalized here which is the culprit.
+--   call to signormd here which is the culprit.
 
-instance ( Additive v, Metric v, Floating n, Epsilon n)
+instance (Additive v, Metric v, Floating n)
     => Transformable (Envelope v n) where
   transform t =
     moveOriginTo (P . negated . transl $ t) . onEnvelope g
       where
         g f v = f v' / (v' `dot` vi)
           where
-            v' = normalize $ lapp (transp t) v
+            v' = signorm $ lapp (transp t) v
             vi = apply (inv t) v
 
     -- XXX add lots of comments explaining this!
     -- moveOriginTo (P . negated . transl $ t) .
     -- (onEnvelope $ \f v ->
-    --   let v' = normalize $ lapp (transp t) v
+    --   let v' = signorm $ lapp (transp t) v
     --       vi = apply (inv t) v
     --   in  f v' / (v' `dot` vi)
     -- )
@@ -185,8 +184,8 @@ instance ( Additive v, Metric v, Floating n, Epsilon n)
 --   ordered field (i.e. support all four arithmetic operations and be
 --   totally ordered) so we introduce this class as a convenient
 --   shorthand.
-class (Floating s, Ord s, Epsilon s) => OrderedField s
-instance (Floating s, Ord s, Epsilon s) => OrderedField s
+class (Floating s, Ord s) => OrderedField s
+instance (Floating s, Ord s) => OrderedField s
 
 -- | @Enveloped@ abstracts over things which have an envelope.
 class (Metric (V a), OrderedField (N a)) => Enveloped a where
