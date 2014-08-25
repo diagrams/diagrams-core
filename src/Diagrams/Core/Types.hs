@@ -1070,7 +1070,7 @@ instance HasLinearMap v => Backend NullBackend v n where
 -- | The Renderable type class connects backends to primitives which
 --   they know how to render.
 class Transformable t => Renderable t b where
-  render :: b -> t -> Render b (V t) n
+  render :: b -> t -> Render b (V t) (N t)
   -- ^ Given a token representing the backend and a
   --   transformable object, render it in the appropriate rendering
   --   context.

@@ -22,9 +22,6 @@ import Control.Applicative
 import Control.Lens        (Rewrapped, Wrapped (..), iso)
 import Data.Semigroup
 
--- import Data.AffineSpace
--- import Data.VectorSpace
-
 import Linear.Affine
 import Linear.Vector
 
@@ -46,8 +43,8 @@ newtype Query v n m = Query { runQuery :: Point v n -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
 
 instance Wrapped (Query v n m) where
-    type Unwrapped (Query v n m) = (Point v n -> m)
-    _Wrapped' = iso runQuery Query
+  type Unwrapped (Query v n m) = (Point v n -> m)
+  _Wrapped' = iso runQuery Query
 
 instance Rewrapped (Query v a m) (Query v' a' m')
 
@@ -59,3 +56,4 @@ instance (Num n, Additive v) => HasOrigin (Query v n m) where
 
 instance (Num a, Additive v, Functor v) => Transformable (Query v a m) where
   transform t (Query f) = Query $ f . papply (inv t)
+

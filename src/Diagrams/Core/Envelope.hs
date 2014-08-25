@@ -101,8 +101,8 @@ import Linear.Vector
 newtype Envelope v n = Envelope (Option (v n -> Max n))
 
 instance Wrapped (Envelope v n) where
-    type Unwrapped (Envelope v n) = Option (v n -> Max n)
-    _Wrapped' = iso (\(Envelope e) -> e) Envelope
+  type Unwrapped (Envelope v n) = Option (v n -> Max n)
+  _Wrapped' = iso (\(Envelope e) -> e) Envelope
 
 instance Rewrapped (Envelope v n) (Envelope v' n')
 
