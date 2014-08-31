@@ -44,15 +44,13 @@ module Diagrams.Core.Style
        ) where
 
 import           Control.Arrow           ((***))
-import           Control.Lens            (Rewrapped, Wrapped (..), iso, (%~),
-                                          (&))
+import           Control.Lens            (Rewrapped, Wrapped (..), iso, (%~), (&))
 import           Data.Data
 import           Data.Data.Lens          (template)
 import qualified Data.Map                as M
+import           Data.Monoid.Action
 import           Data.Semigroup
 import qualified Data.Set                as S
-
-import           Data.Monoid.Action
 
 import           Diagrams.Core.Transform
 import           Diagrams.Core.V
@@ -81,7 +79,7 @@ import           Diagrams.Core.V
 --   simply guarantees 'Typeable' and 'Semigroup' constraints.  The
 --   'Semigroup' instance for an attribute determines how it will combine
 --   with other attributes of the same type.
-class (Typeable a, Semigroup a) => AttributeClass a where
+class (Typeable a, Semigroup a) => AttributeClass a
 
 -- | An existential wrapper type to hold attributes.  Some attributes
 --   are simply inert/static; some are affected by transformations;
@@ -89,9 +87,8 @@ class (Typeable a, Semigroup a) => AttributeClass a where
 --   generically.
 data Attribute (v :: * -> *) n :: * where
   Attribute   :: AttributeClass a => a -> Attribute v n
-  TAttribute  :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
-  GTAttribute :: (AttributeClass a, Data a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
-
+  TAttribute  :: (AttributeClass a, Transformable a, Vn a ~ v n) => a -> Attribute v n
+  GTAttribute :: (AttributeClass a, Data a, Transformable a, Vn a ~ v n) => a -> Attribute v n
 
 
   -- Note: one could imagine requiring all attributes to be generic,
@@ -166,8 +163,8 @@ newtype Style v n = Style (M.Map String (Attribute v n))
   -- the type of the stored attribute.
 
 instance Wrapped (Style v n) where
-    type Unwrapped (Style v n) = M.Map String (Attribute v n)
-    _Wrapped' = iso (\(Style m) -> m) Style
+  type Unwrapped (Style v n) = M.Map String (Attribute v n)
+  _Wrapped' = iso (\(Style m) -> m) Style
 
 instance Rewrapped (Style v n) (Style v' n)
 
@@ -241,7 +238,6 @@ instance Monoid (Style v n) where
   mempty = Style M.empty
   mappend = (<>)
 
-
 instance (Num n, HasLinearMap v) => Transformable (Style v n) where
   transform t = inStyle $ M.map (transform t)
 
@@ -257,7 +253,7 @@ class HasStyle a where
 instance HasStyle (Style v n) where
   applyStyle = mappend
 
-instance (HasStyle a, HasStyle b, V a ~ V b, N a ~ N b) => HasStyle (a,b) where
+instance (HasStyle a, HasStyle b, Vn a ~ Vn b) => HasStyle (a,b) where
   applyStyle s = applyStyle s *** applyStyle s
 
 instance HasStyle a => HasStyle [a] where
@@ -284,9 +280,9 @@ applyAttr = applyStyle . attrToStyle
 --   attribute of the same type, the new attribute is combined on the
 --   left with the existing attribute, according to their semigroup
 --   structure.
-applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
+applyTAttr :: (AttributeClass a, Transformable a, Vn a ~ Vn d, HasStyle d) => a -> d -> d
 applyTAttr = applyStyle . tAttrToStyle
 
-applyGTAttr :: (AttributeClass a, Data a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
+applyGTAttr :: (AttributeClass a, Data a, Transformable a, Vn a ~ Vn d, HasStyle d) => a -> d -> d
 applyGTAttr = applyStyle . gtAttrToStyle
 

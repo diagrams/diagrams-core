@@ -43,21 +43,21 @@ module Diagrams.Core.Envelope
        , OrderedField
        ) where
 
-import           Control.Applicative ((<$>))
-import           Control.Lens        (Rewrapped, Wrapped (..), iso,
-                                      mapped, op, over, _Wrapping')
-import qualified Data.Map            as M
-import           Data.Maybe          (fromMaybe)
+import           Control.Applicative     ((<$>))
+import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped, op, over,
+                                          _Wrapping')
+import qualified Data.Map                as M
+import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
-import qualified Data.Set            as S
+import qualified Data.Set                as S
 
-import Diagrams.Core.HasOrigin
-import Diagrams.Core.Points
-import Diagrams.Core.Transform
-import Diagrams.Core.V
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Points
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
-import Linear.Metric
-import Linear.Vector
+import           Linear.Metric
+import           Linear.Vector
 
 
 ------------------------------------------------------------

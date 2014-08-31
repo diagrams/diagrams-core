@@ -70,25 +70,25 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens   hiding (Action, transform)
-import qualified Data.Map       as M
+import           Control.Lens            hiding (Action, transform)
+import qualified Data.Map                as M
 import           Data.Semigroup
-import qualified Data.Set       as S
+import qualified Data.Set                as S
 
-import Data.Monoid.Action
-import Data.Monoid.Deletable
+import           Data.Monoid.Action
+import           Data.Monoid.Deletable
 
-import Linear.Affine
-import Linear.Vector
+import           Linear.Affine
+import           Linear.Vector
 
-import Control.Applicative
-import Data.Distributive
-import Data.Foldable       (Foldable, toList)
-import Data.Functor.Rep
+import           Control.Applicative
+import           Data.Distributive
+import           Data.Foldable           (Foldable, toList)
+import           Data.Functor.Rep
 
-import Diagrams.Core.HasOrigin
-import Diagrams.Core.Points    ()
-import Diagrams.Core.V
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Points    ()
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Transformations  ---------------------------------------
@@ -350,7 +350,7 @@ instance (Num a, Additive v) => Transformable (Transformation v a) where
 instance (Num a, Additive v) => HasOrigin (Transformation v a) where
   moveOriginTo p = translate (origin .-. p)
 
-instance (Transformable t, Transformable s, V t ~ V s, N t ~ N s)
+instance (Transformable t, Transformable s, Vn t ~ Vn s)
       => Transformable (t, s) where
   transform t (x,y) =  ( transform t x
                        , transform t y
@@ -390,12 +390,6 @@ instance (Num a, Additive t) => Transformable (Point t a) where
 instance Transformable m => Transformable (Deletable m) where
   transform = fmap . transform
 
--- instance Transformable Double where
---   transform = apply
-
--- instance Transformable Rational where
---   transform = apply
-
 ------------------------------------------------------------
 --  Translational invariance  ------------------------------
 ------------------------------------------------------------
@@ -408,8 +402,8 @@ newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
 instance Wrapped (TransInv t) where
-    type Unwrapped (TransInv t) = t
-    _Wrapped' = iso (\(TransInv t) -> t) TransInv
+  type Unwrapped (TransInv t) = t
+  _Wrapped' = iso (\(TransInv t) -> t) TransInv
 
 instance Rewrapped (TransInv t) (TransInv t')
 
@@ -432,13 +426,13 @@ translation :: v a -> Transformation v a
 translation = Transformation mempty mempty
 
 -- | Translate by a vector.
-translate :: (Num (N t), Transformable t) => V t (N t) -> t -> t
+translate :: (Num (N t), Transformable t) => Vn t -> t -> t
 translate = transform . translation
 
 -- | Create a uniform scaling transformation.
 scaling :: (Additive v, Fractional a)
         => a -> Transformation v a
-scaling s = fromLinear lin lin      -- scaling is its own transpose
+scaling s = fromSymmetric lin
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.

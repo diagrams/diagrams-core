@@ -1,8 +1,8 @@
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 -- The UndecidableInstances flag is needed under 6.12.3 for the
 -- HasOrigin (a,b) instance.
@@ -26,12 +26,11 @@ module Diagrams.Core.HasOrigin
 import qualified Data.Map             as M
 import qualified Data.Set             as S
 
+import           Diagrams.Core.Points ()
+import           Diagrams.Core.V
 
-import Linear.Affine
-import Linear.Vector
-
-import Diagrams.Core.V
-import Diagrams.Core.Points ()
+import           Linear.Affine
+import           Linear.Vector
 
 -- | Class of types which have an intrinsic notion of a \"local
 --   origin\", i.e. things which are not invariant under translation,

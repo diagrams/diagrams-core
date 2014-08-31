@@ -122,7 +122,7 @@ module Diagrams.Core.Types
          -- ** Null backend
 
        , NullBackend, D
-       
+
          -- ** Number classes
        , TypeableFloat
        , DataFloat
@@ -133,16 +133,16 @@ module Diagrams.Core.Types
 
        ) where
 
-import Control.Arrow (first, second, (***))
-import Control.Lens  (Lens', Rewrapped, Wrapped (..), iso, lens, over,
-                      view, (^.), _Wrapped, _Wrapping)
-import Control.Monad (mplus)
+import           Control.Arrow             (first, second, (***))
+import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
+                                            (^.), _Wrapped, _Wrapping)
+import           Control.Monad             (mplus)
 import           Data.Data
-import           Data.List        (isSuffixOf)
-import qualified Data.Map         as M
-import           Data.Maybe       (fromMaybe, listToMaybe)
+import           Data.List                 (isSuffixOf)
+import qualified Data.Map                  as M
+import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
-import qualified Data.Traversable as T
+import qualified Data.Traversable          as T
 import           Data.Tree
 
 import           Data.Monoid.Action
@@ -152,24 +152,24 @@ import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
 import qualified Data.Tree.DUAL            as D
 
-import Diagrams.Core.Envelope
-import Diagrams.Core.HasOrigin
-import Diagrams.Core.Juxtapose
-import Diagrams.Core.Names
-import Diagrams.Core.Points
-import Diagrams.Core.Query
-import Diagrams.Core.Style
-import Diagrams.Core.Trace
-import Diagrams.Core.Transform
-import Diagrams.Core.V
+import           Diagrams.Core.Envelope
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Juxtapose
+import           Diagrams.Core.Names
+import           Diagrams.Core.Points
+import           Diagrams.Core.Query
+import           Diagrams.Core.Style
+import           Diagrams.Core.Trace
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
-import Linear.Affine
-import Linear.Metric
-import Linear.Vector
+import           Linear.Affine
+import           Linear.Metric
+import           Linear.Vector
 
-import Control.Applicative hiding (empty)
-import Data.Foldable       (Foldable)
-import Data.Traversable
+import           Control.Applicative       hiding (empty)
+import           Data.Foldable             (Foldable)
+import           Data.Traversable
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -670,7 +670,6 @@ instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
 --   basis for all combining operations.
 instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
       => HasOrigin (QDiagram b v n m) where
-
   moveOriginTo = translate . (origin .-.)
 
 ---- Transformable
@@ -904,19 +903,17 @@ data DNode b v n a = DStyle (Style v n)
 --   compiled and optimized to.
 type DTree b v n a = Tree (DNode b v n a)
 
-data RNode b v n a =  RStyle (Style v n)
-                    -- ^ A style node.
-                  | RAnnot a
-                  | RPrim (Prim b v n)
-                    -- ^ A primitive.
-                  | REmpty
+data RNode b v n a = RStyle (Style v n) -- ^ A style node.
+                   | RAnnot a
+                   | RPrim (Prim b v n) -- ^ A primitive.
+                   | REmpty
 
 -- | An 'RTree' is a compiled and optimized representation of a
 --   'QDiagram', which can be used by backends.  They have the
 --   following invariant which backends may rely upon:
 --
 --   * @RPrim@ nodes never have any children.
-type RTree b v n a = Tree (RNode b v n a )
+type RTree b v n a = Tree (RNode b v n a)
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
@@ -938,7 +935,7 @@ class HasLinearMap v => Backend b v n where
   data Render b v n :: *
 
   -- | The result of running/interpreting a rendering operation.
-  type Result  b v n :: *
+  type Result b v n :: *
 
   -- | Backend-specific rendering options.
   data Options b v n :: *

@@ -27,13 +27,13 @@ module Diagrams.Core.Points
        , relative2, relative3
        ) where
 
-import Control.Lens (Iso', iso)
+import           Control.Lens    (Iso', iso)
 
-import Data.Data
-import Linear
-import Linear.Affine
+import           Data.Data
+import           Linear
+import           Linear.Affine
 
-import Diagrams.Core.V
+import           Diagrams.Core.V
 
 deriving instance Typeable Point
 deriving instance (Typeable v, Typeable n, Data (v n)) => Data (Point v n)

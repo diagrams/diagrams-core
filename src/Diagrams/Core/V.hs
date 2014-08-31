@@ -1,6 +1,5 @@
+{-# LANGUAGE TypeFamilies  #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DataKinds #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -15,15 +14,14 @@
 
 module Diagrams.Core.V
        ( V, N, Vn
-
        ) where
 
-import Data.Map
-import Data.Monoid.Coproduct
-import Data.Monoid.Deletable
-import Data.Monoid.Split
-import Data.Semigroup
-import Data.Set
+import           Data.Map
+import           Data.Monoid.Coproduct
+import           Data.Monoid.Deletable
+import           Data.Monoid.Split
+import           Data.Semigroup
+import           Data.Set
 
 ------------------------------------------------------------
 -- Vector spaces -------------------------------------------
@@ -33,9 +31,6 @@ import Data.Set
 --   they \"live\".  The type function @V@ maps from object types to
 --   the associated vector space.
 type family V a :: * -> *
-
--- type instance V Double    = Double
--- type instance V Rational  = Rational
 
 -- Note, to use these instances one often needs a constraint of the form
 --   V a ~ V b, etc.

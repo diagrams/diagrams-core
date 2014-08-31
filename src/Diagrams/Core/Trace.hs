@@ -55,15 +55,13 @@ import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
 
--- import           Data.AffineSpace
--- import           Data.VectorSpace
-import Linear.Affine
-import Linear.Vector
-
 import           Diagrams.Core.HasOrigin
--- import           Diagrams.Core.Points
 import           Diagrams.Core.Transform
 import           Diagrams.Core.V
+
+import           Linear.Affine
+import           Linear.Vector
+
 
 ------------------------------------------------------------
 --  SortedList  --------------------------------------------
@@ -143,8 +141,8 @@ instance Ord a => Monoid (SortedList a) where
 newtype Trace v n = Trace { appTrace :: Point v n -> v n -> SortedList n }
 
 instance Wrapped (Trace v n) where
-    type Unwrapped (Trace v n) = Point v n -> v n -> SortedList n
-    _Wrapped' = iso appTrace Trace
+  type Unwrapped (Trace v n) = Point v n -> v n -> SortedList n
+  _Wrapped' = iso appTrace Trace
 
 instance Rewrapped (Trace v n) (Trace v' n')
 

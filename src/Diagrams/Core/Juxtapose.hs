@@ -19,17 +19,16 @@ module Diagrams.Core.Juxtapose
        ( Juxtaposable(..), juxtaposeDefault
        ) where
 
-import           Data.Functor ((<$>))
-import qualified Data.Map     as M
-import qualified Data.Set     as S
+import           Data.Functor            ((<$>))
+import qualified Data.Map                as M
+import qualified Data.Set                as S
 
--- import           Data.VectorSpace
-import Linear.Metric
-import Linear.Vector
+import           Diagrams.Core.Envelope
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.V
 
-import Diagrams.Core.Envelope
-import Diagrams.Core.HasOrigin
-import Diagrams.Core.V
+import           Linear.Metric
+import           Linear.Vector
 
 -- | Class of things which can be placed \"next to\" other things, for some
 --   appropriate notion of \"next to\".
