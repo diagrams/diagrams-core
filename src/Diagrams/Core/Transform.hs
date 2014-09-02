@@ -48,7 +48,6 @@ module Diagrams.Core.Transform
        , matrixHomRep
        , determinant
        , avgScale
-       , scaleFromTransform
        , eye
 
          -- * The Transformable class
@@ -293,11 +292,6 @@ determinant t = det . matrixRep $ t
 --
 avgScale :: (Floating n, HasLinearMap v) => Transformation v n -> n
 avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
-
--- | Scale a functor with the average scale of a transform.
-scaleFromTransform :: (HasLinearMap v, Floating n, Functor f)
-  => Transformation v n -> f n -> f n
-scaleFromTransform t = fmap (* avgScale t)
 
 {-
 

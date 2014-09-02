@@ -97,7 +97,7 @@ module Diagrams.Core
          -- * Points
 
        , Point, origin, (*.)
-       -- , _relative
+       , _relative
 
          -- * Transformations
 
@@ -120,7 +120,7 @@ module Diagrams.Core
          -- ** Some specific transformations
        , translation, translate, moveTo, place
        , scaling, scale
-       , avgScale, scaleFromTransform
+       , avgScale
 
          -- ** The Transformable class
 
@@ -216,10 +216,12 @@ module Diagrams.Core
 
          -- * Measurements
        , Measure(..)
+       , fromMeasure
        , fromOutput
        , toOutput
        , atMost
        , atLeast
+       , scaleLocal
 
          -- * Backends
 

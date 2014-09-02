@@ -119,11 +119,6 @@ mkEnvelope = Envelope . Option . Just . (Max .)
 pointEnvelope :: (Fractional n, Metric v) => Point v n -> Envelope v n
 pointEnvelope p = moveTo p (mkEnvelope $ const 0)
 
-
--- pointEnvelope :: (Fractional (Scalar v), InnerSpace v)
---               => Point v -> Envelope v
--- pointEnvelope p = moveTo p (mkEnvelope (const zeroV))
-
 -- | Envelopes form a semigroup with pointwise maximum as composition.
 --   Hence, if @e1@ is the envelope for diagram @d1@, and
 --   @e2@ is the envelope for @d2@, then @e1 \`mappend\` e2@
@@ -155,26 +150,14 @@ instance Show (Envelope v n) where
 --  Transforming envelopes  --------------------------------
 ------------------------------------------------------------
 
--- XXX can we get away with removing this Floating constraint? It's the
---   call to signormd here which is the culprit.
-
-instance (Additive v, Metric v, Floating n)
-    => Transformable (Envelope v n) where
-  transform t =
-    moveOriginTo (P . negated . transl $ t) . onEnvelope g
-      where
-        g f v = f v' / (v' `dot` vi)
-          where
-            v' = signorm $ lapp (transp t) v
-            vi = apply (inv t) v
-
-    -- XXX add lots of comments explaining this!
-    -- moveOriginTo (P . negated . transl $ t) .
-    -- (onEnvelope $ \f v ->
-    --   let v' = signorm $ lapp (transp t) v
-    --       vi = apply (inv t) v
-    --   in  f v' / (v' `dot` vi)
-    -- )
+instance (Additive v, Metric v, Floating n) => Transformable (Envelope v n) where
+  transform t = moveOriginTo (P . negated . transl $ t) . onEnvelope g
+    where
+      -- XXX add lots of comments explaining this!
+      g f v = f v' / (v' `dot` vi)
+        where
+          v' = signorm $ lapp (transp t) v
+          vi = apply (inv t) v
 
 ------------------------------------------------------------
 --  Enveloped class
@@ -206,7 +189,7 @@ instance (OrderedField n, Metric v) => Enveloped (Point v n) where
 instance Enveloped t => Enveloped (TransInv t) where
   getEnvelope = getEnvelope . op TransInv
 
-instance (Enveloped a, Enveloped b, V a ~ V b, N a ~ N b) => Enveloped (a,b) where
+instance (Enveloped a, Enveloped b, Vn a ~ Vn b) => Enveloped (a,b) where
   getEnvelope (x,y) = getEnvelope x <> getEnvelope y
 
 instance Enveloped b => Enveloped [b] where

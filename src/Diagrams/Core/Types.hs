@@ -90,8 +90,10 @@ module Diagrams.Core.Types
 
          -- * Measurements
        , Measure(..)
+       , fromMeasure
        , fromOutput
        , atMost, atLeast
+       , scaleLocal
 
          -- * Subdiagrams
 
@@ -174,6 +176,15 @@ import           Data.Traversable
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
 
+-- | Class of numbers that are 'RealFloat' and 'Typeable'.
+class (RealFloat n, Typeable n) => TypeableFloat n
+instance (RealFloat n, Typeable n) => TypeableFloat n
+-- use class instead of type constaint so users don't need constraint kinds pragma
+
+-- | Class of numbers that are 'RealFloat', 'Typeable' and 'Data'.
+class (TypeableFloat n, Data n) => DataFloat n
+instance (TypeableFloat n, Typeable n, Data n) => DataFloat n
+
 ------------------------------------------------------------
 --  Measurement Units  -------------------------------------
 ------------------------------------------------------------
@@ -186,7 +197,6 @@ data Measure n = Output n
                | MinM (Measure n) (Measure n)
                | MaxM (Measure n) (Measure n)
                | ZeroM
-               | NegateM (Measure n)
                | PlusM (Measure n) (Measure n)
   deriving (Typeable, Functor, Foldable, Traversable)
 
@@ -199,16 +209,37 @@ deriving instance (Typeable n, Data n) => Data (Measure n)
 instance Applicative Measure where
   pure = Output
 
-  (Output w)     <*> m2 = fmap w m2
-  (Normalized w) <*> m2 = fmap w m2
-  (Local w)      <*> m2 = fmap w m2
-  (Global w)     <*> m2 = fmap w m2
-  (MinM w1 w2)   <*> m2 = MinM (w1 <*> m2) (w2 <*> m2)
-  (MaxM w1 w2)   <*> m2 = MaxM (w1 <*> m2) (w2 <*> m2)
-  (ZeroM)        <*> _  = ZeroM
-  (NegateM w)    <*> m2 = NegateM (w <*> m2)
-  (PlusM w1 w2)  <*> m2 = PlusM (w1 <*> m2) (w2 <*> m2)
+  Output w     <*> m2 = fmap w m2
+  Normalized w <*> m2 = fmap w m2
+  Local w      <*> m2 = fmap w m2
+  Global w     <*> m2 = fmap w m2
+  PlusM w1 w2  <*> m2 = PlusM (w1 <*> m2) (w2 <*> m2)
+  MinM w1 w2   <*> m2 = MinM (w1 <*> m2) (w2 <*> m2)
+  MaxM w1 w2   <*> m2 = MaxM (w1 <*> m2) (w2 <*> m2)
+  ZeroM        <*> _  = ZeroM
 
+-- | Scale a measure. Only Local units are scaled.
+scaleLocal :: Num n => n -> Measure n -> Measure n
+scaleLocal s m = case m of
+  Local x     -> Local (s * x)
+  PlusM m1 m2 -> PlusM (scaleLocal s m1) (scaleLocal s m2)
+  MinM m1 m2  -> MinM (scaleLocal s m1) (scaleLocal s m2)
+  MaxM m1 m2  -> MaxM (scaleLocal s m1) (scaleLocal s m2)
+  y           -> y
+
+-- | Extract a measure using the given global and normalized scales.
+fromMeasure :: (Num n, Ord n) => n -> n -> Measure n -> n
+fromMeasure g n m =
+  case m of
+    Output s     -> s
+    Local s      -> s
+    Global s     -> g * s
+    Normalized s -> n * s
+
+    PlusM m1 m2  -> fromMeasure g n m1 + fromMeasure g n m2
+    MinM m1 m2   -> min (fromMeasure g n m1) (fromMeasure g n m2)
+    MaxM m1 m2   -> max (fromMeasure g n m1) (fromMeasure g n m2)
+    ZeroM        -> 0
 
 -- | Compute the larger of two 'Measure's.  Useful for setting lower
 --   bounds.
@@ -240,20 +271,11 @@ fromOutput (Global _)     = fromOutputErr "Global"
 fromOutput (MinM _ _)     = fromOutputErr "MinM"
 fromOutput (MaxM _ _)     = fromOutputErr "MaxM"
 fromOutput (ZeroM)        = fromOutputErr "ZeroM"
-fromOutput (NegateM _)    = fromOutputErr "NegateM"
 fromOutput (PlusM _ _)    = fromOutputErr "PlusM"
 
 fromOutputErr :: String -> a
 fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must be Output."
 
--- | Class of numbers that are 'RealFloat' and 'Typeable'.
-class (RealFloat n, Typeable n) => TypeableFloat n
-instance (RealFloat n, Typeable n) => TypeableFloat n
--- use class instead of type constaint so users don't need constaint kinds pragma
-
--- | Class of numbers that are 'RealFloat', 'Typeable' and 'Data'.
-class (TypeableFloat n, Data n) => DataFloat n
-instance (TypeableFloat n, Typeable n, Data n) => DataFloat n
 
 --   Eventually we may use a GADT like:
 --
@@ -274,6 +296,13 @@ instance (TypeableFloat n, Typeable n, Data n) => DataFloat n
 --   which has to preserve type: so we can't generically convert from
 --   Measure A to Measure O.
 
+--   How about using 
+--
+--     fromOutput = fromMeasure 100 100
+--
+--   you avoid the runtime error and can say 'Normalized' and 'Global' units 
+--   are guessed.
+--
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -632,10 +661,10 @@ instance Functor (QDiagram b v n) where
 --   @Monoid@ instance, except the queries which are combined via
 --   @(<*>)@.
 
--- instance (Backend b v n, s ~ Scalar v, AdditiveGroup s, Ord s)
+-- instance (Backend b v n, Num n, Ord n)
 --            => Applicative (QDiagram b v n) where
 --   pure a = Diagram mempty mempty mempty (Query $ const a)
-
+-- 
 --   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 

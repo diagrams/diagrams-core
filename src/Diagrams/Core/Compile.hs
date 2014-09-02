@@ -44,14 +44,13 @@ import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
--- import           Data.VectorSpace
-import Linear.Vector
-import Linear.Metric hiding (qd)
 
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
 import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
+
+import           Linear.Metric hiding (qd)
 
 emptyDTree :: Tree (DNode b v n a)
 emptyDTree = Node DEmpty []
@@ -184,28 +183,11 @@ styleToOutput
 styleToOutput globalToOutput normToOutput =
   gmapAttrs (toOutput globalToOutput normToOutput :: Measure n -> Measure n)
 
--- | Convert an aribrary 'Measure' to 'Output' units.
-toOutput :: (Num n, Ord n, Fractional n)
+-- | Convert an aribrary 'Measure' to 'Output' units using the given global and 
+--   normalized scales.
+toOutput :: (Num n, Ord n)
   => n -> n -> Measure n -> Measure n
-toOutput g n m =
-  case m of
-     m'@(Output _) -> m'
-     Local s       -> Output s
-     Global s      -> Output (g * s)
-     Normalized s  -> Output (n * s)
-
-     MinM m1 m2    -> outBin min (toOutput g n m1) (toOutput g n m2)
-     MaxM m1 m2    -> outBin max (toOutput g n m1) (toOutput g n m2)
-     ZeroM         -> Output 0
-     NegateM m'    -> outUn negate (toOutput g n m')
-     PlusM m1 m2   -> outBin (+) (toOutput g n m1) (toOutput g n m2)
-     -- ScaleM s m'   -> outUn (s*) (toOutput g n m')
-  where
-    outUn  op (Output o1)             = Output (op o1)
-    outUn  _  _ = error "outUn: The sky is falling!"
-    outBin op (Output o1) (Output o2) = Output (o1 `op` o2)
-    outBin _ _ _ = error "outBin: Both skies are falling!"
-
+toOutput g n = Output . fromMeasure g n
 
 --------------------------------------------------
 
