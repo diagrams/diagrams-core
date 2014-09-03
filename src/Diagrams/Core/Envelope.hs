@@ -37,6 +37,7 @@ module Diagrams.Core.Envelope
        , diameter
        , radius
        , extent
+       , size
        , envelopeVMay, envelopeV, envelopePMay, envelopeP, envelopeSMay, envelopeS
 
          -- * Miscellaneous
@@ -50,6 +51,7 @@ import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
 import qualified Data.Set                as S
+import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Points
@@ -128,7 +130,6 @@ deriving instance Ord n => Semigroup (Envelope v n)
 -- | The special empty envelope is the identity for the
 --   'Monoid' instance.
 deriving instance Ord n => Monoid (Envelope v n)
-
 
 
 --   XXX add some diagrams here to illustrate!  Note that Haddock supports
@@ -267,4 +268,8 @@ radius v = (0.5*) . diameter v
 --   for objects with an empty envelope.
 extent :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe (n, n)
 extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
+
+-- | Compute the size of an enveloped object as a vector.
+size :: (Vn a ~ v n, Enveloped a, HasLinearMap v) => a -> v n
+size d = tabulate $ \(E l) -> diameter (unit l) d
 

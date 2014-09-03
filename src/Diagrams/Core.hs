@@ -160,7 +160,7 @@ module Diagrams.Core
        , appEnvelope, onEnvelope, mkEnvelope
        , Enveloped(..)
        , envelopeVMay, envelopeV, envelopePMay, envelopeP
-       , diameter, radius
+       , diameter, radius, size
 
          -- * Traces
 
