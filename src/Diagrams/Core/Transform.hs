@@ -148,41 +148,41 @@ lapp (f :-: _) = f
 --   For more general, non-invertable transformations, see
 --   @Diagrams.Deform@ (in @diagrams-lib@).
 
-data Transformation f a = Transformation (f a :-: f a) (f a :-: f a) (f a)
+data Transformation v n = Transformation (v n :-: v n) (v n :-: v n) (v n)
 
-type instance V (Transformation v a) = v
-type instance N (Transformation v a) = a
+type instance V (Transformation v n) = v
+type instance N (Transformation v n) = n
 
 -- | Identity matrix.
-eye :: (Rep t ~ E t, Representable t, Applicative t, Num a) => t (t a)
-eye = tabulate $ \(E e) -> unit e
+eye :: (Rep v ~ E v, Representable v, Additive v, Num n) => v (v n)
+eye = tabulate $ \(E e) -> zero & e .~ 1
 
 -- | Invert a transformation.
-inv :: (Num a, Functor t) => Transformation t a -> Transformation t a
+inv :: (Functor v, Num n) => Transformation v n -> Transformation v n
 inv (Transformation t t' v) = Transformation (linv t) (linv t')
                                              (negated (lapp (linv t) v))
 
 -- | Get the transpose of a transformation (ignoring the translation
 --   component).
-transp :: Transformation v a -> (v a :-: v a)
+transp :: Transformation v n -> (v n :-: v n)
 transp (Transformation _ t' _) = t'
 
 -- | Get the translational component of a transformation.
-transl :: Transformation v a -> v a
+transl :: Transformation v n -> v n
 transl (Transformation _ _ v) = v
 
 -- | Drop the translational component of a transformation, leaving only
 --   the linear part.
-dropTransl :: (Num a, Additive v) => Transformation v a -> Transformation v a
+dropTransl :: (Additive v, Num n) => Transformation v n -> Transformation v n
 dropTransl (Transformation a a' _) = Transformation a a' zero
 
 -- | Transformations are closed under composition; @t1 <> t2@ is the
 --   transformation which performs first @t2@, then @t1@.
-instance (Num a, Additive t) => Semigroup (Transformation t a) where
+instance (Additive v, Num n) => Semigroup (Transformation v n) where
   Transformation t1 t1' v1 <> Transformation t2 t2' v2
     = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
 
-instance (Num a, Additive t) => Monoid (Transformation t a) where
+instance (Additive v, Num n) => Monoid (Transformation v n) where
   mempty = Transformation mempty mempty zero
   mappend = (<>)
 
@@ -193,17 +193,17 @@ instance (Vn a ~ v n, Transformable a) => Action (Transformation v n) a where
 -- | Apply a transformation to a vector.  Note that any translational
 --   component of the transformation will not affect the vector, since
 --   vectors are invariant under translation.
-apply :: Transformation v a -> v a -> v a
+apply :: Transformation v n -> v n -> v n
 apply (Transformation (t :-: _) _ _) = t
 
 -- | Apply a transformation to a point.
-papply :: (Additive v, Num a) => Transformation v a -> Point v a -> Point v a
+papply :: (Additive v, Num n) => Transformation v n -> Point v n -> Point v n
 papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 
 -- | Create a general affine transformation from an invertible linear
 --   transformation and its transpose.  The translational component is
 --   assumed to be zero.
-fromLinear :: (Additive v, Num a) => (v a :-: v a) -> (v a :-: v a) -> Transformation v a
+fromLinear :: (Additive v, Num n) => (v n :-: v n) -> (v n :-: v n) -> Transformation v n
 fromLinear l1 l2 = Transformation l1 l2 zero
 
 -- | An orthogonal linear map is one whose inverse is also its transpose.
@@ -214,25 +214,15 @@ fromOrthogonal t = fromLinear t (linv t)
 fromSymmetric :: (Additive v, Num n) => (v n :-: v n) -> Transformation v n
 fromSymmetric t = fromLinear t t
 
-
--- | Get the matrix equivalent of the basis of the vector space v as
---   a list of columns.
--- basis :: (Applicative t, Traversable t, Num a) => [t a]
--- basis = choices $ traverse (\a -> SetOne 0 [a]) (pure 1)
-
--- basis :: (Num a, HasLinearMap f) => [f a]
--- basis = toList eye
-  -- where b = map fst (decompose (zero :: v))
-
 -- | Get the dimension of an object whose vector space is an instance of
 --   @HasLinearMap@, e.g. transformations, paths, diagrams, etc.
-dimension :: forall a v. (v ~ V a, Additive v, Foldable v) => a -> Int
+dimension :: forall a v. (V a ~ v, Additive v, Foldable v) => a -> Int
 dimension _ = lengthOf folded (zero :: V a Double)
 
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
-onBasis :: (Num a, HasLinearMap v) => Transformation v a -> ([v a], v a)
+onBasis :: (HasLinearMap v, Num n) => Transformation v n -> ([v n], v n)
 onBasis (Transformation (f :-: _) _ t) = (toList vmat, t)
   where vmat = fmap f eye
 
@@ -256,30 +246,27 @@ det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
     n = length m
 
 -- | Convert a vector v to a list of scalars.
-listRep :: Foldable f => f a -> [a]
+listRep :: Foldable v => v n -> [n]
 listRep = toList
 
 -- | Convert a `Transformation v` to a matrix representation as a list of
 --   column vectors which are also lists.
--- matrixRep :: HasLinearMap v => Transformation v -> [[Scalar v]]
-matrixRep :: (Num a, HasLinearMap v)  => Transformation v a -> [[a]]
+matrixRep :: (HasLinearMap v, Num n) => Transformation v n -> [[n]]
 matrixRep (Transformation (f :-: _) _ _) = eye ^.. traversed . to (toList . f)
--- matrixRep t = map listRep (fst . onBasis $ t)
---
 
 -- | Convert a `Transformation v` to a homogeneous matrix representation.
 --   The final list is the translation.
 --   The representation leaves off the last row of the matrix as it is
 --   always [0,0, ... 1] and this representation is the defacto standard
 --   for backends.
-matrixHomRep :: (Num a, HasLinearMap v) => Transformation v a -> [[a]]
+matrixHomRep :: (HasLinearMap v, Num n) => Transformation v n -> [[n]]
 matrixHomRep t = mr ++ [listRep tl]
   where
     mr = matrixRep t
     tl = transl t
 
 -- | The determinant of a `Transformation`.
-determinant :: (Num a, HasLinearMap v) => Transformation v a -> a
+determinant :: (HasLinearMap v, Num n) => Transformation v n -> n
 determinant t = det . matrixRep $ t
 
 -- | Compute the \"average\" amount of scaling performed by a
@@ -290,7 +277,7 @@ determinant t = det . matrixRep $ t
 --   avgScale (t1 <> t2)  == avgScale t1 * avgScale t2
 --   @
 --
-avgScale :: (Floating n, HasLinearMap v) => Transformation v n -> n
+avgScale :: (HasLinearMap v, Floating n) => Transformation v n -> n
 avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
 
 {-
@@ -315,22 +302,22 @@ Proofs for the specified properties:
 
 -- | 'HasLinearMap' is a poor man's class constraint synonym, just to
 --   help shorten some of the ridiculously long constraint sets.
-class (Rep f ~ E f,
-       Additive f,
-       Applicative f,
-       Distributive f,
-       Foldable f,
-       Representable f,
-       Traversable f
-       ) => HasLinearMap f
-instance (Rep f ~ E f,
-          Additive f,
-          Applicative f,
-          Distributive f,
-          Foldable f,
-          Representable f,
-          Traversable f
-          ) => HasLinearMap f
+class (Rep v ~ E v,
+       Additive v,
+       Applicative v,
+       Distributive v,
+       Foldable v,
+       Representable v,
+       Traversable v
+       ) => HasLinearMap v
+instance (Rep v ~ E v,
+          Additive v,
+          Applicative v,
+          Distributive v,
+          Foldable v,
+          Representable v,
+          Traversable v
+          ) => HasLinearMap v
 
 -- | Type class for things @t@ which can be transformed.
 class Transformable t where
@@ -338,10 +325,10 @@ class Transformable t where
   -- | Apply a transformation to an object.
   transform :: Transformation (V t) (N t) -> t -> t
 
-instance (Num a, Additive v) => Transformable (Transformation v a) where
+instance (Additive v, Num n) => Transformable (Transformation v n) where
   transform t1 t2 = t1 <> t2
 
-instance (Num a, Additive v) => HasOrigin (Transformation v a) where
+instance (Additive v, Num n) => HasOrigin (Transformation v n) where
   moveOriginTo p = translate (origin .-. p)
 
 instance (Transformable t, Transformable s, Vn t ~ Vn s)
@@ -364,8 +351,6 @@ instance (Transformable t, Transformable s, Transformable u, Vn s ~ Vn t, Vn s ~
 -- construction of image filters. Works well for curried functions, since all
 -- arguments get inversely transformed.
 
--- instance ( HasBasis (V b), HasTrie (Basis (V b))
---          , Transformable a, Transformable b, V b ~ V a) =>
 instance (Vn t ~ v n, Vn t ~ Vn s, Functor v, Num n, Transformable t, Transformable s) => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
 
@@ -378,7 +363,7 @@ instance (Transformable t, Ord t) => Transformable (S.Set t) where
 instance Transformable t => Transformable (M.Map k t) where
   transform = M.map . transform
 
-instance (Num a, Additive t) => Transformable (Point t a) where
+instance (Additive v, Num n) => Transformable (Point v n) where
   transform = papply
 
 instance Transformable m => Transformable (Deletable m) where
@@ -416,7 +401,7 @@ instance (Num (N t), Additive (V t), Transformable t) => Transformable (TransInv
 ------------------------------------------------------------
 
 -- | Create a translation.
-translation :: v a -> Transformation v a
+translation :: v n -> Transformation v n
 translation = Transformation mempty mempty
 
 -- | Translate by a vector.
@@ -424,14 +409,13 @@ translate :: (Num (N t), Transformable t) => Vn t -> t -> t
 translate = transform . translation
 
 -- | Create a uniform scaling transformation.
-scaling :: (Additive v, Fractional a)
-        => a -> Transformation v a
+scaling :: (Additive v, Fractional n) => n -> Transformation v n
 scaling s = fromSymmetric lin
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (a ~ N t, Additive (V t), Transformable t, Fractional a, Eq a)
-      => N t -> t -> t
+scale :: (Vn a ~ v n, Additive v, Fractional n, Eq n, Transformable a)
+      => n -> a -> a
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
 

@@ -269,7 +269,7 @@ radius v = (0.5*) . diameter v
 extent :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe (n, n)
 extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
 
--- | Compute the size of an enveloped object as a vector.
+-- | The smallest positive vector that bounds the envelope of an object.
 size :: (Vn a ~ v n, Enveloped a, HasLinearMap v) => a -> v n
 size d = tabulate $ \(E l) -> diameter (unit l) d
 

@@ -84,7 +84,7 @@ moveTo = moveOriginBy . (origin .-.)
 place :: (Vn t ~ v n, Additive v, Num n, HasOrigin t) => t -> Point v n -> t
 place = flip moveTo
 
-instance (Num a, Additive f) => HasOrigin (Point f a) where
+instance (Additive v, Num n) => HasOrigin (Point v n) where
   moveOriginTo (P u) p = p .-^ u
 
 instance (HasOrigin t, HasOrigin s, V t ~ V s, N t ~ N s) => HasOrigin (s, t) where

@@ -205,7 +205,8 @@ deriving instance (Ord n)              => Ord (Measure n)
 deriving instance (Show n)             => Show (Measure n)
 deriving instance (Typeable n, Data n) => Data (Measure n)
 
--- bogus applicative instance
+-- Bogus applicative instance for Additive class (liftU2, liftI2). Not sure if 
+-- there's a better way.
 instance Applicative Measure where
   pure = Output
 
@@ -217,6 +218,13 @@ instance Applicative Measure where
   MinM w1 w2   <*> m2 = MinM (w1 <*> m2) (w2 <*> m2)
   MaxM w1 w2   <*> m2 = MaxM (w1 <*> m2) (w2 <*> m2)
   ZeroM        <*> _  = ZeroM
+
+instance Additive Measure where
+  zero = ZeroM
+
+  ZeroM ^+^ m     = m
+  m     ^+^ ZeroM = m
+  m1    ^+^ m2    = PlusM m1 m2
 
 -- | Scale a measure. Only Local units are scaled.
 scaleLocal :: Num n => n -> Measure n -> Measure n
@@ -250,13 +258,6 @@ atLeast = MaxM
 --   bounds.
 atMost :: Measure n -> Measure n -> Measure n
 atMost = MinM
-
-instance Additive Measure where
-  zero = ZeroM
-
-  ZeroM ^+^ m     = m
-  m     ^+^ ZeroM = m
-  m1    ^+^ m2    = PlusM m1 m2
 
 type instance V (Measure n) = Measure
 type instance N (Measure n) = n
@@ -446,7 +447,7 @@ type Diagram b v n = QDiagram b v n Any
 
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
-pointDiagram :: (Fractional n, Metric v)
+pointDiagram :: (Metric v, Fractional n)
              => Point v n -> QDiagram b v n m
 pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
 
@@ -986,7 +987,7 @@ class HasLinearMap v => Backend b v n where
   -- | Given some options, take a representation of a diagram as a
   --   tree and render it.  The 'RTree' has already been simplified
   --   and has all measurements converted to @Output@ units.
-  renderRTree :: b -> Options b v n -> RTree b v n annotation -> Result b v n
+  renderRTree :: b -> Options b v n -> RTree b v n Annotation -> Result b v n
 
   -- See Note [backend token]
 

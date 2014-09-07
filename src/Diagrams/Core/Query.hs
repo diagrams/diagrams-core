@@ -15,19 +15,20 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Query
-       ( Query(Query), runQuery
+       ( Query (Query)
+       , runQuery
        ) where
 
-import Control.Applicative
-import Control.Lens        (Rewrapped, Wrapped (..), iso)
-import Data.Semigroup
+import           Control.Applicative
+import           Control.Lens            (Rewrapped, Wrapped (..), iso)
+import           Data.Semigroup
 
-import Linear.Affine
-import Linear.Vector
+import           Linear.Affine
+import           Linear.Vector
 
-import Diagrams.Core.HasOrigin
-import Diagrams.Core.Transform
-import Diagrams.Core.V
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Queries  -----------------------------------------------
@@ -51,9 +52,9 @@ instance Rewrapped (Query v a m) (Query v' a' m')
 type instance V (Query v n m) = v
 type instance N (Query v n m) = n
 
-instance (Num n, Additive v) => HasOrigin (Query v n m) where
+instance (Additive v, Num n) => HasOrigin (Query v n m) where
   moveOriginTo (P u) (Query f) = Query $ \p -> f (p .+^ u)
 
-instance (Num a, Additive v, Functor v) => Transformable (Query v a m) where
+instance (Additive v, Num n) => Transformable (Query v n m) where
   transform t (Query f) = Query $ f . papply (inv t)
 
