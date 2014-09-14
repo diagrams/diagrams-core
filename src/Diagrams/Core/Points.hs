@@ -1,10 +1,5 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies       #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -29,13 +24,10 @@ module Diagrams.Core.Points
 
 import           Control.Lens    (Iso', iso)
 
-import           Data.Data
-import           Linear
 import           Linear.Affine
+import           Linear.Vector
 
 import           Diagrams.Core.V
-
-deriving instance Typeable Point
 
 type instance V (Point v n) = v
 type instance N (Point v n) = n
