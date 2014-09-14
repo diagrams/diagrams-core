@@ -163,6 +163,7 @@ import           Diagrams.Core.V
 
 import           Linear.Affine
 import           Linear.Metric
+import           Linear.Vector
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -310,7 +311,7 @@ transfToAnnot
 
 -- | Extract the (total) transformation from a downwards annotation
 --   value.
-transfFromAnnot :: (Num n, HasLinearMap v) => DownAnnots v n -> Transformation v n
+transfFromAnnot :: (Additive v, Num n) => DownAnnots v n -> Transformation v n
 transfFromAnnot = option mempty killR . fst
 
 -- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
@@ -342,13 +343,13 @@ data Annotation
 
 -- | Apply a static annotation at the root of a diagram.
 applyAnnotation
-  :: (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+  :: (Metric v, OrderedField n, Semigroup m)
   => Annotation -> QDiagram b v n m -> QDiagram b v n m
 applyAnnotation an (QD dt) = QD (D.annot an dt)
 
 -- | Make a diagram into a hyperlink.  Note that only some backends
 --   will honor hyperlink annotations.
-href :: (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+href :: (Metric v, OrderedField n, Semigroup m)
   => String -> QDiagram b v n m -> QDiagram b v n m
 href = applyAnnotation . Href
 
@@ -414,13 +415,13 @@ getU' = maybe mempty (option mempty id . get) . D.getU
 
 -- | Get the envelope of a diagram.
 envelope :: forall b v n m. ( OrderedField n, Metric v
-                            , HasLinearMap v, Monoid' m)
+                            , Monoid' m)
          => Lens' (QDiagram b v n m) (Envelope v n)
 envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
 setEnvelope :: forall b v n m. ( OrderedField n, Metric v
-                               , HasLinearMap v, Monoid' m)
+                               , Monoid' m)
           => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
 setEnvelope e =
     over _Wrapped' ( D.applyUpre (inj . toDeletable $ e)
@@ -429,13 +430,13 @@ setEnvelope e =
               )
 
 -- | Get the trace of a diagram.
-trace :: (Metric v, HasLinearMap v, OrderedField n, Semigroup m) =>
+trace :: (Metric v, OrderedField n, Semigroup m) =>
          Lens' (QDiagram b v n m) (Trace v n)
 trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
 setTrace :: forall b v n m. ( OrderedField n, Metric v
-                            , HasLinearMap v, Semigroup m)
+                            , Semigroup m)
          => Trace v n -> QDiagram b v n m -> QDiagram b v n m
 setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
                          . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
@@ -444,16 +445,16 @@ setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
 
 -- | Get the subdiagram map (/i.e./ an association from names to
 --   subdiagrams) of a diagram.
-subMap :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n)
+subMap :: (Metric v, Semigroup m, OrderedField n)
        => Lens' (QDiagram b v n m) (SubMap b v n m)
 subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
   where
-    setMap :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n) =>
+    setMap :: (Metric v, Semigroup m, OrderedField n) =>
               SubMap b v n m -> QDiagram b v n m -> QDiagram b v n m
     setMap m = over _Wrapped' ( D.applyUpre . inj . toDeletable $ m)
 
 -- | Get a list of names of subdiagrams and their locations.
-names :: (HasLinearMap v, Metric v, Semigroup m, OrderedField n)
+names :: (Metric v, Semigroup m, OrderedField n)
       => QDiagram b v n m -> [(Name, [Point v n])]
 names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 
@@ -463,14 +464,14 @@ names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 --   named x@, then @lookupName x d' == Just d'@ (instead of @Just
 --   d@).
 nameSub :: ( IsName nm
-           , HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+           , Metric v, OrderedField n, Semigroup m)
         => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
 nameSub s n d = d'
   where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
 
 -- | Lookup the most recent diagram associated with (some
 --   qualification of) the given name.
-lookupName :: (IsName nm, HasLinearMap v, Metric v, Semigroup m, OrderedField n)
+lookupName :: (IsName nm, Metric v, Semigroup m, OrderedField n)
            => nm -> QDiagram b v n m -> Maybe (Subdiagram b v n m)
 lookupName n d = lookupSub (toName n) (d^.subMap) >>= listToMaybe
 
@@ -478,7 +479,7 @@ lookupName n d = lookupSub (toName n) (d^.subMap) >>= listToMaybe
 --   subdiagram, perform the transformation using the most recent
 --   subdiagram associated with (some qualification of) the name,
 --   or perform the identity transformation if the name does not exist.
-withName :: (IsName nm, HasLinearMap v, Metric v
+withName :: (IsName nm, Metric v
             , Semigroup m, OrderedField n)
          => nm -> (Subdiagram b v n m -> QDiagram b v n m -> QDiagram b v n m)
          -> QDiagram b v n m -> QDiagram b v n m
@@ -488,7 +489,7 @@ withName n f d = maybe id f (lookupName n d) d
 --   subdiagrams, perform the transformation using the
 --   collection of all such subdiagrams associated with (some
 --   qualification of) the given name.
-withNameAll :: (IsName nm, HasLinearMap v, Metric v
+withNameAll :: (IsName nm, Metric v
                , Semigroup m, OrderedField n)
             => nm -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
             -> QDiagram b v n m -> QDiagram b v n m
@@ -499,7 +500,7 @@ withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (d^.subMap))) d
 --   list of most recent subdiagrams associated with (some qualification
 --   of) each name.  Do nothing (the identity transformation) if any
 --   of the names do not exist.
-withNames :: (IsName nm, HasLinearMap v, Metric v
+withNames :: (IsName nm, Metric v
              , Semigroup m, OrderedField n)
           => [nm] -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
           -> QDiagram b v n m -> QDiagram b v n m
@@ -510,7 +511,7 @@ withNames ns f d = maybe id f ns' d
 
 -- | \"Localize\" a diagram by hiding all the names, so they are no
 --   longer visible to the outside.
-localize :: forall b v n m. ( HasLinearMap v, Metric v
+localize :: forall b v n m. ( Metric v
                           , OrderedField n, Semigroup m
                           )
          => QDiagram b v n m -> QDiagram b v n m
@@ -577,12 +578,12 @@ mkQD' l e t n q
 --   probably only makes sense in vector spaces of dimension lower
 --   than 3, but in theory it could make sense for, say, 3-dimensional
 --   diagrams when viewed by 4-dimensional beings.
-instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+instance (Metric v, OrderedField n, Semigroup m)
   => Monoid (QDiagram b v n m) where
   mempty  = QD D.empty
   mappend = (<>)
 
-instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+instance (Metric v, OrderedField n, Semigroup m)
   => Semigroup (QDiagram b v n m) where
   (QD d1) <> (QD d2) = QD (d2 <> d1)
     -- swap order so that primitives of d2 come first, i.e. will be
@@ -591,7 +592,7 @@ instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
 -- | A convenient synonym for 'mappend' on diagrams, designed to be
 --   used infix (to help remember which diagram goes on top of which
 --   when combining them, namely, the first on top of the second).
-atop :: (HasLinearMap v, OrderedField n, Metric v, Semigroup m)
+atop :: (OrderedField n, Metric v, Semigroup m)
      => QDiagram b v n m -> QDiagram b v n m -> QDiagram b v n m
 atop = (<>)
 
@@ -627,26 +628,26 @@ instance Functor (QDiagram b v n) where
 
 ---- HasStyle
 
-instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+instance (Metric v, OrderedField n, Semigroup m)
       => HasStyle (QDiagram b v n m) where
   applyStyle = over _Wrapped' . D.applyD . inj
              . (inR :: Style v n -> Transformation v n :+: Style v n)
 
 ---- Juxtaposable
 
-instance (HasLinearMap v, Metric v, OrderedField n, Monoid' m)
+instance (Metric v, OrderedField n, Monoid' m)
       => Juxtaposable (QDiagram b v n m) where
   juxtapose = juxtaposeDefault
 
 ---- Enveloped
 
-instance (HasLinearMap v, Metric v, OrderedField n, Monoid' m)
+instance (Metric v, OrderedField n, Monoid' m)
          => Enveloped (QDiagram b v n m) where
   getEnvelope = view envelope
 
 ---- Traced
 
-instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+instance (Metric v, OrderedField n, Semigroup m)
          => Traced (QDiagram b v n m) where
   getTrace = view trace
 
@@ -654,7 +655,7 @@ instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+instance (Metric v, OrderedField n, Semigroup m)
       => HasOrigin (QDiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
@@ -662,7 +663,7 @@ instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
 
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
-instance (HasLinearMap v, OrderedField n, Metric v, Semigroup m)
+instance (OrderedField n, Metric v, Semigroup m)
       => Transformable (QDiagram b v n m) where
   transform = over _Wrapped' . D.applyD . transfToAnnot
 
@@ -670,7 +671,7 @@ instance (HasLinearMap v, OrderedField n, Metric v, Semigroup m)
 
 -- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
-instance (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+instance (Metric v, OrderedField n, Semigroup m)
       => Qualifiable (QDiagram b v n m) where
   (|>) = over _Wrapped' . D.applyD . inj . toName
 
@@ -699,7 +700,7 @@ mkSubdiagram d = Subdiagram d empty
 --   @mkSubdiagram . pointDiagram@, which would result in a subdiagram
 --   with local origin at the parent origin, rather than at the given
 --   point.
-subPoint :: (HasLinearMap v, Metric v, OrderedField n, Semigroup m)
+subPoint :: (Metric v, OrderedField n, Semigroup m)
          => Point v n -> Subdiagram b v n m
 subPoint p = Subdiagram
                (pointDiagram origin)
@@ -708,19 +709,19 @@ subPoint p = Subdiagram
 instance Functor (Subdiagram b v n) where
   fmap f (Subdiagram d a) = Subdiagram (fmap f d) a
 
-instance (OrderedField n, Metric v, HasLinearMap v, Monoid' m)
+instance (OrderedField n, Metric v, Monoid' m)
       => Enveloped (Subdiagram b v n m) where
   getEnvelope (Subdiagram d a) = transform (transfFromAnnot a) $ getEnvelope d
 
-instance (OrderedField n, HasLinearMap v, Metric v, Semigroup m)
+instance (OrderedField n, Metric v, Semigroup m)
       => Traced (Subdiagram b v n m) where
   getTrace (Subdiagram d a) = transform (transfFromAnnot a) $ getTrace d
 
-instance (HasLinearMap v, Metric v, OrderedField n)
+instance (Metric v, OrderedField n)
       => HasOrigin (Subdiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
-instance ( HasLinearMap v, Metric v, Floating n)
+instance ( Metric v, Floating n)
     => Transformable (Subdiagram b v n m) where
   transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
 
@@ -728,7 +729,7 @@ instance ( HasLinearMap v, Metric v, Floating n)
 --   local origin /with respect to/ the vector space of its parent
 --   diagram.  In other words, the point where its local origin
 --   \"ended up\".
-location :: (Num n, HasLinearMap v) => Subdiagram b v n m -> Point v n
+location :: (Additive v, Num n) => Subdiagram b v n m -> Point v n
 location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 
 -- | Turn a subdiagram into a normal diagram, including the enclosing
@@ -737,7 +738,7 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 --   attributes.  @getSub@ simply applies the transformation and
 --   attributes to the diagram to get the corresponding \"top-level\"
 --   diagram.
-getSub :: ( HasLinearMap v, Metric v
+getSub :: ( Metric v
           , Floating n, Ord n
           , Semigroup m
           )
@@ -787,11 +788,11 @@ instance Monoid (SubMap b v n m) where
   mempty  = SubMap M.empty
   mappend = (<>)
 
-instance (OrderedField n, Metric v, HasLinearMap v)
+instance (OrderedField n, Metric v)
       => HasOrigin (SubMap b v n m) where
   moveOriginTo = over _Wrapped' . moveOriginTo
 
-instance (Metric v, Floating n, HasLinearMap v)
+instance (Metric v, Floating n)
   => Transformable (SubMap b v n m) where
   transform = over _Wrapped' . transform
 
@@ -857,12 +858,12 @@ type instance N (Prim b v n) = n
 
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
-instance HasLinearMap v => Transformable (Prim b v n) where
+instance Transformable (Prim b v n) where
   transform v (Prim p) = Prim (transform v p)
 
 -- | The 'Renderable' instance for 'Prim' just pushes calls to
 --   'render' down through the 'Prim' constructor.
-instance HasLinearMap v => Renderable (Prim b v n) b where
+instance Renderable (Prim b v n) b where
   render b (Prim p) = render b p
 
 ------------------------------------------------------------
@@ -910,7 +911,7 @@ type RTree b v n a = Tree (RNode b v n a)
 --   implement 'adjustDia' as well; the default definition does
 --   nothing.  Some useful standard definitions are provided in the
 --   @Diagrams.TwoD.Adjust@ module from the @diagrams-lib@ package.
-class HasLinearMap v => Backend b v n where
+class Backend b v n where
 
   -- | An intermediate representation used for rendering primitives.
   --   (Typically, this will be some sort of monad, but it need not
@@ -936,7 +937,7 @@ class HasLinearMap v => Backend b v n where
   --
   --   See the diagrams-lib package (particularly the
   --   @Diagrams.TwoD.Adjust@ module) for some useful implementations.
-  adjustDia :: (Monoid' m, Num n) => b -> Options b v n
+  adjustDia :: (Additive v, Monoid' m, Num n) => b -> Options b v n
             -> QDiagram b v n m -> (Options b v n, Transformation v n, QDiagram b v n m)
   adjustDia _ o d = (o,mempty,d)
 
@@ -1043,7 +1044,7 @@ instance Monoid (Render NullBackend v n) where
   mempty      = NullBackendRender
   mappend _ _ = NullBackendRender
 
-instance HasLinearMap v => Backend NullBackend v n where
+instance Backend NullBackend v n where
   data Render NullBackend v n = NullBackendRender
   type Result NullBackend v n = ()
   data Options NullBackend v n

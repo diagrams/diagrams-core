@@ -51,6 +51,7 @@ import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
 import           Linear.Metric hiding (qd)
+import           Linear.Vector
 
 emptyDTree :: Tree (DNode b v n a)
 emptyDTree = Node DEmpty []
@@ -59,7 +60,7 @@ uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
 uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: (Num n, HasLinearMap v) => n -> n -> QDiagram b v n m
+toDTree :: (Additive v, Num n) => n -> n -> QDiagram b v n m
                           -> Maybe (DTree b v n Annotation)
 toDTree g n (QD qd)
   = foldDUAL
@@ -178,12 +179,12 @@ onRStyle _ n          = n
 --   applied). Normalized units are based on a logical diagram size of
 --   1 x 1.
 styleToOutput
-  :: forall v n. (Typeable v, Typeable n, Num n, Ord n, Fractional n)
+  :: forall v n. (Typeable v, Typeable n, Fractional n, Ord n)
   => n -> n -> Style v n -> Style v n
 styleToOutput globalToOutput normToOutput =
   gmapAttrs (toOutput globalToOutput normToOutput :: Measure n -> Measure n)
 
--- | Convert an aribrary 'Measure' to 'Output' units using the given global and 
+-- | Convert an arbitrary 'Measure' to 'Output' units using the given global and 
 --   normalized scales.
 toOutput :: (Num n, Ord n)
   => n -> n -> Measure n -> Measure n
@@ -209,9 +210,10 @@ renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
 -- | Render a diagram.
 renderDia
   :: ( Backend b v n
-     , Metric v, Typeable v, Typeable n
+     , HasLinearMap v, Metric v, Typeable v, Typeable n
      , OrderedField n
      , Monoid' m
      )
-          => b -> Options b v n -> QDiagram b v n m -> Result b v n
+  => b -> Options b v n -> QDiagram b v n m -> Result b v n
 renderDia b opts d = snd (renderDiaT b opts d)
+

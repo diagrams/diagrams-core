@@ -53,6 +53,7 @@ module Diagrams.Core.Transform
          -- * The Transformable class
 
        , HasLinearMap
+       , HasBasis
        , Transformable(..)
 
          -- * Translational invariance
@@ -81,7 +82,6 @@ import           Linear.Affine
 import           Linear.Vector
 
 import           Control.Applicative
-import           Data.Distributive
 import           Data.Foldable           (Foldable, toList)
 import           Data.Functor.Rep
 
@@ -145,7 +145,7 @@ lapp (f :-: _) = f
 --   transforming bounding functions, which are defined in terms of
 --   /perpendicular/ (i.e. normal) hyperplanes.
 --
---   For more general, non-invertable transformations, see
+--   For more general, non-invertible transformations, see
 --   @Diagrams.Deform@ (in @diagrams-lib@).
 
 data Transformation v n = Transformation (v n :-: v n) (v n :-: v n) (v n)
@@ -154,7 +154,7 @@ type instance V (Transformation v n) = v
 type instance N (Transformation v n) = n
 
 -- | Identity matrix.
-eye :: (Rep v ~ E v, Representable v, Additive v, Num n) => v (v n)
+eye :: (HasBasis v, Num n) => v (v n)
 eye = tabulate $ \(E e) -> zero & e .~ 1
 
 -- | Invert a transformation.
@@ -216,15 +216,14 @@ fromSymmetric t = fromLinear t t
 
 -- | Get the dimension of an object whose vector space is an instance of
 --   @HasLinearMap@, e.g. transformations, paths, diagrams, etc.
-dimension :: forall a v. (V a ~ v, Additive v, Foldable v) => a -> Int
-dimension _ = lengthOf folded (zero :: V a Double)
+dimension :: forall a v. (V a ~ v, Applicative v, Traversable v) => a -> Int
+dimension _ = length (basis :: [v Int])
 
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
-onBasis :: (HasLinearMap v, Num n) => Transformation v n -> ([v n], v n)
-onBasis (Transformation (f :-: _) _ t) = (toList vmat, t)
-  where vmat = fmap f eye
+onBasis :: (Applicative v, Traversable v, Num n) => Transformation v n -> ([v n], v n)
+onBasis (Transformation (f :-: _) _ t) = (map f basis, t)
 
 -- Remove the nth element from a list
 remove :: Int -> [a] -> [a]
@@ -251,23 +250,23 @@ listRep = toList
 
 -- | Convert a `Transformation v` to a matrix representation as a list of
 --   column vectors which are also lists.
-matrixRep :: (HasLinearMap v, Num n) => Transformation v n -> [[n]]
-matrixRep (Transformation (f :-: _) _ _) = eye ^.. traversed . to (toList . f)
+matrixRep :: (Applicative v, Traversable v, Num n) => Transformation v n -> [[n]]
+matrixRep (Transformation (f :-: _) _ _) = map (toList . f) basis
 
 -- | Convert a `Transformation v` to a homogeneous matrix representation.
 --   The final list is the translation.
 --   The representation leaves off the last row of the matrix as it is
 --   always [0,0, ... 1] and this representation is the defacto standard
 --   for backends.
-matrixHomRep :: (HasLinearMap v, Num n) => Transformation v n -> [[n]]
-matrixHomRep t = mr ++ [listRep tl]
+matrixHomRep :: (Applicative v, Traversable v, Num n) => Transformation v n -> [[n]]
+matrixHomRep t = mr ++ [toList tl]
   where
     mr = matrixRep t
     tl = transl t
 
 -- | The determinant of a `Transformation`.
-determinant :: (HasLinearMap v, Num n) => Transformation v n -> n
-determinant t = det . matrixRep $ t
+determinant :: (Applicative v, Traversable v, Num n) => Transformation v n -> n
+determinant = det . matrixRep
 
 -- | Compute the \"average\" amount of scaling performed by a
 --   transformation.  Satisfies the properties
@@ -277,8 +276,8 @@ determinant t = det . matrixRep $ t
 --   avgScale (t1 <> t2)  == avgScale t1 * avgScale t2
 --   @
 --
-avgScale :: (HasLinearMap v, Floating n) => Transformation v n -> n
-avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
+avgScale :: (Applicative v, Traversable v, Floating n) => Transformation v n -> n
+avgScale t = (abs . determinant) t ** (recip . fromIntegral . dimension) t
 
 {-
 
@@ -302,22 +301,17 @@ Proofs for the specified properties:
 
 -- | 'HasLinearMap' is a poor man's class constraint synonym, just to
 --   help shorten some of the ridiculously long constraint sets.
-class (Rep v ~ E v,
-       Additive v,
-       Applicative v,
-       Distributive v,
-       Foldable v,
-       Representable v,
-       Traversable v
-       ) => HasLinearMap v
-instance (Rep v ~ E v,
-          Additive v,
-          Applicative v,
-          Distributive v,
-          Foldable v,
-          Representable v,
-          Traversable v
-          ) => HasLinearMap v
+class (Additive v, Applicative v, Traversable v) => HasLinearMap v
+instance (Additive v, Applicative v, Traversable v) => HasLinearMap v
+-- Most (if not all) of the functions in linear that use Applicative could be 
+-- defined in terms of Additive. Ideally we'd only use Additive but for now 
+-- just stick both in a class.
+
+-- | An 'Additive' vector space whose representation is made up of basis elements.
+class (Additive v, Representable v, Rep v ~ E v) => HasBasis v
+instance (Additive v, Representable v, Rep v ~ E v) => HasBasis v
+
+
 
 -- | Type class for things @t@ which can be transformed.
 class Transformable t where
@@ -351,7 +345,9 @@ instance (Transformable t, Transformable s, Transformable u, Vn s ~ Vn t, Vn s ~
 -- construction of image filters. Works well for curried functions, since all
 -- arguments get inversely transformed.
 
-instance (Vn t ~ v n, Vn t ~ Vn s, Functor v, Num n, Transformable t, Transformable s) => Transformable (s -> t) where
+instance ( Vn t ~ v n, Vn t ~ Vn s, Functor v, Num n
+         , Transformable t, Transformable s)
+         => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
 
 instance Transformable t => Transformable [t] where

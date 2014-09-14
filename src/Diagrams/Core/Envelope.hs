@@ -46,7 +46,7 @@ module Diagrams.Core.Envelope
 
 import           Control.Applicative     ((<$>))
 import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped, op, over,
-                                          _Wrapping')
+                                          _Wrapping', (&), (.~))
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
@@ -270,6 +270,6 @@ extent :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe (n, n)
 extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
 
 -- | The smallest positive vector that bounds the envelope of an object.
-size :: (Vn a ~ v n, Enveloped a, HasLinearMap v) => a -> v n
-size d = tabulate $ \(E l) -> diameter (unit l) d
+size :: (Vn a ~ v n, Enveloped a, HasBasis v) => a -> v n
+size d = tabulate $ \(E l) -> diameter (zero & l .~ 1) d
 
