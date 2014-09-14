@@ -36,7 +36,6 @@ import           Linear.Affine
 import           Diagrams.Core.V
 
 deriving instance Typeable Point
-deriving instance (Typeable v, Typeable n, Data (v n)) => Data (Point v n)
 
 type instance V (Point v n) = v
 type instance N (Point v n) = n
