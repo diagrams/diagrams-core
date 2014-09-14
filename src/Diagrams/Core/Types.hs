@@ -1,16 +1,12 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE DeriveFoldable             #-}
 {-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE ExistentialQuantification  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
@@ -167,23 +163,20 @@ import           Diagrams.Core.V
 
 import           Linear.Affine
 import           Linear.Metric
-import           Linear.Vector
-
-import           Control.Applicative       hiding (empty)
-import           Data.Foldable             (Foldable)
-import           Data.Traversable
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
 
--- | Class of numbers that are 'RealFloat' and 'Typeable'.
-class (RealFloat n, Typeable n) => TypeableFloat n
-instance (RealFloat n, Typeable n) => TypeableFloat n
--- use class instead of type constaint so users don't need constraint kinds pragma
+-- | Class of numbers that are 'RealFloat' and 'Typeable'. This class I used to 
+--   shorten type constraints.
+class (Typeable n, RealFloat n) => TypeableFloat n
+instance (Typeable n, RealFloat n) => TypeableFloat n
+-- use class instead of type constraint so users don't need constraint kinds pragma
 
--- | Class of numbers that are 'RealFloat', 'Typeable' and 'Data'.
-class (TypeableFloat n, Data n) => DataFloat n
-instance (TypeableFloat n, Typeable n, Data n) => DataFloat n
+-- | Class of numbers that are 'RealFloat', and 'Data'. This class is used to 
+--   shorten type constraints.
+class (Data n, RealFloat n) => DataFloat n
+instance (Data n, RealFloat n) => DataFloat n
 
 ------------------------------------------------------------
 --  Measurement Units  -------------------------------------
@@ -198,33 +191,7 @@ data Measure n = Output n
                | MaxM (Measure n) (Measure n)
                | ZeroM
                | PlusM (Measure n) (Measure n)
-  deriving (Typeable, Functor, Foldable, Traversable)
-
-deriving instance (Eq n)               => Eq (Measure n)
-deriving instance (Ord n)              => Ord (Measure n)
-deriving instance (Show n)             => Show (Measure n)
-deriving instance (Typeable n, Data n) => Data (Measure n)
-
--- Bogus applicative instance for Additive class (liftU2, liftI2). Not sure if 
--- there's a better way.
-instance Applicative Measure where
-  pure = Output
-
-  Output w     <*> m2 = fmap w m2
-  Normalized w <*> m2 = fmap w m2
-  Local w      <*> m2 = fmap w m2
-  Global w     <*> m2 = fmap w m2
-  PlusM w1 w2  <*> m2 = PlusM (w1 <*> m2) (w2 <*> m2)
-  MinM w1 w2   <*> m2 = MinM (w1 <*> m2) (w2 <*> m2)
-  MaxM w1 w2   <*> m2 = MaxM (w1 <*> m2) (w2 <*> m2)
-  ZeroM        <*> _  = ZeroM
-
-instance Additive Measure where
-  zero = ZeroM
-
-  ZeroM ^+^ m     = m
-  m     ^+^ ZeroM = m
-  m1    ^+^ m2    = PlusM m1 m2
+  deriving (Data, Typeable, Show)
 
 -- | Scale a measure. Only Local units are scaled.
 scaleLocal :: Num n => n -> Measure n -> Measure n
@@ -258,9 +225,6 @@ atLeast = MaxM
 --   bounds.
 atMost :: Measure n -> Measure n -> Measure n
 atMost = MinM
-
-type instance V (Measure n) = Measure
-type instance N (Measure n) = n
 
 -- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
 --   Only 'Ouput' measures should be left in the 'RTree' passed to the backend.
@@ -296,14 +260,6 @@ fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must
 --   annotation.  That all works fine.  The problem is with gmapAttrs,
 --   which has to preserve type: so we can't generically convert from
 --   Measure A to Measure O.
-
---   How about using 
---
---     fromOutput = fromMeasure 100 100
---
---   you avoid the runtime error and can say 'Normalized' and 'Global' units 
---   are guessed.
---
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------

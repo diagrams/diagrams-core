@@ -238,7 +238,7 @@ instance Monoid (Style v n) where
   mempty = Style M.empty
   mappend = (<>)
 
-instance (Num n, HasLinearMap v) => Transformable (Style v n) where
+instance Num n => Transformable (Style v n) where
   transform t = inStyle $ M.map (transform t)
 
 -- | Styles have no action on other monoids.
