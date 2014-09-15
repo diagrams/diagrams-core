@@ -229,7 +229,13 @@ renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
 -- | Render a diagram.
 renderDia
   :: ( Backend b v n
-     , HasLinearMap v, Metric v, Typeable v, Typeable n
+     , HasLinearMap v, Metric v
+#if __GLASGOW_HASKELL__ > 707
+     , Typeable v
+#else
+     , Typeable1 v
+#endif
+     , Typeable n
      , OrderedField n
      , Monoid' m
      )
