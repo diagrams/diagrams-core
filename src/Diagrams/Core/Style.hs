@@ -87,8 +87,8 @@ class (Typeable a, Semigroup a) => AttributeClass a
 --   generically.
 data Attribute (v :: * -> *) n :: * where
   Attribute   :: AttributeClass a => a -> Attribute v n
-  TAttribute  :: (AttributeClass a, Transformable a, Vn a ~ v n) => a -> Attribute v n
-  GTAttribute :: (AttributeClass a, Data a, Transformable a, Vn a ~ v n) => a -> Attribute v n
+  TAttribute  :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
+  GTAttribute :: (AttributeClass a, Data a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
 
 
   -- Note: one could imagine requiring all attributes to be generic,

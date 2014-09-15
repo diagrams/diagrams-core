@@ -220,12 +220,12 @@ envelopeV v = fromMaybe zero . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction, or @Nothing@ for the empty envelope.
-envelopePMay :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe (Point v n)
+envelopePMay :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Maybe (Point v n)
 envelopePMay v = fmap P . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction.  Returns the origin for the empty envelope.
-envelopeP :: (Vn a ~ v n, Enveloped a) => v n -> a -> Point v n
+envelopeP :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Point v n
 envelopeP v = P . envelopeV v
 
 -- | Equivalent to the norm of 'envelopeVMay':
@@ -237,7 +237,7 @@ envelopeP v = P . envelopeV v
 --   Note that the 'envelopeVMay' / 'envelopePMay' functions above should be
 --   preferred, as this requires a call to norm.  However, it is more
 --   efficient than calling norm on the results of those functions.
-envelopeSMay :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe n
+envelopeSMay :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Maybe n
 envelopeSMay v = fmap ((* norm v) . ($ v)) . appEnvelope . getEnvelope
 
 -- | Equivalent to the norm of 'envelopeV':
@@ -249,27 +249,27 @@ envelopeSMay v = fmap ((* norm v) . ($ v)) . appEnvelope . getEnvelope
 --   Note that the 'envelopeV' / 'envelopeP' functions above should be
 --   preferred, as this requires a call to norm. However, it is more
 --   efficient than calling norm on the results of those functions.
-envelopeS :: (Vn a ~ v n, Enveloped a, Num n) => v n -> a -> n
+envelopeS :: (V a ~ v, N a ~ n, Enveloped a, Num n) => v n -> a -> n
 envelopeS v = fromMaybe 0 . envelopeSMay v
 
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
-diameter :: (Vn a ~ v n, Enveloped a) => v n -> a -> n
+diameter :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> n
 diameter v a = maybe 0 (\(lo,hi) -> (hi - lo) * norm v) (extent v a)
 
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
 --   along a particular vector.
-radius :: (Vn a ~ v n, Enveloped a) => v n -> a -> n
+radius :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> n
 radius v = (0.5*) . diameter v
 
 -- | Compute the range of an enveloped object along a certain
 --   direction.  Returns a pair of scalars @(lo,hi)@ such that the
 --   object extends from @(lo *^ v)@ to @(hi *^ v)@. Returns @Nothing@
 --   for objects with an empty envelope.
-extent :: (Vn a ~ v n, Enveloped a) => v n -> a -> Maybe (n, n)
+extent :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Maybe (n, n)
 extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
 
 -- | The smallest positive vector that bounds the envelope of an object.
-size :: (Vn a ~ v n, Enveloped a, HasBasis v) => a -> v n
+size :: (V a ~ v, N a ~ n, Enveloped a, HasBasis v) => a -> v n
 size d = tabulate $ \(E l) -> diameter (zero & l .~ 1) d
 

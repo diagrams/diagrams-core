@@ -187,7 +187,7 @@ instance (Additive v, Num n) => Monoid (Transformation v n) where
   mappend = (<>)
 
 -- | Transformations can act on transformable things.
-instance (Vn a ~ v n, Transformable a) => Action (Transformation v n) a where
+instance (Transformable a, V a ~ v, N a ~ n) => Action (Transformation v n) a where
   act = transform
 
 -- | Apply a transformation to a vector.  Note that any translational
@@ -345,7 +345,7 @@ instance (Transformable t, Transformable s, Transformable u, Vn s ~ Vn t, Vn s ~
 -- construction of image filters. Works well for curried functions, since all
 -- arguments get inversely transformed.
 
-instance ( Vn t ~ v n, Vn t ~ Vn s, Functor v, Num n
+instance ( V t ~ v, N t ~ n, Vn t ~ Vn s, Functor v, Num n
          , Transformable t, Transformable s)
          => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
@@ -410,7 +410,7 @@ scaling s = fromSymmetric lin
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (Vn a ~ v n, Additive v, Fractional n, Eq n, Transformable a)
+scale :: (V a ~ v, N a ~ n, Additive v, Fractional n, Eq n, Transformable a)
       => n -> a -> a
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s

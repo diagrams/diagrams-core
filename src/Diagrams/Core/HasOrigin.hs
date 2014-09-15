@@ -58,7 +58,7 @@ class HasOrigin t where
   moveOriginTo :: Point (V t) (N t) -> t -> t
 
 -- | Move the local origin by a relative vector.
-moveOriginBy :: (Vn t ~ v n, Num n, HasOrigin t) => v n -> t -> t
+moveOriginBy :: (V t ~ v, N t ~ n, Num n, HasOrigin t) => v n -> t -> t
 moveOriginBy = moveOriginTo . P
 
 -- | Translate the object by the translation that sends the origin to
@@ -75,13 +75,13 @@ moveOriginBy = moveOriginTo . P
 --   @
 --   moveTo (origin .^+ v) === translate v
 --   @
-moveTo :: (Vn t ~ v n, Num n, HasOrigin t, Additive v) => Point v n -> t -> t
+moveTo :: (V t ~ v, N t ~ n, Num n, HasOrigin t, Additive v) => Point v n -> t -> t
 moveTo = moveOriginBy . (origin .-.)
 
 -- | A flipped variant of 'moveTo', provided for convenience.  Useful
 --   when writing a function which takes a point as an argument, such
 --   as when using 'withName' and friends.
-place :: (Vn t ~ v n, Additive v, Num n, HasOrigin t) => t -> Point v n -> t
+place :: (V t ~ v, N t ~ n, Additive v, Num n, HasOrigin t) => t -> Point v n -> t
 place = flip moveTo
 
 instance (Additive v, Num n) => HasOrigin (Point v n) where
