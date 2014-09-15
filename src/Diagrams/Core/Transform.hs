@@ -325,13 +325,13 @@ instance (Additive v, Num n) => Transformable (Transformation v n) where
 instance (Additive v, Num n) => HasOrigin (Transformation v n) where
   moveOriginTo p = translate (origin .-. p)
 
-instance (Transformable t, Transformable s, Vn t ~ Vn s)
+instance (Transformable t, Transformable s, V t ~ V s, N t ~ N s)
       => Transformable (t, s) where
   transform t (x,y) =  ( transform t x
                        , transform t y
                        )
 
-instance (Transformable t, Transformable s, Transformable u, Vn s ~ Vn t, Vn s ~ Vn u)
+instance (Transformable t, Transformable s, Transformable u, V s ~ V t, N s ~ N t, V s ~ V u, N s ~ N u)
       => Transformable (t,s,u) where
   transform t (x,y,z) = ( transform t x
                         , transform t y
@@ -345,7 +345,7 @@ instance (Transformable t, Transformable s, Transformable u, Vn s ~ Vn t, Vn s ~
 -- construction of image filters. Works well for curried functions, since all
 -- arguments get inversely transformed.
 
-instance ( V t ~ v, N t ~ n, Vn t ~ Vn s, Functor v, Num n
+instance ( V t ~ v, N t ~ n, V t ~ V s, N t ~ N s, Functor v, Num n
          , Transformable t, Transformable s)
          => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
