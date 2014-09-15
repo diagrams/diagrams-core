@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -148,7 +149,13 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (HasLinearMap v, Metric v, Typeable v, Typeable n, OrderedField n, Monoid m, Semigroup m)
+  :: (HasLinearMap v, Metric v
+#if __GLASGOW_HASKELL__ > 707
+     , Typeable v
+#else
+     , Typeable1 v
+#endif
+     , Typeable n, OrderedField n, Monoid m, Semigroup m)
   => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 toRTree globalToOutput d
   = (fmap . onRStyle) (styleToOutput gToO nToO)
@@ -179,7 +186,13 @@ onRStyle _ n          = n
 --   applied). Normalized units are based on a logical diagram size of
 --   1 x 1.
 styleToOutput
-  :: forall v n. (Typeable v, Typeable n, Fractional n, Ord n)
+  :: forall v n. (
+#if __GLASGOW_HASKELL__ > 707
+                   Typeable v
+#else
+                   Typeable1 v
+#endif
+                 , Typeable n, Fractional n, Ord n)
   => n -> n -> Style v n -> Style v n
 styleToOutput globalToOutput normToOutput =
   gmapAttrs (toOutput globalToOutput normToOutput :: Measure n -> Measure n)
@@ -199,7 +212,13 @@ toOutput g n = Output . fromMeasure g n
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
   :: ( Backend b v n
-     , HasLinearMap v, Metric v, Typeable v, Typeable n
+     , HasLinearMap v, Metric v
+#if __GLASGOW_HASKELL__ > 707
+     , Typeable v
+#else
+     , Typeable1 v
+#endif
+     , Typeable n
      , OrderedField n
      , Monoid' m
      )
