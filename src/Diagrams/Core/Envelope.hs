@@ -190,7 +190,7 @@ instance (OrderedField n, Metric v) => Enveloped (Point v n) where
 instance Enveloped t => Enveloped (TransInv t) where
   getEnvelope = getEnvelope . op TransInv
 
-instance (Enveloped a, Enveloped b, Vn a ~ Vn b) => Enveloped (a,b) where
+instance (Enveloped a, Enveloped b, V a ~ V b, N a ~ N b) => Enveloped (a,b) where
   getEnvelope (x,y) = getEnvelope x <> getEnvelope y
 
 instance Enveloped b => Enveloped [b] where

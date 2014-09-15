@@ -56,7 +56,7 @@ juxtaposeDefault v a1 a2 =
 instance (Metric v, OrderedField n) => Juxtaposable (Envelope v n) where
   juxtapose = juxtaposeDefault
 
-instance (Enveloped a, HasOrigin a, Enveloped b, HasOrigin b, Vn a ~ Vn b)
+instance (Enveloped a, HasOrigin a, Enveloped b, HasOrigin b, V a ~ V b, N a ~ N b)
          => Juxtaposable (a,b) where
   juxtapose = juxtaposeDefault
 

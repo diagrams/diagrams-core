@@ -253,7 +253,7 @@ class HasStyle a where
 instance HasStyle (Style v n) where
   applyStyle = mappend
 
-instance (HasStyle a, HasStyle b, Vn a ~ Vn b) => HasStyle (a,b) where
+instance (HasStyle a, HasStyle b, V a ~ V b, N a ~ N b) => HasStyle (a,b) where
   applyStyle s = applyStyle s *** applyStyle s
 
 instance HasStyle a => HasStyle [a] where
@@ -280,9 +280,9 @@ applyAttr = applyStyle . attrToStyle
 --   attribute of the same type, the new attribute is combined on the
 --   left with the existing attribute, according to their semigroup
 --   structure.
-applyTAttr :: (AttributeClass a, Transformable a, Vn a ~ Vn d, HasStyle d) => a -> d -> d
+applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
 applyTAttr = applyStyle . tAttrToStyle
 
-applyGTAttr :: (AttributeClass a, Data a, Transformable a, Vn a ~ Vn d, HasStyle d) => a -> d -> d
+applyGTAttr :: (AttributeClass a, Data a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
 applyGTAttr = applyStyle . gtAttrToStyle
 
