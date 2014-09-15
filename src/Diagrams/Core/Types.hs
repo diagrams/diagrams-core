@@ -382,7 +382,6 @@ href = applyAnnotation . Href
 --   changing it at this point.
 newtype QDiagram b v n m
   = QD (D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m))
-  deriving Typeable
 
 instance Wrapped (QDiagram b v n m) where
   type Unwrapped (QDiagram b v n m) =
