@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE EmptyDataDecls             #-}
@@ -382,6 +383,16 @@ href = applyAnnotation . Href
 --   changing it at this point.
 newtype QDiagram b v n m
   = QD (D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m))
+#if __GLASGOW_HASKELL__ >= 707
+  deriving Typeable
+#else
+
+instance forall b v. (Typeable b, Typeable1 v) => Typeable2 (QDiagram b v) where
+  typeOf2 _ = mkTyConApp (mkTyCon3 "diagrams-core" "Diagrams.Core.Types" "QDiagram") [] `mkAppTy`
+              typeOf (undefined :: b)                                                   `mkAppTy`
+              typeOf1 (undefined :: v n)
+#endif
+
 
 instance Wrapped (QDiagram b v n m) where
   type Unwrapped (QDiagram b v n m) =

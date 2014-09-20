@@ -1,5 +1,5 @@
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE RankNTypes   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -39,9 +39,9 @@ mirror = reflectThrough origin
 relative :: (Affine p, Num n) => p n -> (Diff p n -> Diff p n) -> p n -> p n
 relative p f = (p .+^) . f . (.-. p)
 
--- | Scale a point by a scalar.
-(*.) :: (Functor f, Num n) => n -> Point f n -> Point f n
-s *. P v = P (s *^ v)
+-- | Scale a point by a scalar. Specialized version of '(*^)'.
+(*.) :: (Functor v, Num n) => n -> Point v n -> Point v n
+(*.) = (*^)
 
 -- -- | Apply a transformation relative to the given point.
 relative2 :: (Affine p, Num n) => p n -> (Diff p n -> Diff p n -> Diff p n) -> p n -> p n -> p n

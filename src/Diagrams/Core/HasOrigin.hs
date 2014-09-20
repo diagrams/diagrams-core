@@ -41,7 +41,7 @@ import           Linear.Vector
 --   are instances of both we should have the identity
 --
 --   @
---   moveOriginTo (origin .^+ v) === translate (negateV v)
+--   moveOriginTo (origin .^+ v) === translate (negated v)
 --   @
 --
 --   The reason is that some things (e.g. vectors, 'Trail's) are
