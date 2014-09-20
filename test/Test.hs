@@ -3,26 +3,18 @@
            , TypeSynonymInstances
            , TypeFamilies #-}
 
-import Test.Framework (defaultMain, testGroup)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.Tasty
+import Test.Tasty.QuickCheck as QC
 
-import Data.Ratio
 import Control.Monad
 import Data.Monoid
 import Control.Applicative
 
-import Data.Basis
 import Data.LinearMap
-import Data.AdditiveGroup
-import Data.VectorSpace
 
-import Graphics.Rendering.Diagrams.Core
-import Graphics.Rendering.Diagrams.V
-import Graphics.Rendering.Diagrams.Points
-import Graphics.Rendering.Diagrams.Transform
-import Graphics.Rendering.Diagrams.Util
-
-import Test.QuickCheck
+import Diagrams.Core
+import Diagrams.Core.Points
+import Diagrams.Core.Transform
 
 ------------------------------------------------------------
 --  Supporting infrastructure  -----------------------------
@@ -37,11 +29,6 @@ type I2 = Q2 :-: Q2
 -- | 2x2 matrices of rationals.
 data M2 = M2 Q2 Q2
   deriving (Eq, Show)
-
-type instance V Q2 = Q2
-
-instance Transformable Q2 where
-  transform = apply
 
 -- | Kludgy way to generate random nonsingular matrices.
 instance Arbitrary M2 where
@@ -78,7 +65,7 @@ mm (M2 (a1,b1) (c1,d1)) (M2 (a2,b2) (c2,d2))
   = M2 (a1*a2 + b1*c2, a1*b2 + b1*d2) (c1*a2 + d1*c2, c1*b2 + d1*d2)
 
 -- | Convert a matrix to a (linear) function.
-m2f :: M2 -> (Q2 -> Q2)
+m2f :: M2 -> Q2 -> Q2
 m2f (M2 (a,b) (c,d)) (x,y) = (a*x + b*y, c*x + d*y)
 
 -- | Convert a linear function to a matrix.
@@ -93,27 +80,15 @@ m2l m = m2f m <-> m2f (minv m)
 l2m :: (Q2 :-* Q2) -> M2
 l2m l = mtrans $ M2 (lapply l (1,0)) (lapply l (0,1))
 
-instance AdditiveGroup Rational where {zeroV=0; (^+^) = (+); negateV = negate}
-
-instance VectorSpace Rational where
-  type Scalar Rational = Rational
-  (*^) = (*)
-
-instance HasBasis Rational where
-  type Basis Rational = ()
-  basisValue ()       = 1
-  decompose s         = [((),s)]
-  decompose' s        = const s
-
 instance Arbitrary I2 where
   arbitrary = do
     m <- arbitrary
-    if det m == 0
-       then return (id <-> id)
-       else return (m2f m <-> m2f (minv m))
+    return $ if det m == 0
+       then id <-> id
+       else m2f m <-> m2f (minv m)
 
 instance Show I2 where
-  show (f :-: g) = "[" ++ show a ++ " " ++ show c ++ "]\n[" ++ show b ++ " " ++ show d ++ "]"
+  show (f :-: _) = "[" ++ show a ++ " " ++ show c ++ "]\n[" ++ show b ++ " " ++ show d ++ "]"
     where (a,c) = lapply f (1,0)
           (b,d) = lapply f (0,1)
 
@@ -184,7 +159,7 @@ prop_linv_R l = (l <> linv l) == mempty
 prop_minv m = det m /= 0 ==> mm m (minv m) == idm
 
 -- Random transformations are valid.
-prop_tValid t = tValid t
+prop_tValid = tValid
 
 -- Inversion gives a valid transformation.
 prop_inv_valid t = tValid (inv t)
@@ -193,12 +168,12 @@ prop_inv_valid t = tValid (inv t)
 prop_trans_valid v = tValid (translation v)
 
 -- Translations have no effect on vectors.
-prop_trans_vec_invariant :: Q2 -> Q2 -> Bool
+prop_trans_vec_invariant :: Rational -> Q2 -> Bool
 prop_trans_vec_invariant v w = translate v w == w
 
 -- Translations do what they should to points.
 prop_trans_point :: Q2 -> Q2 -> Bool
-prop_trans_point v w = translate v (P w) == (P w')
+prop_trans_point v w = translate v (P w) == P w'
   where (v1,v2) = v
         (x,y)   = w
         w'      = (x+v1, y+v2)
@@ -216,21 +191,22 @@ prop_scale_scales s v = s /= 0 ==> scale s v == v'
 --  Collecting test results  -------------------------------
 ------------------------------------------------------------
 
-tests = [ testGroup "Linear functions"
-          [ testProperty "Matrix/function conversion" prop_f2m_m2f
-          , testProperty "Linear left inverse"        prop_linv_L
-          , testProperty "Linear right inverse"       prop_linv_R
+tests = testGroup "Properties"
+        [ testGroup "Linear functions"
+          [ QC.testProperty "Matrix/function conversion" prop_f2m_m2f
+          , QC.testProperty "Linear left inverse"        prop_linv_L
+          , QC.testProperty "Linear right inverse"       prop_linv_R
           ]
 
         , testGroup "Transformations"
-          [ testProperty "Matrix inversion"        prop_minv
-          , testProperty "Transformation validity" prop_tValid
-          , testProperty "Inversion validity"      prop_inv_valid
-          , testProperty "Translation validity"    prop_trans_valid
-          , testProperty "Translation invariance"  prop_trans_vec_invariant
-          , testProperty "Point translation"       prop_trans_point
-          , testProperty "Scale validity"          prop_scale_valid
-          , testProperty "Scaling"                 prop_scale_scales
+          [ QC.testProperty "Matrix inversion"        prop_minv
+          , QC.testProperty "Transformation validity" prop_tValid
+          , QC.testProperty "Inversion validity"      prop_inv_valid
+          , QC.testProperty "Translation validity"    prop_trans_valid
+          , QC.testProperty "Translation invariance"  prop_trans_vec_invariant
+          , QC.testProperty "Point translation"       prop_trans_point
+          , QC.testProperty "Scale validity"          prop_scale_valid
+          , QC.testProperty "Scaling"                 prop_scale_scales
           ]
         ]
 
