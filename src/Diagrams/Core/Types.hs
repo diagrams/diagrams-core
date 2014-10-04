@@ -169,13 +169,13 @@ import           Linear.Vector
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
 
--- | Class of numbers that are 'RealFloat' and 'Typeable'. This class I used to 
+-- | Class of numbers that are 'RealFloat' and 'Typeable'. This class is used to
 --   shorten type constraints.
 class (Typeable n, RealFloat n) => TypeableFloat n
 instance (Typeable n, RealFloat n) => TypeableFloat n
 -- use class instead of type constraint so users don't need constraint kinds pragma
 
--- | Class of numbers that are 'RealFloat', and 'Data'. This class is used to 
+-- | Class of numbers that are 'RealFloat', and 'Data'. This class is used to
 --   shorten type constraints.
 class (Data n, RealFloat n) => DataFloat n
 instance (Data n, RealFloat n) => DataFloat n
@@ -632,7 +632,7 @@ instance Functor (QDiagram b v n) where
 -- instance (Backend b v n, Num n, Ord n)
 --            => Applicative (QDiagram b v n) where
 --   pure a = Diagram mempty mempty mempty (Query $ const a)
--- 
+--
 --   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
