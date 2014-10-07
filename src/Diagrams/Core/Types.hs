@@ -47,8 +47,8 @@ module Diagrams.Core.Types
          -- ** Annotations
 
          -- *** Static annotations
-         Annotation(Href)
-       , applyAnnotation, href
+         Annotation(Href, GroupOpacity)
+       , applyAnnotation, href, groupOpacity
 
          -- *** Dynamic (monoidal) annotations
        , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
@@ -328,7 +328,7 @@ data QDiaLeaf b v n m
     --   already apply any transformation in the given
     --   @DownAnnots@ (that is, the transformation will not
     --   be applied by the context).
-  deriving (Functor)
+  deriving Functor
 
 withQDiaLeaf :: (Prim b v n -> r)
             -> ((DownAnnots v n -> n -> n -> QDiagram b v n m) -> r)
@@ -340,6 +340,7 @@ withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
 --   diagram tree.
 data Annotation
   = Href String    -- ^ Hyperlink
+  | GroupOpacity Double
   deriving Show
 
 -- | Apply a static annotation at the root of a diagram.
@@ -353,6 +354,11 @@ applyAnnotation an (QD dt) = QD (D.annot an dt)
 href :: (Metric v, OrderedField n, Semigroup m)
   => String -> QDiagram b v n m -> QDiagram b v n m
 href = applyAnnotation . Href
+
+-- | Change the transparency of a 'Diagram' as a group.
+groupOpacity :: (Metric v, OrderedField n, Semigroup m)
+  => Double -> QDiagram b v n m -> QDiagram b v n m
+groupOpacity = applyAnnotation . GroupOpacity
 
 -- | The fundamental diagram type.  The type variables are as follows:
 --
@@ -392,7 +398,6 @@ instance forall b v. (Typeable b, Typeable1 v) => Typeable2 (QDiagram b v) where
               typeOf (undefined :: b)                                                   `mkAppTy`
               typeOf1 (undefined :: v n)
 #endif
-
 
 instance Wrapped (QDiagram b v n m) where
   type Unwrapped (QDiagram b v n m) =
