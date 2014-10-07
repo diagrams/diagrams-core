@@ -215,15 +215,6 @@ module Diagrams.Core
        , location
        , subPoint
 
-         -- * Measurements
-       , Measure(..)
-       , fromMeasure
-       , fromOutput
-       , toOutput
-       , atMost
-       , atLeast
-       , scaleLocal
-
          -- * Backends
 
        , Backend(..)

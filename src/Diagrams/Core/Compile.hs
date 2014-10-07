@@ -31,8 +31,6 @@ module Diagrams.Core.Compile
 
   , toDTree
   , fromDTree
-  , styleToOutput
-  , toOutput
   )
   where
 
@@ -47,7 +45,6 @@ import           Data.Tree
 import           Data.Tree.DUAL
 
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
-import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
@@ -158,8 +155,7 @@ toRTree
      , Typeable n, OrderedField n, Monoid m, Semigroup m)
   => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 toRTree globalToOutput d
-  = (fmap . onRStyle) (styleToOutput gToO nToO)
-  . fromDTree
+  = fromDTree
   . fromMaybe (Node DEmpty [])
   . toDTree gToO nToO
   $ d
@@ -171,37 +167,6 @@ toRTree globalToOutput d
     -- this point the diagram has already had the globalToOutput
     -- transformation applied, so output = global = local units.
     nToO = product (map (`diameter` d) basis) ** (1 / fromIntegral (dimension d))
-
--- | Apply a style transformation on 'RStyle' nodes; the identity for
---   other 'RNode's.
-onRStyle :: (Style v n -> Style v n) -> RNode b v n a -> RNode b v n a
-onRStyle f (RStyle s) = RStyle (f s)
-onRStyle _ n          = n
-
--- | Convert all 'Measure' values to 'Output' units.  The arguments
---   are, respectively, the scaling factor from global units to output
---   units, and from normalized units to output units.  It is assumed
---   that local units are identical to output units (which will be the
---   case if all transformations have been fully pushed down and
---   applied). Normalized units are based on a logical diagram size of
---   1 x 1.
-styleToOutput
-  :: forall v n. (
-#if __GLASGOW_HASKELL__ > 707
-                   Typeable v
-#else
-                   Typeable1 v
-#endif
-                 , Typeable n, Fractional n, Ord n)
-  => n -> n -> Style v n -> Style v n
-styleToOutput globalToOutput normToOutput =
-  gmapAttrs (toOutput globalToOutput normToOutput :: Measure n -> Measure n)
-
--- | Convert an arbitrary 'Measure' to 'Output' units using the given global and 
---   normalized scales.
-toOutput :: (Num n, Ord n)
-  => n -> n -> Measure n -> Measure n
-toOutput g n = Output . fromMeasure g n
 
 --------------------------------------------------
 
