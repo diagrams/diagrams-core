@@ -202,6 +202,7 @@ module Diagrams.Core
        , localize
 
        , href
+       , groupOpacity
 
        , setEnvelope, setTrace
 
