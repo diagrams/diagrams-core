@@ -92,7 +92,7 @@
 module Diagrams.Core
        ( -- * Associated vector spaces
 
-         V, N, Vn
+         V, N, Vn, InSpace, SameSpace
 
          -- * Points
 
