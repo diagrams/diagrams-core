@@ -47,9 +47,9 @@ import           Data.Tree.DUAL
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
+import           Diagrams.Core.Style
 
 import           Linear.Metric hiding (qd)
-import           Linear.Vector
 
 emptyDTree :: Tree (DNode b v n a)
 emptyDTree = Node DEmpty []
@@ -58,8 +58,7 @@ uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
 uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: (Additive v, Num n) => n -> n -> QDiagram b v n m
-                          -> Maybe (DTree b v n Annotation)
+toDTree :: (HasLinearMap v, HasBasis v, Floating n, Typeable n) => n -> n -> QDiagram b v n m -> Maybe (DTree b v n Annotation)
 toDTree g n (QD qd)
   = foldDUAL
 
@@ -76,8 +75,7 @@ toDTree g n (QD qd)
                -- the continuation, convert the result to a DTree, and
                -- splice it in, adding a DDelay node to mark the point
                -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree g n
-                            . ($ (d, g, n)) . uncurry3)
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree g n . ($ (d, g, n)) . uncurry3)
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
@@ -109,7 +107,7 @@ toDTree g n (QD qd)
 -- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
-fromDTree :: forall b v n. (Num n, HasLinearMap v) => DTree b v n Annotation -> RTree b v n Annotation
+fromDTree :: forall b v n. (Floating n, HasLinearMap v) => DTree b v n Annotation -> RTree b v n Annotation
 fromDTree = fromDTree' mempty
   where
     fromDTree' :: HasLinearMap v => Transformation v n -> DTree b v n Annotation -> RTree b v n Annotation
@@ -146,7 +144,7 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (HasLinearMap v, Metric v
+  :: (HasLinearMap v, HasBasis v, Metric v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else
@@ -155,7 +153,8 @@ toRTree
      , Typeable n, OrderedField n, Monoid m, Semigroup m)
   => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 toRTree globalToOutput d
-  = fromDTree
+  = (fmap . onRStyle) (unmeasureAttrs gToO nToO)
+  . fromDTree
   . fromMaybe (Node DEmpty [])
   . toDTree gToO nToO
   $ d
@@ -168,6 +167,12 @@ toRTree globalToOutput d
     -- transformation applied, so output = global = local units.
     nToO = product (map (`diameter` d) basis) ** (1 / fromIntegral (dimension d))
 
+-- | Apply a style transformation on 'RStyle' nodes; the identity for
+--   other 'RNode's.
+onRStyle :: (Style v n -> Style v n) -> RNode b v n a -> RNode b v n a
+onRStyle f (RStyle s) = RStyle (f s)
+onRStyle _ n          = n
+
 --------------------------------------------------
 
 -- | Render a diagram, returning also the transformation which was
@@ -177,7 +182,7 @@ toRTree globalToOutput d
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
   :: ( Backend b v n
-     , HasLinearMap v, Metric v
+     , HasLinearMap v, HasBasis v, Metric v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else
@@ -194,7 +199,7 @@ renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
 -- | Render a diagram.
 renderDia
   :: ( Backend b v n
-     , HasLinearMap v, Metric v
+     , HasLinearMap v, Metric v, HasBasis v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else
