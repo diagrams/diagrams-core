@@ -215,6 +215,19 @@ module Diagrams.Core
        , location
        , subPoint
 
+         -- ** Measurements
+
+       , Measured
+       , Measure
+       , fromMeasured
+       , output
+       , local
+       , global
+       , normalized
+       , scaleLocal
+       , atLeast
+       , atMost
+
          -- * Backends
 
        , Backend(..)
@@ -230,6 +243,7 @@ module Diagrams.Core
          -- * Convenience classes
 
        , HasLinearMap
+       , HasBasis
        , OrderedField
        , TypeableFloat
        , DataFloat
@@ -248,6 +262,7 @@ import           Diagrams.Core.Style
 import           Diagrams.Core.Trace
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
+import           Diagrams.Core.Measure
 import           Diagrams.Core.V
 
 import           Data.Monoid.WithSemigroup (Monoid')
