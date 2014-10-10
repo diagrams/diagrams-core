@@ -134,7 +134,6 @@ unwrapAttr (GTAttribute a) = cast a
 unwrapMAttr :: (AttributeClass a, Typeable n) => Attribute v n -> Maybe (Measured n a)
 unwrapMAttr (MAttribute m) = cast m
 unwrapMAttr _              = Nothing
--- unwrapMAttr _                         = Nothing
 
 -- | Attributes form a semigroup, where the semigroup operation simply
 --   returns the right-hand attribute when the types do not match, and
