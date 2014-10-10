@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -44,21 +45,24 @@ import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
-import           Data.VectorSpace
+
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
 import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
 
-emptyDTree :: Tree (DNode b v a)
+import           Linear.Metric hiding (qd)
+import           Linear.Vector
+
+emptyDTree :: Tree (DNode b v n a)
 emptyDTree = Node DEmpty []
 
 uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
 uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: HasLinearMap v => Scalar v -> Scalar v -> QDiagram b v m
-                          -> Maybe (DTree b v Annotation)
+toDTree :: (Additive v, Num n) => n -> n -> QDiagram b v n m
+                          -> Maybe (DTree b v n Annotation)
 toDTree g n (QD qd)
   = foldDUAL
 
@@ -108,10 +112,10 @@ toDTree g n (QD qd)
 -- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
-fromDTree :: HasLinearMap v => DTree b v Annotation -> RTree b v Annotation
+fromDTree :: forall b v n. (Num n, HasLinearMap v) => DTree b v n Annotation -> RTree b v n Annotation
 fromDTree = fromDTree' mempty
   where
-    fromDTree' :: HasLinearMap v => Transformation v -> DTree b v Annotation -> RTree b v Annotation
+    fromDTree' :: HasLinearMap v => Transformation v n -> DTree b v n Annotation -> RTree b v n Annotation
     -- We put the accumulated transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
@@ -145,8 +149,14 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (HasLinearMap v, InnerSpace v, Typeable v, OrderedField (Scalar v), Monoid m, Semigroup m)
-  => Transformation v -> QDiagram b v m -> RTree b v Annotation
+  :: (HasLinearMap v, Metric v
+#if __GLASGOW_HASKELL__ > 707
+     , Typeable v
+#else
+     , Typeable1 v
+#endif
+     , Typeable n, OrderedField n, Monoid m, Semigroup m)
+  => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 toRTree globalToOutput d
   = (fmap . onRStyle) (styleToOutput gToO nToO)
   . fromDTree
@@ -160,11 +170,11 @@ toRTree globalToOutput d
     -- of product of diameters along each basis direction.  Note at
     -- this point the diagram has already had the globalToOutput
     -- transformation applied, so output = global = local units.
-    nToO = product (map (\v -> diameter v d) basis) ** (1 / fromIntegral (dimension d))
+    nToO = product (map (`diameter` d) basis) ** (1 / fromIntegral (dimension d))
 
 -- | Apply a style transformation on 'RStyle' nodes; the identity for
 --   other 'RNode's.
-onRStyle :: (Style v -> Style v) -> (RNode b v a -> RNode b v a)
+onRStyle :: (Style v n -> Style v n) -> RNode b v n a -> RNode b v n a
 onRStyle f (RStyle s) = RStyle (f s)
 onRStyle _ n          = n
 
@@ -176,33 +186,22 @@ onRStyle _ n          = n
 --   applied). Normalized units are based on a logical diagram size of
 --   1 x 1.
 styleToOutput
-  :: forall v. (Typeable v, Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
-  => Scalar v -> Scalar v -> Style v -> Style v
+  :: forall v n. (
+#if __GLASGOW_HASKELL__ > 707
+                   Typeable v
+#else
+                   Typeable1 v
+#endif
+                 , Typeable n, Fractional n, Ord n)
+  => n -> n -> Style v n -> Style v n
 styleToOutput globalToOutput normToOutput =
-  gmapAttrs (toOutput globalToOutput normToOutput :: Measure v -> Measure v)
+  gmapAttrs (toOutput globalToOutput normToOutput :: Measure n -> Measure n)
 
--- | Convert an aribrary 'Measure' to 'Output' units.
-toOutput :: forall v. (Num (Scalar v), Ord (Scalar v), Fractional (Scalar v))
-  => Scalar v -> Scalar v -> Measure v -> Measure v
-toOutput g n m =
-  case m of
-     m'@(Output _) -> m'
-     Local s       -> Output s
-     Global s      -> Output (g * s)
-     Normalized s  -> Output (n * s)
-
-     MinM m1 m2    -> outBin min (toOutput g n m1) (toOutput g n m2)
-     MaxM m1 m2    -> outBin max (toOutput g n m1) (toOutput g n m2)
-     ZeroM         -> Output 0
-     NegateM m'    -> outUn negate (toOutput g n m')
-     PlusM m1 m2   -> outBin (+) (toOutput g n m1) (toOutput g n m2)
-     ScaleM s m'   -> outUn (s*) (toOutput g n m')
-  where
-    outUn  op (Output o1)             = Output (op o1)
-    outUn  _  _ = error "outUn: The sky is falling!"
-    outBin op (Output o1) (Output o2) = Output (o1 `op` o2)
-    outBin _ _ _ = error "outBin: Both skies are falling!"
-
+-- | Convert an arbitrary 'Measure' to 'Output' units using the given global and 
+--   normalized scales.
+toOutput :: (Num n, Ord n)
+  => n -> n -> Measure n -> Measure n
+toOutput g n = Output . fromMeasure g n
 
 --------------------------------------------------
 
@@ -212,21 +211,34 @@ toOutput g n m =
 --   transformation can be used, for example, to convert output/screen
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
-  :: ( Backend b v
-     , HasLinearMap v, InnerSpace v, Typeable v
-     , OrderedField (Scalar v)
+  :: ( Backend b v n
+     , HasLinearMap v, Metric v
+#if __GLASGOW_HASKELL__ > 707
+     , Typeable v
+#else
+     , Typeable1 v
+#endif
+     , Typeable n
+     , OrderedField n
      , Monoid' m
      )
-  => b -> Options b v -> QDiagram b v m -> (Transformation v, Result b v)
+  => b -> Options b v n -> QDiagram b v n m -> (Transformation v n, Result b v n)
 renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
   where (opts', g2o, d') = adjustDia b opts d
 
 -- | Render a diagram.
 renderDia
-  :: ( Backend b v
-     , InnerSpace v, Typeable v
-     , OrderedField (Scalar v)
+  :: ( Backend b v n
+     , HasLinearMap v, Metric v
+#if __GLASGOW_HASKELL__ > 707
+     , Typeable v
+#else
+     , Typeable1 v
+#endif
+     , Typeable n
+     , OrderedField n
      , Monoid' m
      )
-          => b -> Options b v -> QDiagram b v m -> Result b v
+  => b -> Options b v n -> QDiagram b v n m -> Result b v n
 renderDia b opts d = snd (renderDiaT b opts d)
+

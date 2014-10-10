@@ -1,15 +1,12 @@
-{-# LANGUAGE TypeOperators
-           , FlexibleContexts
-           , FlexibleInstances
-           , UndecidableInstances
-           , TypeFamilies
-           , MultiParamTypeClasses
-           , GeneralizedNewtypeDeriving
-           , TemplateHaskell
-           , TypeFamilies
-           , TypeSynonymInstances
-           , ScopedTypeVariables
-  #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -41,6 +38,8 @@ module Diagrams.Core.Transform
        , apply
        , papply
        , fromLinear
+       , fromOrthogonal
+       , fromSymmetric
        , basis
        , dimension
        , onBasis
@@ -49,10 +48,12 @@ module Diagrams.Core.Transform
        , matrixHomRep
        , determinant
        , avgScale
+       , eye
 
          -- * The Transformable class
 
        , HasLinearMap
+       , HasBasis
        , Transformable(..)
 
          -- * Translational invariance
@@ -69,22 +70,23 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens                 (Wrapped(..), Rewrapped, iso)
-import qualified Data.Map as M
+import           Control.Lens            hiding (Action, transform)
+import qualified Data.Map                as M
 import           Data.Semigroup
-import qualified Data.Set as S
+import qualified Data.Set                as S
 
-import           Data.AdditiveGroup
-import           Data.AffineSpace ((.-.))
-import           Data.Basis
-import           Data.LinearMap
-import           Data.MemoTrie
 import           Data.Monoid.Action
 import           Data.Monoid.Deletable
-import           Data.VectorSpace
+
+import           Linear.Affine
+import           Linear.Vector
+
+import           Control.Applicative
+import           Data.Foldable           (Foldable, toList)
+import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
-import           Diagrams.Core.Points
+import           Diagrams.Core.Points    ()
 import           Diagrams.Core.V
 
 ------------------------------------------------------------
@@ -96,21 +98,21 @@ import           Diagrams.Core.V
 -------------------------------------------------------
 
 -- | @(v1 :-: v2)@ is a linear map paired with its inverse.
-data (:-:) u v = (u :-* v) :-: (v :-* u)
+data (:-:) u v = (u -> v) :-: (v -> u)
 infixr 7 :-:
 
 -- | Create an invertible linear map from two functions which are
 --   assumed to be linear inverses.
-(<->) :: (HasLinearMap u, HasLinearMap v) => (u -> v) -> (v -> u) -> (u :-: v)
-f <-> g = linear f :-: linear g
+(<->) :: (u -> v) -> (v -> u) -> (u :-: v)
+f <-> g = f :-: g
 
-instance HasLinearMap v => Semigroup (v :-: v) where
-  (f :-: f') <> (g :-: g') = f *.* g :-: g' *.* f'
+instance Semigroup (a :-: a) where
+  (f :-: f') <> (g :-: g') = f . g :-: g' . f'
 
 -- | Invertible linear maps from a vector space to itself form a
 --   monoid under composition.
-instance HasLinearMap v => Monoid (v :-: v) where
-  mempty = idL :-: idL
+instance Monoid (v :-: v) where
+  mempty  = id :-: id
   mappend = (<>)
 
 -- | Invert a linear map.
@@ -118,8 +120,8 @@ linv :: (u :-: v) -> (v :-: u)
 linv (f :-: g) = g :-: f
 
 -- | Apply a linear map to a vector.
-lapp :: (VectorSpace v, Scalar u ~ Scalar v, HasLinearMap u) => (u :-: v) -> u -> v
-lapp (f :-: _) = lapply f
+lapp :: (u :-: v) -> u -> v
+lapp (f :-: _) = f
 
 --------------------------------------------------
 --  Affine transformations  ----------------------
@@ -143,86 +145,89 @@ lapp (f :-: _) = lapply f
 --   transforming bounding functions, which are defined in terms of
 --   /perpendicular/ (i.e. normal) hyperplanes.
 --
---   For more general, non-invertable transformations, see
+--   For more general, non-invertible transformations, see
 --   @Diagrams.Deform@ (in @diagrams-lib@).
 
-data Transformation v = Transformation (v :-: v) (v :-: v) v
+data Transformation v n = Transformation (v n :-: v n) (v n :-: v n) (v n)
 
-type instance V (Transformation v) = v
+type instance V (Transformation v n) = v
+type instance N (Transformation v n) = n
+
+-- | Identity matrix.
+eye :: (HasBasis v, Num n) => v (v n)
+eye = tabulate $ \(E e) -> zero & e .~ 1
 
 -- | Invert a transformation.
-inv :: HasLinearMap v => Transformation v -> Transformation v
+inv :: (Functor v, Num n) => Transformation v n -> Transformation v n
 inv (Transformation t t' v) = Transformation (linv t) (linv t')
-                                             (negateV (lapp (linv t) v))
+                                             (negated (lapp (linv t) v))
 
 -- | Get the transpose of a transformation (ignoring the translation
 --   component).
-transp :: Transformation v -> (v :-: v)
+transp :: Transformation v n -> (v n :-: v n)
 transp (Transformation _ t' _) = t'
 
 -- | Get the translational component of a transformation.
-transl :: Transformation v -> v
+transl :: Transformation v n -> v n
 transl (Transformation _ _ v) = v
 
 -- | Drop the translational component of a transformation, leaving only
 --   the linear part.
-dropTransl :: AdditiveGroup v => Transformation v -> Transformation v
-dropTransl (Transformation a a' _) = Transformation a a' zeroV
+dropTransl :: (Additive v, Num n) => Transformation v n -> Transformation v n
+dropTransl (Transformation a a' _) = Transformation a a' zero
 
 -- | Transformations are closed under composition; @t1 <> t2@ is the
 --   transformation which performs first @t2@, then @t1@.
-instance HasLinearMap v => Semigroup (Transformation v) where
+instance (Additive v, Num n) => Semigroup (Transformation v n) where
   Transformation t1 t1' v1 <> Transformation t2 t2' v2
     = Transformation (t1 <> t2) (t2' <> t1') (v1 ^+^ lapp t1 v2)
 
-instance HasLinearMap v => Monoid (Transformation v) where
-  mempty = Transformation mempty mempty zeroV
+instance (Additive v, Num n) => Monoid (Transformation v n) where
+  mempty = Transformation mempty mempty zero
   mappend = (<>)
 
 -- | Transformations can act on transformable things.
-instance (HasLinearMap v, v ~ (V a), Transformable a)
-         => Action (Transformation v) a where
+instance (Transformable a, V a ~ v, N a ~ n) => Action (Transformation v n) a where
   act = transform
 
 -- | Apply a transformation to a vector.  Note that any translational
 --   component of the transformation will not affect the vector, since
 --   vectors are invariant under translation.
-apply :: HasLinearMap v => Transformation v -> v -> v
-apply (Transformation t _ _) = lapp t
+apply :: Transformation v n -> v n -> v n
+apply (Transformation (t :-: _) _ _) = t
 
 -- | Apply a transformation to a point.
-papply :: HasLinearMap v => Transformation v -> Point v -> Point v
+papply :: (Additive v, Num n) => Transformation v n -> Point v n -> Point v n
 papply (Transformation t _ v) (P p) = P $ lapp t p ^+^ v
 
 -- | Create a general affine transformation from an invertible linear
 --   transformation and its transpose.  The translational component is
 --   assumed to be zero.
-fromLinear :: AdditiveGroup v => (v :-: v) -> (v :-: v) -> Transformation v
-fromLinear l1 l2 = Transformation l1 l2 zeroV
+fromLinear :: (Additive v, Num n) => (v n :-: v n) -> (v n :-: v n) -> Transformation v n
+fromLinear l1 l2 = Transformation l1 l2 zero
 
--- | Get the matrix equivalent of the basis of the vector space v as
---   a list of columns.
-basis :: forall v. HasLinearMap v => [v]
-basis = map basisValue b
-  where b = map fst (decompose (zeroV :: v))
+-- | An orthogonal linear map is one whose inverse is also its transpose.
+fromOrthogonal :: (Additive v, Num n) => (v n :-: v n) -> Transformation v n
+fromOrthogonal t = fromLinear t (linv t)
+
+-- | A symmetric linear map is one whose transpose is equal to its self.
+fromSymmetric :: (Additive v, Num n) => (v n :-: v n) -> Transformation v n
+fromSymmetric t = fromLinear t t
 
 -- | Get the dimension of an object whose vector space is an instance of
 --   @HasLinearMap@, e.g. transformations, paths, diagrams, etc.
-dimension :: forall a. HasLinearMap (V a) => a -> Int
-dimension _ = length (decompose (zeroV :: V a))
+dimension :: forall a v. (V a ~ v, Applicative v, Traversable v) => a -> Int
+dimension _ = length (basis :: [v Int])
 
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
-onBasis :: forall v. HasLinearMap v => Transformation v -> ([v], v)
-onBasis t = (vmat, tr)
-  where
-      tr    = transl t
-      vmat = map (apply t) basis
+onBasis :: (Applicative v, Traversable v, Num n) => Transformation v n -> ([v n], v n)
+onBasis (Transformation (f :-: _) _ t) = (map f basis, t)
 
 -- Remove the nth element from a list
 remove :: Int -> [a] -> [a]
-remove n xs = ys ++ (tail zs)
+remove n xs = ys ++ tail zs
   where
     (ys, zs) = splitAt n xs
 
@@ -240,28 +245,28 @@ det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
     n = length m
 
 -- | Convert a vector v to a list of scalars.
-listRep :: HasLinearMap v => v -> [Scalar v]
-listRep v = map snd (decompose v)
+listRep :: Foldable v => v n -> [n]
+listRep = toList
 
 -- | Convert a `Transformation v` to a matrix representation as a list of
 --   column vectors which are also lists.
-matrixRep :: HasLinearMap v => Transformation v -> [[Scalar v]]
-matrixRep t = map listRep (fst . onBasis $ t)
+matrixRep :: (Applicative v, Traversable v, Num n) => Transformation v n -> [[n]]
+matrixRep (Transformation (f :-: _) _ _) = map (toList . f) basis
 
 -- | Convert a `Transformation v` to a homogeneous matrix representation.
 --   The final list is the translation.
 --   The representation leaves off the last row of the matrix as it is
 --   always [0,0, ... 1] and this representation is the defacto standard
 --   for backends.
-matrixHomRep :: HasLinearMap v => Transformation v -> [[Scalar v]]
-matrixHomRep t = mr ++ [listRep tl]
+matrixHomRep :: (Applicative v, Traversable v, Num n) => Transformation v n -> [[n]]
+matrixHomRep t = mr ++ [toList tl]
   where
     mr = matrixRep t
     tl = transl t
 
 -- | The determinant of a `Transformation`.
-determinant :: (HasLinearMap v, Num (Scalar v)) => Transformation v -> Scalar v
-determinant t = det . matrixRep $ t
+determinant :: (Applicative v, Traversable v, Num n) => Transformation v n -> n
+determinant = det . matrixRep
 
 -- | Compute the \"average\" amount of scaling performed by a
 --   transformation.  Satisfies the properties
@@ -271,8 +276,8 @@ determinant t = det . matrixRep $ t
 --   avgScale (t1 <> t2)  == avgScale t1 * avgScale t2
 --   @
 --
-avgScale :: (HasLinearMap v, Floating (Scalar v)) => Transformation v -> Scalar v
-avgScale t = (abs . determinant $ t) ** (1 / fromIntegral (dimension t))
+avgScale :: (Applicative v, Traversable v, Floating n) => Transformation v n -> n
+avgScale t = (abs . determinant) t ** (recip . fromIntegral . dimension) t
 
 {-
 
@@ -296,29 +301,38 @@ Proofs for the specified properties:
 
 -- | 'HasLinearMap' is a poor man's class constraint synonym, just to
 --   help shorten some of the ridiculously long constraint sets.
-class (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
-instance (HasBasis v, HasTrie (Basis v), VectorSpace v) => HasLinearMap v
+class (Additive v, Applicative v, Traversable v) => HasLinearMap v
+instance (Additive v, Applicative v, Traversable v) => HasLinearMap v
+-- Most (if not all) of the functions in linear that use Applicative could be 
+-- defined in terms of Additive. Ideally we'd only use Additive but for now 
+-- just stick both in a class.
+
+-- | An 'Additive' vector space whose representation is made up of basis elements.
+class (Additive v, Representable v, Rep v ~ E v) => HasBasis v
+instance (Additive v, Representable v, Rep v ~ E v) => HasBasis v
+
+
 
 -- | Type class for things @t@ which can be transformed.
-class HasLinearMap (V t) => Transformable t where
+class Transformable t where
 
   -- | Apply a transformation to an object.
-  transform :: Transformation (V t) -> t -> t
+  transform :: Transformation (V t) (N t) -> t -> t
 
-instance HasLinearMap v => Transformable (Transformation v) where
+instance (Additive v, Num n) => Transformable (Transformation v n) where
   transform t1 t2 = t1 <> t2
 
-instance HasLinearMap v => HasOrigin (Transformation v) where
+instance (Additive v, Num n) => HasOrigin (Transformation v n) where
   moveOriginTo p = translate (origin .-. p)
 
-instance (Transformable a, Transformable b, V a ~ V b)
-      => Transformable (a,b) where
+instance (Transformable t, Transformable s, V t ~ V s, N t ~ N s)
+      => Transformable (t, s) where
   transform t (x,y) =  ( transform t x
                        , transform t y
                        )
 
-instance (Transformable a, Transformable b, Transformable c, V a ~ V b, V a ~ V c)
-      => Transformable (a,b,c) where
+instance (Transformable t, Transformable s, Transformable u, V s ~ V t, N s ~ N t, V s ~ V u, N s ~ N u)
+      => Transformable (t,s,u) where
   transform t (x,y,z) = ( transform t x
                         , transform t y
                         , transform t z
@@ -331,9 +345,9 @@ instance (Transformable a, Transformable b, Transformable c, V a ~ V b, V a ~ V 
 -- construction of image filters. Works well for curried functions, since all
 -- arguments get inversely transformed.
 
-instance ( HasBasis (V b), HasTrie (Basis (V b))
-         , Transformable a, Transformable b, V b ~ V a) =>
-         Transformable (a -> b) where
+instance ( V t ~ v, N t ~ n, V t ~ V s, N t ~ N s, Functor v, Num n
+         , Transformable t, Transformable s)
+         => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
 
 instance Transformable t => Transformable [t] where
@@ -345,17 +359,11 @@ instance (Transformable t, Ord t) => Transformable (S.Set t) where
 instance Transformable t => Transformable (M.Map k t) where
   transform = M.map . transform
 
-instance HasLinearMap v => Transformable (Point v) where
+instance (Additive v, Num n) => Transformable (Point v n) where
   transform = papply
 
 instance Transformable m => Transformable (Deletable m) where
   transform = fmap . transform
-
-instance Transformable Double where
-  transform = apply
-
-instance Transformable Rational where
-  transform = apply
 
 ------------------------------------------------------------
 --  Translational invariance  ------------------------------
@@ -369,40 +377,41 @@ newtype TransInv t = TransInv t
   deriving (Eq, Ord, Show, Semigroup, Monoid)
 
 instance Wrapped (TransInv t) where
-    type Unwrapped (TransInv t) = t
-    _Wrapped' = iso (\(TransInv t) -> t) TransInv
+  type Unwrapped (TransInv t) = t
+  _Wrapped' = iso (\(TransInv t) -> t) TransInv
 
 instance Rewrapped (TransInv t) (TransInv t')
 
 type instance V (TransInv t) = V t
+type instance N (TransInv t) = N t
 
-instance VectorSpace (V t) => HasOrigin (TransInv t) where
+instance HasOrigin (TransInv t) where
   moveOriginTo = const id
 
-instance Transformable t => Transformable (TransInv t) where
+instance (Num (N t), Additive (V t), Transformable t) => Transformable (TransInv t) where
   transform (Transformation a a' _) (TransInv t)
-    = TransInv (transform (Transformation a a' zeroV) t)
+    = TransInv (transform (Transformation a a' zero) t)
 
 ------------------------------------------------------------
 --  Generic transformations  -------------------------------
 ------------------------------------------------------------
 
 -- | Create a translation.
-translation :: HasLinearMap v => v -> Transformation v
+translation :: v n -> Transformation v n
 translation = Transformation mempty mempty
 
 -- | Translate by a vector.
-translate :: (Transformable t, HasLinearMap (V t)) => V t -> t -> t
+translate :: (Num (N t), Transformable t) => Vn t -> t -> t
 translate = transform . translation
 
 -- | Create a uniform scaling transformation.
-scaling :: (HasLinearMap v, Fractional (Scalar v))
-        => Scalar v -> Transformation v
-scaling s = fromLinear lin lin      -- scaling is its own transpose
+scaling :: (Additive v, Fractional n) => n -> Transformation v n
+scaling s = fromSymmetric lin
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (Transformable t, Fractional (Scalar (V t)), Eq (Scalar (V t)))
-      => Scalar (V t) -> t -> t
+scale :: (V a ~ v, N a ~ n, Additive v, Fractional n, Eq n, Transformable a)
+      => n -> a -> a
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
+

@@ -1,9 +1,7 @@
-{-# LANGUAGE FlexibleInstances
-           , GeneralizedNewtypeDeriving
-           , MultiParamTypeClasses
-           , TemplateHaskell
-           , TypeFamilies
-  #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE TypeFamilies               #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Query
@@ -17,20 +15,20 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Query
-       ( Query(Query), runQuery
+       ( Query (Query)
+       , runQuery
        ) where
 
-import Control.Applicative
-import Control.Lens (Wrapped(..), Rewrapped, iso)
-import Data.Semigroup
+import           Control.Applicative
+import           Control.Lens            (Rewrapped, Wrapped (..), iso)
+import           Data.Semigroup
 
-import Data.AffineSpace
-import Data.VectorSpace
+import           Linear.Affine
+import           Linear.Vector
 
-import Diagrams.Core.HasOrigin
-import Diagrams.Core.Points
-import Diagrams.Core.Transform
-import Diagrams.Core.V
+import           Diagrams.Core.HasOrigin
+import           Diagrams.Core.Transform
+import           Diagrams.Core.V
 
 ------------------------------------------------------------
 --  Queries  -----------------------------------------------
@@ -42,19 +40,21 @@ import Diagrams.Core.V
 --
 --   The idea for annotating diagrams with monoidal queries came from
 --   the graphics-drawingcombinators package, <http://hackage.haskell.org/package/graphics-drawingcombinators>.
-newtype Query v m = Query { runQuery :: Point v -> m }
+newtype Query v n m = Query { runQuery :: Point v n -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
 
-instance Wrapped (Query v m) where
-    type Unwrapped (Query v m) = (Point v -> m)
-    _Wrapped' = iso runQuery Query
+instance Wrapped (Query v n m) where
+  type Unwrapped (Query v n m) = (Point v n -> m)
+  _Wrapped' = iso runQuery Query
 
-instance Rewrapped (Query v m) (Query v' m')
+instance Rewrapped (Query v a m) (Query v' a' m')
 
-type instance V (Query v m) = v
+type instance V (Query v n m) = v
+type instance N (Query v n m) = n
 
-instance VectorSpace v => HasOrigin (Query v m) where
+instance (Additive v, Num n) => HasOrigin (Query v n m) where
   moveOriginTo (P u) (Query f) = Query $ \p -> f (p .+^ u)
 
-instance HasLinearMap v => Transformable (Query v m) where
+instance (Additive v, Num n) => Transformable (Query v n m) where
   transform t (Query f) = Query $ f . papply (inv t)
+

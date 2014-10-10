@@ -92,7 +92,7 @@
 module Diagrams.Core
        ( -- * Associated vector spaces
 
-         V
+         V, N, Vn
 
          -- * Points
 
@@ -129,6 +129,7 @@ module Diagrams.Core
          -- ** Translational invariance
 
        , TransInv(TransInv)
+       , eye
 
          -- * Names
 
@@ -159,7 +160,7 @@ module Diagrams.Core
        , appEnvelope, onEnvelope, mkEnvelope
        , Enveloped(..)
        , envelopeVMay, envelopeV, envelopePMay, envelopeP
-       , diameter, radius
+       , diameter, radius, size
 
          -- * Traces
 
@@ -215,10 +216,12 @@ module Diagrams.Core
 
          -- * Measurements
        , Measure(..)
+       , fromMeasure
        , fromOutput
        , toOutput
        , atMost
        , atLeast
+       , scaleLocal
 
          -- * Backends
 
@@ -236,6 +239,8 @@ module Diagrams.Core
 
        , HasLinearMap
        , OrderedField
+       , TypeableFloat
+       , DataFloat
        , Monoid'
 
        ) where

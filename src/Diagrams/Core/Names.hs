@@ -4,7 +4,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverlappingInstances       #-}
-{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 -----------------------------------------------------------------------------
@@ -114,8 +113,8 @@ newtype Name = Name [AName]
   deriving (Eq, Ord, Semigroup, Monoid, Typeable)
 
 instance Wrapped Name where
-    type Unwrapped Name = [AName]
-    _Wrapped' = iso (\(Name ans) -> ans) Name
+  type Unwrapped Name = [AName]
+  _Wrapped' = iso (\(Name ans) -> ans) Name
 
 instance Rewrapped Name Name
 
