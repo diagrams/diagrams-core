@@ -152,7 +152,7 @@ module Diagrams.Core
 
        , Style, HasStyle(..)
        , getAttr, combineAttr
-       , applyAttr, applyTAttr, applyGTAttr
+       , applyAttr, applyMAttr, applyTAttr, applyGTAttr
 
          -- * Envelopes
 
@@ -202,7 +202,7 @@ module Diagrams.Core
        , localize
 
        , href
-       , groupOpacity
+       , opacityGroup
 
        , setEnvelope, setTrace
 

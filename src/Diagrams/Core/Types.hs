@@ -47,8 +47,8 @@ module Diagrams.Core.Types
          -- ** Annotations
 
          -- *** Static annotations
-         Annotation(Href, GroupOpacity)
-       , applyAnnotation, href, groupOpacity
+         Annotation(Href, OpacityGroup)
+       , applyAnnotation, href, opacityGroup
 
          -- *** Dynamic (monoidal) annotations
        , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
@@ -193,10 +193,10 @@ instance (Data n, RealFloat n) => DataFloat n
 --
 --   * query functions (see "Diagrams.Core.Query")
 type UpAnnots b v n m = Deletable (Envelope v n)
-                  ::: Deletable (Trace v n)
-                  ::: Deletable (SubMap b v n m)
-                  ::: Query v n m
-                  ::: ()
+                    ::: Deletable (Trace v n)
+                    ::: Deletable (SubMap b v n m)
+                    ::: Query v n m
+                    ::: ()
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   /i.e./ which accumulate along each path to a leaf (and which can
@@ -206,8 +206,8 @@ type UpAnnots b v n m = Deletable (Envelope v n)
 --
 --   * names (see "Diagrams.Core.Names")
 type DownAnnots v n = (Transformation v n :+: Style v n)
-                ::: Name
-                ::: ()
+                  ::: Name
+                  ::: ()
 
   -- Note that we have to put the transformations and styles together
   -- using a coproduct because the transformations can act on the
@@ -243,14 +243,14 @@ data QDiaLeaf b v n m
 withQDiaLeaf :: (Prim b v n -> r)
             -> ((DownAnnots v n -> n -> n -> QDiagram b v n m) -> r)
             -> QDiaLeaf b v n m -> r
-withQDiaLeaf f _ (PrimLeaf p)    = f p
+withQDiaLeaf f _ (PrimLeaf p)      = f p
 withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
 
 -- | Static annotations which can be placed at a particular node of a
 --   diagram tree.
 data Annotation
   = Href String    -- ^ Hyperlink
-  | GroupOpacity Double
+  | OpacityGroup Double
   deriving Show
 
 -- | Apply a static annotation at the root of a diagram.
@@ -266,9 +266,9 @@ href :: (Metric v, OrderedField n, Semigroup m)
 href = applyAnnotation . Href
 
 -- | Change the transparency of a 'Diagram' as a group.
-groupOpacity :: (Metric v, OrderedField n, Semigroup m)
+opacityGroup :: (Metric v, OrderedField n, Semigroup m)
   => Double -> QDiagram b v n m -> QDiagram b v n m
-groupOpacity = applyAnnotation . GroupOpacity
+opacityGroup = applyAnnotation . OpacityGroup
 
 -- | The fundamental diagram type.  The type variables are as follows:
 --
