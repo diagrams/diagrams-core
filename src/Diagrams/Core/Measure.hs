@@ -9,6 +9,7 @@ module Diagrams.Core.Measure
   , local
   , global
   , normalized
+  , normalised
   , scaleLocal
   , atLeast
   , atMost
@@ -32,24 +33,36 @@ type Measure n = Measured n n
 fromMeasured :: Num n => n -> n -> Measured n a -> a
 fromMeasured g n (Measured m) = m (1,g,n)
 
+-- | Output units don't change.
 output :: Num n => n -> Measure n
 output = pure
 
+-- | Local units are scaled by the average scale of a transform.
 local :: Num n => n -> Measure n
 local x = views _1 (*x)
 
+-- | Global units are ?
 global :: Num n => n -> Measure n
 global x = views _2 (*x)
 
+-- | Normalized units get scaled so that one normalized unit is the size of the 
+--   final diagram.
 normalized :: Num n => n -> Measure n
 normalized x = views _3 (*x)
 
+-- | Just like 'normalized' but spelt properly.
+normalised :: Num n => n -> Measure n
+normalised x = views _3 (*x)
+
+-- | Scale the local units of a 'Measured' thing.
 scaleLocal :: Num n => n -> Measured n a -> Measured n a
 scaleLocal s = R.local (_1 *~ s)
 
+-- | Calculate the smaller of two measures.
 atLeast :: Ord n => Measure n -> Measure n -> Measure n
 atLeast = liftA2 min
 
+-- | Calculate the larger of two measures.
 atMost :: Ord n => Measure n -> Measure n -> Measure n
 atMost = liftA2 max
 

@@ -148,11 +148,11 @@ module Diagrams.Core
          -- * Attributes and styles
 
        , AttributeClass
-       , Attribute, mkAttr, mkTAttr, mkGTAttr, unwrapAttr
+       , Attribute, mkAttr, mkTAttr, unwrapAttr
 
        , Style, HasStyle(..)
        , getAttr, combineAttr
-       , applyAttr, applyMAttr, applyTAttr, applyGTAttr
+       , applyAttr, applyMAttr, applyTAttr
 
          -- * Envelopes
 
@@ -246,7 +246,6 @@ module Diagrams.Core
        , HasBasis
        , OrderedField
        , TypeableFloat
-       , DataFloat
        , Monoid'
 
        ) where
