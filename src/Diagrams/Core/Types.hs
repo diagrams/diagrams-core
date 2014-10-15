@@ -48,7 +48,7 @@ module Diagrams.Core.Types
 
          -- *** Static annotations
          Annotation(Href, OpacityGroup)
-       , applyAnnotation, href, opacityGroup
+       , applyAnnotation, href, opacityGroup, groupOpacity
 
          -- *** Dynamic (monoidal) annotations
        , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
@@ -117,7 +117,6 @@ module Diagrams.Core.Types
 
          -- ** Number classes
        , TypeableFloat
-       , DataFloat
 
          -- * Renderable
 
@@ -129,7 +128,7 @@ import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
                                             (^.), _Wrapped, _Wrapping)
 import           Control.Monad             (mplus)
-import           Data.Data
+import           Data.Typeable
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
@@ -167,11 +166,6 @@ import           Linear.Vector
 class (Typeable n, RealFloat n) => TypeableFloat n
 instance (Typeable n, RealFloat n) => TypeableFloat n
 -- use class instead of type constraint so users don't need constraint kinds pragma
-
--- | Class of numbers that are 'RealFloat', and 'Data'. This class is used to
---   shorten type constraints.
-class (Data n, RealFloat n) => DataFloat n
-instance (Data n, RealFloat n) => DataFloat n
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
@@ -266,9 +260,11 @@ href :: (Metric v, OrderedField n, Semigroup m)
 href = applyAnnotation . Href
 
 -- | Change the transparency of a 'Diagram' as a group.
-opacityGroup :: (Metric v, OrderedField n, Semigroup m)
+opacityGroup, groupOpacity :: (Metric v, OrderedField n, Semigroup m)
   => Double -> QDiagram b v n m -> QDiagram b v n m
 opacityGroup = applyAnnotation . OpacityGroup
+groupOpacity = applyAnnotation . OpacityGroup
+
 
 -- | The fundamental diagram type.  The type variables are as follows:
 --
@@ -388,9 +384,8 @@ names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 --   included/.  The upshot of this knot-tying is that if @d' = d #
 --   named x@, then @lookupName x d' == Just d'@ (instead of @Just
 --   d@).
-nameSub :: ( IsName nm
-           , Metric v, OrderedField n, Semigroup m)
-        => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
+nameSub :: (IsName nm , Metric v, OrderedField n, Semigroup m)
+  => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
 nameSub s n d = d'
   where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
 
@@ -646,7 +641,7 @@ instance (Metric v, OrderedField n)
       => HasOrigin (Subdiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
-instance ( Metric v, Floating n)
+instance (Metric v, Floating n)
     => Transformable (Subdiagram b v n m) where
   transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
 
@@ -685,8 +680,8 @@ newtype SubMap b v n m = SubMap (M.Map Name [Subdiagram b v n m])
   -- See Note [SubMap Set vs list]
 
 instance Wrapped (SubMap b v n m) where
-    type Unwrapped (SubMap b v n m) = M.Map Name [Subdiagram b v n m]
-    _Wrapped' = iso (\(SubMap m) -> m) SubMap
+  type Unwrapped (SubMap b v n m) = M.Map Name [Subdiagram b v n m]
+  _Wrapped' = iso (\(SubMap m) -> m) SubMap
 
 instance Rewrapped (SubMap b v n m) (SubMap b' v' n' m')
 
@@ -784,7 +779,7 @@ type instance N (Prim b v n) = n
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
 instance Transformable (Prim b v n) where
-  transform v (Prim p) = Prim (transform v p)
+  transform t (Prim p) = Prim (transform t p)
 
 -- | The 'Renderable' instance for 'Prim' just pushes calls to
 --   'render' down through the 'Prim' constructor.
@@ -796,17 +791,17 @@ instance Renderable (Prim b v n) b where
 ------------------------------------------------------------
 
 data DNode b v n a = DStyle (Style v n)
-                 | DTransform (Transformation v n)
-                 | DAnnot a
-                 | DDelay
-                   -- ^ @DDelay@ marks a point where a delayed subtree
-                   --   was expanded.  Such subtrees already take all
-                   --   non-frozen transforms above them into account,
-                   --   so when later processing the tree, upon
-                   --   encountering a @DDelay@ node we must drop any
-                   --   accumulated non-frozen transformation.
-                 | DPrim (Prim b v n)
-                 | DEmpty
+                   | DTransform (Transformation v n)
+                   | DAnnot a
+                   | DDelay
+                     -- ^ @DDelay@ marks a point where a delayed subtree
+                     --   was expanded.  Such subtrees already take all
+                     --   non-frozen transforms above them into account,
+                     --   so when later processing the tree, upon
+                     --   encountering a @DDelay@ node we must drop any
+                     --   accumulated non-frozen transformation.
+                   | DPrim (Prim b v n)
+                   | DEmpty
 
 -- | A 'DTree' is a raw tree representation of a 'QDiagram', with all
 --   the @u@-annotations removed.  It is used as an intermediate type
