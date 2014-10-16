@@ -56,7 +56,6 @@ module Diagrams.Core.Types
          -- ** Basic type definitions
        , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), Diagram
-       , Figure
 
          -- * Operations on diagrams
          -- ** Creating diagrams
@@ -411,9 +410,7 @@ type instance N (QDiagram b v n m) = n
 --   Transforming a default diagram into one with a more interesting
 --   query can be done via the 'Functor' instance of @'QDiagram' b@ or
 --   the 'value' function.
-type Diagram b v n = QDiagram b v n Any
-
-type family Figure b :: *
+type Diagram b = QDiagram b (V b) (N b) Any
 
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
