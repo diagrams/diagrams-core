@@ -56,6 +56,7 @@ module Diagrams.Core.Types
          -- ** Basic type definitions
        , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), Diagram
+       , Figure
 
          -- * Operations on diagrams
          -- ** Creating diagrams
@@ -411,6 +412,8 @@ type instance N (QDiagram b v n m) = n
 --   query can be done via the 'Functor' instance of @'QDiagram' b@ or
 --   the 'value' function.
 type Diagram b v n = QDiagram b v n Any
+
+type family Figure b :: *
 
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
@@ -1025,7 +1028,7 @@ class Backend b v n where
 --   1.9999999999999998
 --   @
 
-type D v n = Diagram NullBackend v n
+type D v n = QDiagram NullBackend v n Any
 
 
 -- | A null backend which does no actual rendering.  It is provided
