@@ -58,7 +58,7 @@ uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
 uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: (HasLinearMap v, HasBasis v, Floating n, Typeable n) => n -> n -> QDiagram b v n m -> Maybe (DTree b v n Annotation)
+toDTree :: (HasLinearMap v, Floating n, Typeable n) => n -> n -> QDiagram b v n m -> Maybe (DTree b v n Annotation)
 toDTree g n (QD qd)
   = foldDUAL
 
@@ -144,7 +144,7 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (HasLinearMap v, HasBasis v, Metric v
+  :: (HasLinearMap v, Metric v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else
@@ -165,7 +165,7 @@ toRTree globalToOutput d
     -- of product of diameters along each basis direction.  Note at
     -- this point the diagram has already had the globalToOutput
     -- transformation applied, so output = global = local units.
-    nToO = product (map (`diameter` d) basis) ** (1 / fromIntegral (dimension d))
+    nToO = product (map (`diameter` d) basis') ** (1 / fromIntegral (dimension d))
 
 -- | Apply a style transformation on 'RStyle' nodes; the identity for
 --   other 'RNode's.
@@ -181,8 +181,7 @@ onRStyle _ n          = n
 --   transformation can be used, for example, to convert output/screen
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
-  :: ( Backend b v n
-     , HasLinearMap v, HasBasis v, Metric v
+  :: ( Backend b v n , HasLinearMap v, Metric v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else
@@ -198,8 +197,7 @@ renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
 
 -- | Render a diagram.
 renderDia
-  :: ( Backend b v n
-     , HasLinearMap v, Metric v, HasBasis v
+  :: ( Backend b v n , HasLinearMap v, Metric v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else

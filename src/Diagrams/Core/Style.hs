@@ -52,6 +52,8 @@ import           Diagrams.Core.Transform
 import           Diagrams.Core.V
 import           Diagrams.Core.Measure
 
+import           Linear.Vector
+
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------
 ------------------------------------------------------------
@@ -149,7 +151,7 @@ instance Typeable n => Semigroup (Attribute v n) where
       Nothing  -> a2
       Just a2' -> TAttribute (a1 <> a2')
 
-instance (Floating n, HasLinearMap v) => Transformable (Attribute v n) where
+instance (Additive v, Traversable v, Floating n) => Transformable (Attribute v n) where
   transform _ (Attribute a)   = Attribute a
   transform t (MAttribute a)  = MAttribute $ scaleLocal (avgScale t) a
   transform t (TAttribute a)  = TAttribute (transform t a)
@@ -262,7 +264,7 @@ instance Typeable n => Monoid (Style v n) where
   mempty = Style HM.empty
   mappend = (<>)
 
-instance (HasLinearMap v, Floating n) => Transformable (Style v n) where
+instance (Additive v, Traversable v, Floating n) => Transformable (Style v n) where
   transform t = attrMap (transform t)
 
 -- | Styles have no action on other monoids.
