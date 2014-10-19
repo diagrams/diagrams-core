@@ -355,7 +355,7 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- > import Control.Lens ((^.))
 -- > import Data.Maybe (fromMaybe)
 -- >
--- > thingyT :: Trail R2
+-- > thingyT :: Trail V2 Double
 -- > thingyT =
 -- >   fromOffsets
 -- >     [ 3 *^ unitX, 3 *^ unitY, 2 *^ unit_X, 1 *^ unit_Y
@@ -364,9 +364,9 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- > thingy = strokeTrail thingyT
 -- >
 -- > data TraceDiaOpts
--- >   = TDO { traceShape :: Diagram B R2
--- >         , basePt     :: P2
--- >         , dirV       :: R2
+-- >   = TDO { traceShape :: Diagram B
+-- >         , basePt     :: P2 Double
+-- >         , dirV       :: V2 Double
 -- >         , sFilter    :: [Double] -> [Double]
 -- >         , drawV      :: Bool
 -- >         }
@@ -383,14 +383,14 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- > pointB = 1 ^& 1.2
 -- > pointC = 2.5 ^& 3.5
 -- >
--- > dot = circle 0.05 # lw none
+-- > dot' = circle 0.05 # lw none
 -- >
--- > mkTraceDia :: TraceDiaOpts -> Diagram B R2
+-- > mkTraceDia :: TraceDiaOpts -> Diagram B
 -- > mkTraceDia tdo = mconcat
--- >   [ mconcat $ map (place (dot # fc red)) pts
+-- >   [ mconcat $ map (place (dot' # fc red)) pts
 -- >   , if drawV tdo then resultArrow else mempty
 -- >   , arrowAt (basePt tdo) (dirV tdo) # lc blue
--- >   , dot # fc blue # moveTo (basePt tdo)
+-- >   , dot' # fc blue # moveTo (basePt tdo)
 -- >   , traceLine (basePt tdo) maxPosPt
 -- >   , traceLine (basePt tdo) minNegPt
 -- >   , traceShape tdo
@@ -417,9 +417,9 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- > traceLine _ Nothing = mempty
 -- > traceLine p (Just q) = (p ~~ q) # dashingG [0.1,0.1] 0
 -- >
--- > mkTraceDias :: [TraceDiaOpts] -> Diagram B R2
+-- > mkTraceDias :: [TraceDiaOpts] -> Diagram B
 -- > mkTraceDias = hcat' (with & sep .~ 1) . map mkTraceDia
 -- >
--- > mkTraceDiasABC :: TraceDiaOpts -> Diagram B R2
+-- > mkTraceDiasABC :: TraceDiaOpts -> Diagram B
 -- > mkTraceDiasABC tdo = mkTraceDias (map (\p -> tdo { basePt = p }) [pointA, pointB, pointC])
 

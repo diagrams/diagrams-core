@@ -362,8 +362,11 @@ href = applyAnnotation . Href
 --     @B@, meaning \"use whatever backend is in scope\".
 --
 --   * @v@ represents the vector space of the diagram.  Typical
---     instantiations include @R2@ (for a two-dimensional diagram) or
---     @R3@ (for a three-dimensional diagram).
+--     instantiations include @V2@ (for a two-dimensional diagram) or
+--     @V3@ (for a three-dimensional diagram).
+--
+--   * @n@ represents the numerical field the diagram uses.  Typically
+--     this will be a concrete numeric type like @Double@.
 --
 --   * @m@ is the monoidal type of \"query annotations\": each point
 --     in the diagram has a value of type @m@ associated to it, and
@@ -404,11 +407,11 @@ instance Rewrapped (QDiagram b v n m) (QDiagram b' v' n' m')
 type instance V (QDiagram b v n m) = v
 type instance N (QDiagram b v n m) = n
 
--- | @Diagram b v n@ is a synonym for @'QDiagram' b v n 'Any'@.  That is,
+-- | @Diagram b@ is a synonym for @'QDiagram' b (V b) (N b) 'Any'@.  That is,
 --   the default sort of diagram is one where querying at a point
 --   simply tells you whether the diagram contains that point or not.
 --   Transforming a default diagram into one with a more interesting
---   query can be done via the 'Functor' instance of @'QDiagram' b@ or
+--   query can be done via the 'Functor' instance of @'QDiagram' b v n@ or
 --   the 'value' function.
 type Diagram b = QDiagram b (V b) (N b) Any
 
@@ -972,32 +975,39 @@ class Backend b v n where
 --   width of an image (this example requires @diagrams-lib@):
 --
 --   @
---   ghci> width (image \"foo.png\" 200 200)
---   \<interactive\>:8:8:
---       No instance for (Renderable Diagrams.TwoD.Image.Image b0)
+--   ghci> width (image (uncheckedImageRef \"foo.png\" 200 200))
+--   \<interactive\>:11:8:
+--       No instance for (Renderable (DImage n0 External) b0)
 --         arising from a use of `image'
+--       The type variables `n0', `b0' are ambiguous
+--       Possible fix: add a type signature that fixes these type variable(s)
+--       Note: there is a potential instance available:
+--         instance Fractional n => Renderable (DImage n a) NullBackend
+--           -- Defined in `Diagrams.TwoD.Image'
 --       Possible fix:
 --         add an instance declaration for
---         (Renderable Diagrams.TwoD.Image.Image b0)
+--         (Renderable (DImage n0 External) b0)
 --       In the first argument of `width', namely
---         `(image \"foo.png\" 200 200)'
---       In the expression: width (image \"foo.png\" 200 200)
---       In an equation for `it': it = width (image \"foo.png\" 200 200)
+--         `(image (uncheckedImageRef \"foo.png\" 200 200))'
+--       In the expression:
+--         width (image (uncheckedImageRef \"foo.png\" 200 200))
+--       In an equation for `it':
+--           it = width (image (uncheckedImageRef \"foo.png\" 200 200))
 --   @
 --
---   GHC complains that there is no instance for @Renderable Image
---   b0@; what is really going on is that it does not have enough
+--   GHC complains that there is no instance for @Renderable (DImage n0
+--   External) b0@; what is really going on is that it does not have enough
 --   information to decide what backend to use (hence the
---   uninstantiated @b0@). This is annoying because /we/ know that the
+--   uninstantiated @n0@ and @b0@). This is annoying because /we/ know that the
 --   choice of backend cannot possibly affect the width of the image
 --   (it's 200! it's right there in the code!); /but/ there is no way
 --   for GHC to know that.
 --
 --   The solution is to annotate the call to 'image' with the type
---   @'D' 'R2'@, like so:
+--   @'D' 'V2' 'Double'@, like so:
 --
 --   @
---   ghci> width (image \"foo.png\" 200 200 :: D R2)
+--   ghci> width (image (uncheckedImageRef \"foo.png\" 200 200) :: D V2 Double)
 --   200.00000000000006
 --   @
 --
@@ -1008,8 +1018,10 @@ class Backend b v n where
 --
 --   @
 --   ghci> width (circle 1)
---   \<interactive\>:4:1:
---       Couldn't match type `V a0' with `R2'
+--   \<interactive\>:12:1:
+--       Couldn't match expected type `V2' with actual type `V a0'
+--       The type variable `a0' is ambiguous
+--       Possible fix: add a type signature that fixes these type variable(s)
 --       In the expression: width (circle 1)
 --       In an equation for `it': it = width (circle 1)
 --   @
@@ -1021,7 +1033,7 @@ class Backend b v n where
 --   However, the solution is the same:
 --
 --   @
---   ghci> width (circle 1 :: D R2)
+--   ghci> width (circle 1 :: D V2 Double)
 --   1.9999999999999998
 --   @
 
