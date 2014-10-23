@@ -39,6 +39,7 @@ import qualified Data.Set                as S
 import           Data.Typeable
 
 import           Diagrams.Core.Transform
+import           Diagrams.Core.Measure
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
@@ -160,6 +161,9 @@ instance Qualifiable a => Qualifiable (M.Map k a) where
 
 instance Qualifiable a => Qualifiable (b -> a) where
  n |> f = (n |>) . f
+
+instance Qualifiable a => Qualifiable (Measured n a) where
+ n |> m = fmap (n |>) m
 
 infixr 5 |>
 infixr 5 .>

@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Diagrams.Core.Measure
   ( Measured (..)
@@ -20,12 +21,18 @@ import           Control.Lens
 import qualified Control.Monad.Reader as R
 import           Data.Distributive
 import           Data.Typeable
+import           Data.Semigroup
+
+import Diagrams.Core.V
 
 import           Linear.Vector
 
 -- (local, global, normalized) -> output
-newtype Measured n a = Measured { unMeasure :: (n,n,n) -> a }
+newtype Measured n a = Measured { unmeasure :: (n,n,n) -> a }
   deriving (Typeable, Functor, Applicative, Monad, Additive, R.MonadReader (n,n,n))
+
+type instance V (Measured n a) = V a
+type instance N (Measured n a) = N a
 
 type Measure n = Measured n n
 
@@ -101,7 +108,13 @@ instance Floating a => Floating (Measured n a) where
   atanh   = fmap atanh
   acosh   = fmap acosh
 
--- exotic instances
+instance Semigroup a => Semigroup (Measured n a) where
+  (<>) = liftA2 (<>)
+
+instance Monoid a => Monoid (Measured n a) where
+  mempty  = pure mempty
+  mappend = liftA2 mappend
+
 
 instance Distributive (Measured n) where
   distribute a = Measured $ \x -> fmap (\(Measured m) -> m x) a

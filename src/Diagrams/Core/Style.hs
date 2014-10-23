@@ -294,6 +294,9 @@ instance HasStyle a => HasStyle (M.Map k a) where
 instance (HasStyle a, Ord a) => HasStyle (S.Set a) where
   applyStyle = S.map . applyStyle
 
+instance HasStyle b => HasStyle (Measured n b) where
+  applyStyle = fmap . applyStyle
+
 -- | Apply an attribute to an instance of 'HasStyle' (such as a
 --   diagram or a style).  If the object already has an attribute of
 --   the same type, the new attribute is combined on the left with the
