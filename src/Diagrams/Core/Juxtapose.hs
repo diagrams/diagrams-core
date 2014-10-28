@@ -19,11 +19,12 @@ module Diagrams.Core.Juxtapose
        ( Juxtaposable(..), juxtaposeDefault
        ) where
 
-import           Data.Functor            ((<$>))
+import           Control.Applicative
 import qualified Data.Map                as M
 import qualified Data.Set                as S
 
 import           Diagrams.Core.Envelope
+import           Diagrams.Core.Measure
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.V
 
@@ -71,4 +72,7 @@ instance (Enveloped b, HasOrigin b, Ord b) => Juxtaposable (S.Set b) where
 
 instance Juxtaposable a => Juxtaposable (b -> a) where
   juxtapose v f1 f2 b = juxtapose v (f1 b) (f2 b)
+
+instance Juxtaposable a => Juxtaposable (Measured n a) where
+  juxtapose v = liftA2 (juxtapose v)
 

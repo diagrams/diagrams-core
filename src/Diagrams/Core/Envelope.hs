@@ -151,7 +151,7 @@ instance Show (Envelope v n) where
 --  Transforming envelopes  --------------------------------
 ------------------------------------------------------------
 
-instance (Additive v, Metric v, Floating n) => Transformable (Envelope v n) where
+instance (Metric v, Floating n) => Transformable (Envelope v n) where
   transform t = moveOriginTo (P . negated . transl $ t) . onEnvelope g
     where
       -- XXX add lots of comments explaining this!

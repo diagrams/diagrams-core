@@ -1,14 +1,9 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
-
--- The UndecidableInstances flag is needed under 6.12.3 for the
--- HasStyle (a,b) instance.
 
 -----------------------------------------------------------------------------
 -- |
@@ -27,26 +22,27 @@ module Diagrams.Core.Style
          -- $attr
 
          AttributeClass
-       , Attribute(..)
-       , mkAttr, mkTAttr, mkGTAttr, unwrapAttr
-       , applyAttr, applyTAttr, applyGTAttr
+       , Attribute(..), _Attribute, _MAttribute, _TAttribute
+       , mkAttr, mkMAttr, mkTAttr, unwrapAttr
+       , applyAttr, applyMAttr, applyTAttr
 
          -- * Styles
          -- $style
 
        , Style(..)
-       , attrToStyle, tAttrToStyle, gtAttrToStyle
+       , attrToStyle, tAttrToStyle, mAttrToStyle
        , getAttr, setAttr, addAttr, combineAttr
-       , gmapAttrs
+
+       , unmeasureAttr, unmeasureAttrs
 
        , HasStyle(..)
 
        ) where
 
 import           Control.Arrow           ((***))
-import           Control.Lens            (Rewrapped, Wrapped (..), iso, (%~), (&))
-import           Data.Data
-import           Data.Data.Lens          (template)
+import           Control.Lens            hiding (Action, transform)-- (Rewrapped, Wrapped (..), iso, (%~), (&))
+import           Data.Typeable
+import qualified Data.HashMap.Strict     as HM
 import qualified Data.Map                as M
 import           Data.Monoid.Action
 import           Data.Semigroup
@@ -54,6 +50,9 @@ import qualified Data.Set                as S
 
 import           Diagrams.Core.Transform
 import           Diagrams.Core.V
+import           Diagrams.Core.Measure
+
+import           Linear.Vector
 
 ------------------------------------------------------------
 --  Attributes  --------------------------------------------
@@ -87,16 +86,20 @@ class (Typeable a, Semigroup a) => AttributeClass a
 --   generically.
 data Attribute (v :: * -> *) n :: * where
   Attribute   :: AttributeClass a => a -> Attribute v n
+  MAttribute  :: AttributeClass a => Measured n a -> Attribute v n
   TAttribute  :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
-  GTAttribute :: (AttributeClass a, Data a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
 
+-- | Prism onto 'Attribute'.
+_Attribute :: AttributeClass a => Prism' (Attribute v n) a
+_Attribute = prism' Attribute (\(Attribute a) -> cast a)
 
-  -- Note: one could imagine requiring all attributes to be generic,
-  -- but adding Data instances for everything would be a big pain in
-  -- the butt, especially for things in other packages which don't
-  -- export their constructors (e.g. FingerTree).  Having three
-  -- different attribute wrappers is not ideal but it's far less work
-  -- than the alternative.
+-- | Prism onto 'MAttribute'.
+_MAttribute :: (AttributeClass a, Typeable n) => Prism' (Attribute v n) (Measured n a)
+_MAttribute = prism' MAttribute (\(MAttribute a) -> cast a)
+
+-- | Prism onto 'TAttribute'.
+_TAttribute :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => Prism' (Attribute v n) a
+_TAttribute = prism' TAttribute (\(TAttribute a) -> cast a)
 
 type instance V (Attribute v n) = v
 type instance N (Attribute v n) = n
@@ -105,13 +108,13 @@ type instance N (Attribute v n) = n
 mkAttr :: AttributeClass a => a -> Attribute v n
 mkAttr = Attribute
 
+-- | Wrap up a measured attribute.
+mkMAttr :: AttributeClass a => Measured n a -> Attribute v n
+mkMAttr = MAttribute
+
 -- | Wrap up a transformable attribute.
 mkTAttr :: (AttributeClass a, Transformable a) => a -> Attribute (V a) (N a)
 mkTAttr = TAttribute
-
--- | Wrap up a transformable and generic attribute.
-mkGTAttr :: (AttributeClass a, Data a, Transformable a) => a -> Attribute (V a) (N a)
-mkGTAttr = GTAttribute
 
 -- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
 --   safe) check on the type of the result.  If the required type
@@ -120,31 +123,38 @@ mkGTAttr = GTAttribute
 --   is returned.
 unwrapAttr :: AttributeClass a => Attribute v n -> Maybe a
 unwrapAttr (Attribute a)   = cast a
+unwrapAttr (MAttribute _)  = Nothing -- can't unwarp measured attributes
 unwrapAttr (TAttribute a)  = cast a
-unwrapAttr (GTAttribute a) = cast a
+-- Measured is intentionally not an instance on 'AttributeClass' to avoid any 
+-- mix ups.
+
+-- | Same as 'unwrapAttr' but for an 'MAttribute'.
+unwrapMAttr :: (AttributeClass a, Typeable n) => Attribute v n -> Maybe (Measured n a)
+unwrapMAttr (MAttribute m) = cast m
+unwrapMAttr _              = Nothing
 
 -- | Attributes form a semigroup, where the semigroup operation simply
 --   returns the right-hand attribute when the types do not match, and
 --   otherwise uses the semigroup operation specific to the (matching)
 --   types.
-instance Semigroup (Attribute v n) where
+instance Typeable n => Semigroup (Attribute v n) where
   (Attribute a1) <> a2 =
     case unwrapAttr a2 of
       Nothing  -> a2
       Just a2' -> Attribute (a1 <> a2')
+  (MAttribute (Measured a1)) <> a2 =
+    case unwrapMAttr a2 of
+      Just (Measured a2') -> MAttribute $ Measured (a1 <> a2')
+      Nothing             -> a2
   (TAttribute a1) <> a2 =
     case unwrapAttr a2 of
       Nothing  -> a2
       Just a2' -> TAttribute (a1 <> a2')
-  (GTAttribute a1) <> a2 =
-    case unwrapAttr a2 of
-      Nothing -> a2
-      Just a2' -> GTAttribute (a1 <> a2')
 
-instance Transformable (Attribute v n) where
+instance (Additive v, Traversable v, Floating n) => Transformable (Attribute v n) where
   transform _ (Attribute a)   = Attribute a
+  transform t (MAttribute a)  = MAttribute $ scaleLocal (avgScale t) a
   transform t (TAttribute a)  = TAttribute (transform t a)
-  transform t (GTAttribute a) = GTAttribute (transform t a)
 
 ------------------------------------------------------------
 --  Styles  ------------------------------------------------
@@ -158,21 +168,39 @@ instance Transformable (Attribute v n) where
 
 -- | A @Style@ is a heterogeneous collection of attributes, containing
 --   at most one attribute of any given type.
-newtype Style v n = Style (M.Map String (Attribute v n))
-  -- The String keys are serialized TypeRep values, corresponding to
-  -- the type of the stored attribute.
-
-instance Wrapped (Style v n) where
-  type Unwrapped (Style v n) = M.Map String (Attribute v n)
-  _Wrapped' = iso (\(Style m) -> m) Style
-
-instance Rewrapped (Style v n) (Style v' n)
+newtype Style v n = Style (HM.HashMap TypeRep (Attribute v n))
 
 type instance V (Style v n) = v
 type instance N (Style v n) = n
 
+instance Rewrapped (Style v n) (Style v' n')
+instance Wrapped (Style v n) where
+  type Unwrapped (Style v n) = HM.HashMap TypeRep (Attribute v n)
+  _Wrapped' = iso (\(Style m) -> m) Style
+  {-# INLINE _Wrapped' #-}
+
+type instance Index (Style v n)   = TypeRep
+type instance IxValue (Style v n) = Attribute v n
+
+instance Ixed (Style v n) where
+  ix k = _Wrapped' . ix k
+  {-# INLINE ix #-}
+
+instance At (Style v n) where
+  at k = _Wrapped' . at k
+  {-# INLINE at #-}
+
+instance Each (Style v n) (Style v' n') (Attribute v n) (Attribute v' n') where
+  each = _Wrapped . each
+  {-# INLINE each #-}
+
+-- | Map the attributes of a style, with the possibility of changing the space 
+--   / number type.
+attrMap :: (Attribute v n -> Attribute u n') -> Style v n -> Style u n'
+attrMap f (Style s) = Style $ HM.map f s
+
 -- | Helper function for operating on styles.
-inStyle :: (M.Map String (Attribute v n) -> M.Map String (Attribute v n))
+inStyle :: (HM.HashMap TypeRep (Attribute v n) -> HM.HashMap TypeRep (Attribute v n))
         -> Style v n -> Style v n
 inStyle f (Style s) = Style (f s)
 
@@ -180,66 +208,64 @@ inStyle f (Style s) = Style (f s)
 --   style contains an attribute of the requested type, it will be
 --   returned wrapped in @Just@; otherwise, @Nothing@ is returned.
 getAttr :: forall a v n. AttributeClass a => Style v n -> Maybe a
-getAttr (Style s) = M.lookup ty s >>= unwrapAttr
-  where ty = show . typeOf $ (undefined :: a)
+getAttr (Style s) = HM.lookup ty s >>= unwrapAttr
+  where ty = typeOf (undefined :: a)
   -- the unwrapAttr should never fail, since we maintain the invariant
   -- that attributes of type T are always stored with the key "T".
 
 -- | Create a style from a single attribute.
-attrToStyle :: forall a v n. AttributeClass a => a -> Style v n
-attrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkAttr a))
+attrToStyle :: AttributeClass a => a -> Style v n
+attrToStyle a = Style (HM.singleton (typeOf a) (mkAttr a))
+
+-- | Create a style from a single attribute.
+mAttrToStyle :: forall v n a. (AttributeClass a, Typeable n) => Measured n a -> Style v n
+mAttrToStyle a = Style (HM.singleton (typeOf (undefined :: a)) (mkMAttr a))
+-- Note that we use type 'a' not 'Measured n a' so we don't have to rebuild 
+-- when un-measuring the attributes.
 
 -- | Create a style from a single transformable attribute.
-tAttrToStyle :: forall a. (AttributeClass a, Transformable a) => a -> Style (V a) (N a)
-tAttrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkTAttr a))
-
--- | Create a style from a single transformable, generic attribute.
-gtAttrToStyle :: forall a. (AttributeClass a, Data a, Transformable a) => a -> Style (V a) (N a)
-gtAttrToStyle a = Style (M.singleton (show . typeOf $ (undefined :: a)) (mkGTAttr a))
+tAttrToStyle :: (AttributeClass a, Transformable a) => a -> Style (V a) (N a)
+tAttrToStyle a = Style (HM.singleton (typeOf a) (mkTAttr a))
 
 -- | Add a new attribute to a style, or replace the old attribute of
 --   the same type if one exists.
-setAttr :: forall a v n. AttributeClass a => a -> Style v n -> Style v n
-setAttr a = inStyle $ M.insert (show . typeOf $ (undefined :: a)) (mkAttr a)
+setAttr :: AttributeClass a => a -> Style v n -> Style v n
+setAttr a = inStyle $ HM.insert (typeOf a) (mkAttr a)
 
 -- | Attempt to add a new attribute to a style, but if an attribute of
 --   the same type already exists, do not replace it.
-addAttr :: AttributeClass a => a -> Style v n -> Style v n
+addAttr :: (AttributeClass a, Typeable n) => a -> Style v n -> Style v n
 addAttr a s = attrToStyle a <> s
 
 -- | Add a new attribute to a style that does not already contain an
 --   attribute of this type, or combine it on the left with an existing
 --   attribute.
-combineAttr :: AttributeClass a => a -> Style v n -> Style v n
-combineAttr a s =
-  case getAttr s of
-    Nothing -> setAttr a s
-    Just a' -> setAttr (a <> a') s
+combineAttr :: forall a v n. (AttributeClass a, Typeable n) => a -> Style v n -> Style v n
+combineAttr a = inStyle $ HM.insertWith (<>) (typeOf a) (mkAttr a)
 
--- | Map generically over all generic attributes in a style, applying
---   the given function to any values with the given type, even deeply
---   nested ones.  Note that only attributes wrapped in 'GTAttribute'
---   are affected.
-gmapAttrs :: forall v a n. Typeable a => (a -> a) -> Style v n -> Style v n
-gmapAttrs f = (inStyle . M.map) gmapAttr
-  where
-    gmapAttr :: Attribute v n -> Attribute v n
-    gmapAttr (GTAttribute a) = GTAttribute (a & template %~ f)
-    gmapAttr a = a
+unmeasureAttrs :: (Num n, Typeable n) => n -> n -> Style v n -> Style v n
+unmeasureAttrs g n = attrMap (unmeasureAttr g n)
+-- Note that measured attributes are stored with their type, not their measured 
+-- type, so there's no need to rebuild the whole map to rename them
 
-instance Semigroup (Style v n) where
-  Style s1 <> Style s2 = Style $ M.unionWith (<>) s1 s2
+-- | Turn a 'MAttribute' into a 'Attribute'.
+unmeasureAttr :: (Num n, Typeable n) => n -> n -> Attribute v n -> Attribute v n
+unmeasureAttr g n (MAttribute m) = Attribute (fromMeasured g n m)
+unmeasureAttr _ _ a              = a
+
+instance Typeable n => Semigroup (Style v n) where
+  Style s1 <> Style s2 = Style $ HM.unionWith (<>) s1 s2
 
 -- | The empty style contains no attributes; composition of styles is
 --   a union of attributes; if the two styles have attributes of the
 --   same type they are combined according to their semigroup
 --   structure.
-instance Monoid (Style v n) where
-  mempty = Style M.empty
+instance Typeable n => Monoid (Style v n) where
+  mempty = Style HM.empty
   mappend = (<>)
 
-instance Num n => Transformable (Style v n) where
-  transform t = inStyle $ M.map (transform t)
+instance (Additive v, Traversable v, Floating n) => Transformable (Style v n) where
+  transform t = attrMap (transform t)
 
 -- | Styles have no action on other monoids.
 instance Action (Style v n) m
@@ -250,7 +276,7 @@ class HasStyle a where
   --   existing style.
   applyStyle :: Style (V a) (N a) -> a -> a
 
-instance HasStyle (Style v n) where
+instance Typeable n => HasStyle (Style v n) where
   applyStyle = mappend
 
 instance (HasStyle a, HasStyle b, V a ~ V b, N a ~ N b) => HasStyle (a,b) where
@@ -268,12 +294,18 @@ instance HasStyle a => HasStyle (M.Map k a) where
 instance (HasStyle a, Ord a) => HasStyle (S.Set a) where
   applyStyle = S.map . applyStyle
 
+instance HasStyle b => HasStyle (Measured n b) where
+  applyStyle = fmap . applyStyle
+
 -- | Apply an attribute to an instance of 'HasStyle' (such as a
 --   diagram or a style).  If the object already has an attribute of
 --   the same type, the new attribute is combined on the left with the
 --   existing attribute, according to their semigroup structure.
 applyAttr :: (AttributeClass a, HasStyle d) => a -> d -> d
 applyAttr = applyStyle . attrToStyle
+
+applyMAttr :: (N d ~ n, AttributeClass a, HasStyle d, Typeable n) => Measured n a -> d -> d
+applyMAttr = applyStyle . mAttrToStyle
 
 -- | Apply a transformable attribute to an instance of 'HasStyle'
 --   (such as a diagram or a style).  If the object already has an
@@ -282,7 +314,4 @@ applyAttr = applyStyle . attrToStyle
 --   structure.
 applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
 applyTAttr = applyStyle . tAttrToStyle
-
-applyGTAttr :: (AttributeClass a, Data a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
-applyGTAttr = applyStyle . gtAttrToStyle
 

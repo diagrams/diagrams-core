@@ -1,5 +1,6 @@
-{-# LANGUAGE TypeFamilies  #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ConstraintKinds  #-}
+{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE TypeOperators    #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -13,7 +14,7 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.V
-       ( V, N, Vn
+       ( V, N, Vn, InSpace, SameSpace
        ) where
 
 import           Data.Map
@@ -22,6 +23,8 @@ import           Data.Monoid.Deletable
 import           Data.Monoid.Split
 import           Data.Semigroup
 import           Data.Set
+
+import           Linear.Vector
 
 ------------------------------------------------------------
 -- Vector spaces -------------------------------------------
@@ -69,4 +72,7 @@ type instance N (m :+: n)     = N m
 --   object's vector space. This is usually used as @Vn a ~ v n@ where @v@ is 
 --   the vector space and @n@ is the numerical field.
 type Vn a = V a (N a)
+
+type InSpace v n a = (V a ~ v, N a ~ n, Additive v, Num n)
+type SameSpace a b = (V a ~ V b, N a ~ N b)
 

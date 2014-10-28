@@ -31,8 +31,6 @@ module Diagrams.Core.Compile
 
   , toDTree
   , fromDTree
-  , styleToOutput
-  , toOutput
   )
   where
 
@@ -47,12 +45,11 @@ import           Data.Tree
 import           Data.Tree.DUAL
 
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
-import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
+import           Diagrams.Core.Style
 
 import           Linear.Metric hiding (qd)
-import           Linear.Vector
 
 emptyDTree :: Tree (DNode b v n a)
 emptyDTree = Node DEmpty []
@@ -61,8 +58,7 @@ uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
 uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: (Additive v, Num n) => n -> n -> QDiagram b v n m
-                          -> Maybe (DTree b v n Annotation)
+toDTree :: (HasLinearMap v, Floating n, Typeable n) => n -> n -> QDiagram b v n m -> Maybe (DTree b v n Annotation)
 toDTree g n (QD qd)
   = foldDUAL
 
@@ -79,8 +75,7 @@ toDTree g n (QD qd)
                -- the continuation, convert the result to a DTree, and
                -- splice it in, adding a DDelay node to mark the point
                -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree g n
-                            . ($ (d, g, n)) . uncurry3)
+               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree g n . ($ (d, g, n)) . uncurry3)
       )
 
       -- u-only leaves --> empty DTree. We don't care about the
@@ -112,7 +107,7 @@ toDTree g n (QD qd)
 -- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
-fromDTree :: forall b v n. (Num n, HasLinearMap v) => DTree b v n Annotation -> RTree b v n Annotation
+fromDTree :: forall b v n. (Floating n, HasLinearMap v) => DTree b v n Annotation -> RTree b v n Annotation
 fromDTree = fromDTree' mempty
   where
     fromDTree' :: HasLinearMap v => Transformation v n -> DTree b v n Annotation -> RTree b v n Annotation
@@ -158,7 +153,7 @@ toRTree
      , Typeable n, OrderedField n, Monoid m, Semigroup m)
   => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 toRTree globalToOutput d
-  = (fmap . onRStyle) (styleToOutput gToO nToO)
+  = (fmap . onRStyle) (unmeasureAttrs gToO nToO)
   . fromDTree
   . fromMaybe (Node DEmpty [])
   . toDTree gToO nToO
@@ -170,38 +165,13 @@ toRTree globalToOutput d
     -- of product of diameters along each basis direction.  Note at
     -- this point the diagram has already had the globalToOutput
     -- transformation applied, so output = global = local units.
-    nToO = product (map (`diameter` d) basis) ** (1 / fromIntegral (dimension d))
+    nToO = product (map (`diameter` d) basis') ** (1 / fromIntegral (dimension d))
 
 -- | Apply a style transformation on 'RStyle' nodes; the identity for
 --   other 'RNode's.
 onRStyle :: (Style v n -> Style v n) -> RNode b v n a -> RNode b v n a
 onRStyle f (RStyle s) = RStyle (f s)
 onRStyle _ n          = n
-
--- | Convert all 'Measure' values to 'Output' units.  The arguments
---   are, respectively, the scaling factor from global units to output
---   units, and from normalized units to output units.  It is assumed
---   that local units are identical to output units (which will be the
---   case if all transformations have been fully pushed down and
---   applied). Normalized units are based on a logical diagram size of
---   1 x 1.
-styleToOutput
-  :: forall v n. (
-#if __GLASGOW_HASKELL__ > 707
-                   Typeable v
-#else
-                   Typeable1 v
-#endif
-                 , Typeable n, Fractional n, Ord n)
-  => n -> n -> Style v n -> Style v n
-styleToOutput globalToOutput normToOutput =
-  gmapAttrs (toOutput globalToOutput normToOutput :: Measure n -> Measure n)
-
--- | Convert an arbitrary 'Measure' to 'Output' units using the given global and 
---   normalized scales.
-toOutput :: (Num n, Ord n)
-  => n -> n -> Measure n -> Measure n
-toOutput g n = Output . fromMeasure g n
 
 --------------------------------------------------
 
@@ -211,8 +181,7 @@ toOutput g n = Output . fromMeasure g n
 --   transformation can be used, for example, to convert output/screen
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
-  :: ( Backend b v n
-     , HasLinearMap v, Metric v
+  :: ( Backend b v n , HasLinearMap v, Metric v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else
@@ -228,8 +197,7 @@ renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
 
 -- | Render a diagram.
 renderDia
-  :: ( Backend b v n
-     , HasLinearMap v, Metric v
+  :: ( Backend b v n , HasLinearMap v, Metric v
 #if __GLASGOW_HASKELL__ > 707
      , Typeable v
 #else

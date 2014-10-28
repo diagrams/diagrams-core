@@ -92,7 +92,7 @@
 module Diagrams.Core
        ( -- * Associated vector spaces
 
-         V, N, Vn
+         V, N, Vn, InSpace, SameSpace
 
          -- * Points
 
@@ -148,11 +148,11 @@ module Diagrams.Core
          -- * Attributes and styles
 
        , AttributeClass
-       , Attribute, mkAttr, mkTAttr, mkGTAttr, unwrapAttr
+       , Attribute, mkAttr, mkTAttr, unwrapAttr
 
        , Style, HasStyle(..)
        , getAttr, combineAttr
-       , applyAttr, applyTAttr, applyGTAttr
+       , applyAttr, applyMAttr, applyTAttr
 
          -- * Envelopes
 
@@ -202,6 +202,7 @@ module Diagrams.Core
        , localize
 
        , href
+       , opacityGroup
 
        , setEnvelope, setTrace
 
@@ -214,14 +215,18 @@ module Diagrams.Core
        , location
        , subPoint
 
-         -- * Measurements
-       , Measure(..)
-       , fromMeasure
-       , fromOutput
-       , toOutput
-       , atMost
-       , atLeast
+         -- ** Measurements
+
+       , Measured
+       , Measure
+       , fromMeasured
+       , output
+       , local
+       , global
+       , normalized
        , scaleLocal
+       , atLeast
+       , atMost
 
          -- * Backends
 
@@ -238,9 +243,9 @@ module Diagrams.Core
          -- * Convenience classes
 
        , HasLinearMap
+       , HasBasis
        , OrderedField
        , TypeableFloat
-       , DataFloat
        , Monoid'
 
        ) where
@@ -256,6 +261,7 @@ import           Diagrams.Core.Style
 import           Diagrams.Core.Trace
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
+import           Diagrams.Core.Measure
 import           Diagrams.Core.V
 
 import           Data.Monoid.WithSemigroup (Monoid')

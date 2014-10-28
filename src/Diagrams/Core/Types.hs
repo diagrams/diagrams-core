@@ -47,8 +47,8 @@ module Diagrams.Core.Types
          -- ** Annotations
 
          -- *** Static annotations
-         Annotation(Href)
-       , applyAnnotation, href
+         Annotation(Href, OpacityGroup)
+       , applyAnnotation, href, opacityGroup, groupOpacity
 
          -- *** Dynamic (monoidal) annotations
        , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
@@ -85,13 +85,6 @@ module Diagrams.Core.Types
        , setEnvelope
        , setTrace
 
-         -- * Measurements
-       , Measure(..)
-       , fromMeasure
-       , fromOutput
-       , atMost, atLeast
-       , scaleLocal
-
          -- * Subdiagrams
 
        , Subdiagram(..), mkSubdiagram
@@ -124,7 +117,6 @@ module Diagrams.Core.Types
 
          -- ** Number classes
        , TypeableFloat
-       , DataFloat
 
          -- * Renderable
 
@@ -136,7 +128,7 @@ import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
                                             (^.), _Wrapped, _Wrapping)
 import           Control.Monad             (mplus)
-import           Data.Data
+import           Data.Typeable
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
@@ -175,94 +167,6 @@ class (Typeable n, RealFloat n) => TypeableFloat n
 instance (Typeable n, RealFloat n) => TypeableFloat n
 -- use class instead of type constraint so users don't need constraint kinds pragma
 
--- | Class of numbers that are 'RealFloat', and 'Data'. This class is used to
---   shorten type constraints.
-class (Data n, RealFloat n) => DataFloat n
-instance (Data n, RealFloat n) => DataFloat n
-
-------------------------------------------------------------
---  Measurement Units  -------------------------------------
-------------------------------------------------------------
--- | Type of measurement units for attributes.
-data Measure n = Output n
-               | Normalized n
-               | Local n
-               | Global n
-
-               | MinM (Measure n) (Measure n)
-               | MaxM (Measure n) (Measure n)
-               | ZeroM
-               | PlusM (Measure n) (Measure n)
-  deriving (Data, Typeable, Show)
-
--- | Scale a measure. Only Local units are scaled.
-scaleLocal :: Num n => n -> Measure n -> Measure n
-scaleLocal s m = case m of
-  Local x     -> Local (s * x)
-  PlusM m1 m2 -> PlusM (scaleLocal s m1) (scaleLocal s m2)
-  MinM m1 m2  -> MinM (scaleLocal s m1) (scaleLocal s m2)
-  MaxM m1 m2  -> MaxM (scaleLocal s m1) (scaleLocal s m2)
-  y           -> y
-
--- | Extract a measure using the given global and normalized scales.
-fromMeasure :: (Num n, Ord n) => n -> n -> Measure n -> n
-fromMeasure g n m =
-  case m of
-    Output s     -> s
-    Local s      -> s
-    Global s     -> g * s
-    Normalized s -> n * s
-
-    PlusM m1 m2  -> fromMeasure g n m1 + fromMeasure g n m2
-    MinM m1 m2   -> min (fromMeasure g n m1) (fromMeasure g n m2)
-    MaxM m1 m2   -> max (fromMeasure g n m1) (fromMeasure g n m2)
-    ZeroM        -> 0
-
--- | Compute the larger of two 'Measure's.  Useful for setting lower
---   bounds.
-atLeast :: Measure n -> Measure n -> Measure n
-atLeast = MaxM
-
--- | Compute the smaller of two 'Measure's.  Useful for setting upper
---   bounds.
-atMost :: Measure n -> Measure n -> Measure n
-atMost = MinM
-
--- | Retrieve the 'Output' value of a 'Measure v' or throw an exception.
---   Only 'Ouput' measures should be left in the 'RTree' passed to the backend.
-fromOutput :: Measure n -> n
-fromOutput (Output w)     = w
-fromOutput (Normalized _) = fromOutputErr "Normalized"
-fromOutput (Local _)      = fromOutputErr "Local"
-fromOutput (Global _)     = fromOutputErr "Global"
-fromOutput (MinM _ _)     = fromOutputErr "MinM"
-fromOutput (MaxM _ _)     = fromOutputErr "MaxM"
-fromOutput (ZeroM)        = fromOutputErr "ZeroM"
-fromOutput (PlusM _ _)    = fromOutputErr "PlusM"
-
-fromOutputErr :: String -> a
-fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must be Output."
-
-
---   Eventually we may use a GADT like:
---
---     data Measure o v where
---       Output     :: Scalar v -> Measure O v
---       Normalized :: Scalar v -> Measure A v
---       Global     :: Scalar v -> Measure A v
---       Local      :: Scale v  -> Measure A v
---
---   to check this at compile time. But for now we throw a runtime error.
---
---   [BAY 4 April 2014] I tried switching to such a GADT.  One tricky
---   bit is that you have to use Output :: Scalar v -> Measure o v,
---   not Measure O v: the reason is that operations like addition have
---   to take two values of the same type, so in order to be able to
---   add Output to something else, Output must be able to have an A
---   annotation.  That all works fine.  The problem is with gmapAttrs,
---   which has to preserve type: so we can't generically convert from
---   Measure A to Measure O.
-
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------
 ------------------------------------------------------------
@@ -283,10 +187,10 @@ fromOutputErr s = error $ "fromOutput: Cannot pass " ++ s ++ " to backends, must
 --
 --   * query functions (see "Diagrams.Core.Query")
 type UpAnnots b v n m = Deletable (Envelope v n)
-                  ::: Deletable (Trace v n)
-                  ::: Deletable (SubMap b v n m)
-                  ::: Query v n m
-                  ::: ()
+                    ::: Deletable (Trace v n)
+                    ::: Deletable (SubMap b v n m)
+                    ::: Query v n m
+                    ::: ()
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   /i.e./ which accumulate along each path to a leaf (and which can
@@ -296,8 +200,8 @@ type UpAnnots b v n m = Deletable (Envelope v n)
 --
 --   * names (see "Diagrams.Core.Names")
 type DownAnnots v n = (Transformation v n :+: Style v n)
-                ::: Name
-                ::: ()
+                  ::: Name
+                  ::: ()
 
   -- Note that we have to put the transformations and styles together
   -- using a coproduct because the transformations can act on the
@@ -328,18 +232,19 @@ data QDiaLeaf b v n m
     --   already apply any transformation in the given
     --   @DownAnnots@ (that is, the transformation will not
     --   be applied by the context).
-  deriving (Functor)
+  deriving Functor
 
 withQDiaLeaf :: (Prim b v n -> r)
             -> ((DownAnnots v n -> n -> n -> QDiagram b v n m) -> r)
             -> QDiaLeaf b v n m -> r
-withQDiaLeaf f _ (PrimLeaf p)    = f p
+withQDiaLeaf f _ (PrimLeaf p)      = f p
 withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
 
 -- | Static annotations which can be placed at a particular node of a
 --   diagram tree.
 data Annotation
   = Href String    -- ^ Hyperlink
+  | OpacityGroup Double
   deriving Show
 
 -- | Apply a static annotation at the root of a diagram.
@@ -353,6 +258,13 @@ applyAnnotation an (QD dt) = QD (D.annot an dt)
 href :: (Metric v, OrderedField n, Semigroup m)
   => String -> QDiagram b v n m -> QDiagram b v n m
 href = applyAnnotation . Href
+
+-- | Change the transparency of a 'Diagram' as a group.
+opacityGroup, groupOpacity :: (Metric v, OrderedField n, Semigroup m)
+  => Double -> QDiagram b v n m -> QDiagram b v n m
+opacityGroup = applyAnnotation . OpacityGroup
+groupOpacity = applyAnnotation . OpacityGroup
+
 
 -- | The fundamental diagram type.  The type variables are as follows:
 --
@@ -395,7 +307,6 @@ instance forall b v. (Typeable b, Typeable1 v) => Typeable2 (QDiagram b v) where
               typeOf (undefined :: b)                                                   `mkAppTy`
               typeOf1 (undefined :: v n)
 #endif
-
 
 instance Wrapped (QDiagram b v n m) where
   type Unwrapped (QDiagram b v n m) =
@@ -476,9 +387,8 @@ names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 --   included/.  The upshot of this knot-tying is that if @d' = d #
 --   named x@, then @lookupName x d' == Just d'@ (instead of @Just
 --   d@).
-nameSub :: ( IsName nm
-           , Metric v, OrderedField n, Semigroup m)
-        => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
+nameSub :: (IsName nm , Metric v, OrderedField n, Semigroup m)
+  => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
 nameSub s n d = d'
   where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
 
@@ -734,7 +644,7 @@ instance (Metric v, OrderedField n)
       => HasOrigin (Subdiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
-instance ( Metric v, Floating n)
+instance (Metric v, Floating n)
     => Transformable (Subdiagram b v n m) where
   transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
 
@@ -773,8 +683,8 @@ newtype SubMap b v n m = SubMap (M.Map Name [Subdiagram b v n m])
   -- See Note [SubMap Set vs list]
 
 instance Wrapped (SubMap b v n m) where
-    type Unwrapped (SubMap b v n m) = M.Map Name [Subdiagram b v n m]
-    _Wrapped' = iso (\(SubMap m) -> m) SubMap
+  type Unwrapped (SubMap b v n m) = M.Map Name [Subdiagram b v n m]
+  _Wrapped' = iso (\(SubMap m) -> m) SubMap
 
 instance Rewrapped (SubMap b v n m) (SubMap b' v' n' m')
 
@@ -872,7 +782,7 @@ type instance N (Prim b v n) = n
 -- | The 'Transformable' instance for 'Prim' just pushes calls to
 --   'transform' down through the 'Prim' constructor.
 instance Transformable (Prim b v n) where
-  transform v (Prim p) = Prim (transform v p)
+  transform t (Prim p) = Prim (transform t p)
 
 -- | The 'Renderable' instance for 'Prim' just pushes calls to
 --   'render' down through the 'Prim' constructor.
@@ -884,17 +794,17 @@ instance Renderable (Prim b v n) b where
 ------------------------------------------------------------
 
 data DNode b v n a = DStyle (Style v n)
-                 | DTransform (Transformation v n)
-                 | DAnnot a
-                 | DDelay
-                   -- ^ @DDelay@ marks a point where a delayed subtree
-                   --   was expanded.  Such subtrees already take all
-                   --   non-frozen transforms above them into account,
-                   --   so when later processing the tree, upon
-                   --   encountering a @DDelay@ node we must drop any
-                   --   accumulated non-frozen transformation.
-                 | DPrim (Prim b v n)
-                 | DEmpty
+                   | DTransform (Transformation v n)
+                   | DAnnot a
+                   | DDelay
+                     -- ^ @DDelay@ marks a point where a delayed subtree
+                     --   was expanded.  Such subtrees already take all
+                     --   non-frozen transforms above them into account,
+                     --   so when later processing the tree, upon
+                     --   encountering a @DDelay@ node we must drop any
+                     --   accumulated non-frozen transformation.
+                   | DPrim (Prim b v n)
+                   | DEmpty
 
 -- | A 'DTree' is a raw tree representation of a 'QDiagram', with all
 --   the @u@-annotations removed.  It is used as an intermediate type

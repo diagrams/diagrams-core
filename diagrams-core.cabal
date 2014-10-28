@@ -30,6 +30,7 @@ Library
                        Diagrams.Core.Points,
                        Diagrams.Core.Query
                        Diagrams.Core.Style,
+                       Diagrams.Core.Measure,
                        Diagrams.Core.Trace,
                        Diagrams.Core.Transform,
                        Diagrams.Core.Types,
@@ -37,13 +38,15 @@ Library
 
   Build-depends:       base >= 4.2 && < 4.8,
                        containers >= 0.4.2 && < 0.6,
+                       unordered-containers >= 0.2 && < 0.2.6,
                        semigroups >= 0.8.4 && < 0.16,
                        monoid-extras >= 0.3 && < 0.4,
                        dual-tree >= 0.2 && < 0.3,
                        lens >= 4.0 && < 4.5,
                        linear >= 1.10 && < 1.11,
                        adjunctions >= 4.0 && < 5.0,
-                       distributive >=0.2.2 && < 1.0
+                       distributive >=0.2.2 && < 1.0,
+                       mtl
   hs-source-dirs:      src
 
   Other-extensions:    DeriveDataTypeable

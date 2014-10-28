@@ -26,6 +26,7 @@ module Diagrams.Core.HasOrigin
 import qualified Data.Map             as M
 import qualified Data.Set             as S
 
+import           Diagrams.Core.Measure
 import           Diagrams.Core.Points ()
 import           Diagrams.Core.V
 
@@ -83,6 +84,9 @@ moveTo = moveOriginBy . (origin .-.)
 --   as when using 'withName' and friends.
 place :: (V t ~ v, N t ~ n, Additive v, Num n, HasOrigin t) => t -> Point v n -> t
 place = flip moveTo
+
+instance HasOrigin t => HasOrigin (Measured n t) where
+  moveOriginTo = fmap . moveOriginTo
 
 instance (Additive v, Num n) => HasOrigin (Point v n) where
   moveOriginTo (P u) p = p .-^ u

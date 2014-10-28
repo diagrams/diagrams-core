@@ -39,6 +39,7 @@ import qualified Data.Set                as S
 import           Data.Typeable
 
 import           Diagrams.Core.Transform
+import           Diagrams.Core.Measure
 
 ------------------------------------------------------------
 --  Names  -------------------------------------------------
@@ -88,7 +89,7 @@ instance (IsName a, IsName b, IsName c) => IsName (a,b,c)
 --   things which are 'Typeable', 'Ord' and 'Show'.
 data AName where
   AName :: (Typeable a, Ord a, Show a) => a -> AName
-  deriving (Typeable)
+  deriving Typeable
 
 instance IsName AName where
   toName = Name . (:[])
@@ -102,8 +103,8 @@ instance Eq AName where
 instance Ord AName where
   (AName a1) `compare` (AName a2) =
     case cast a2 of
-      Nothing  -> show (typeOf a1) `compare` show (typeOf a2)
       Just a2' -> a1 `compare` a2'
+      Nothing  -> typeOf a1 `compare` typeOf a2
 
 instance Show AName where
   show (AName a) = show a
@@ -160,6 +161,9 @@ instance Qualifiable a => Qualifiable (M.Map k a) where
 
 instance Qualifiable a => Qualifiable (b -> a) where
  n |> f = (n |>) . f
+
+instance Qualifiable a => Qualifiable (Measured n a) where
+ n |> m = fmap (n |>) m
 
 infixr 5 |>
 infixr 5 .>
