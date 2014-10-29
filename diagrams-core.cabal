@@ -23,6 +23,7 @@ Source-repository head
 Library
   Exposed-modules:     Diagrams.Core,
                        Diagrams.Core.Compile,
+                       Diagrams.Core.Context,
                        Diagrams.Core.Envelope,
                        Diagrams.Core.HasOrigin,
                        Diagrams.Core.Juxtapose,
