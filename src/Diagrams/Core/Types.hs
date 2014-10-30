@@ -51,18 +51,18 @@ module Diagrams.Core.Types
        , applyAnnotation, href, opacityGroup, groupOpacity
 
          -- *** Dynamic (monoidal) annotations
-       , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+       , Summary, Context
 
          -- ** Basic type definitions
-       , QDiaLeaf(..), withQDiaLeaf
        , QDiagram(..), Diagram
 
          -- * Operations on diagrams
          -- ** Creating diagrams
-       , mkQD, mkQD', pointDiagram
+       , leafS
+       , mkQD, pointDiagram
 
          -- ** Extracting information
-       , envelope, trace, subMap, names, query, sample
+       , envelope, trace, query, sample
        , value, resetValue, clearValue
 
          -- ** Combining diagrams
@@ -72,15 +72,6 @@ module Diagrams.Core.Types
 
        , atop
 
-         -- ** Modifying diagrams
-         -- *** Names
-       , nameSub
-       , lookupName
-       , withName
-       , withNameAll
-       , withNames
-       , localize
-
          -- *** Other
        , setEnvelope
        , setTrace
@@ -88,15 +79,15 @@ module Diagrams.Core.Types
          -- * Subdiagrams
 
        , Subdiagram(..), mkSubdiagram
-       , getSub, rawSub
-       , location
+       --, getSub, rawSub
+       --, location
        , subPoint
 
          -- * Subdiagram maps
 
        , SubMap(..)
 
-       , fromNames, rememberAs, lookupSub
+       , fromNames, lookupSub
 
          -- * Primtives
          -- $prim
@@ -106,10 +97,8 @@ module Diagrams.Core.Types
          -- * Backends
 
        , Backend(..)
-       , DNode(..)
-       , DTree
        , RNode(..)
-       , RTree
+       , RTree, emptyRTree
 
          -- ** Null backend
 
@@ -126,10 +115,12 @@ module Diagrams.Core.Types
 
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
-                                            (^.), _Wrapped, _Wrapping)
+                                            review, (^.), _Wrapped, _Wrapping, op)
 import           Control.Monad             (mplus)
 import           Data.Typeable
+import           Data.Functor              ((<$>))
 import           Data.List                 (isSuffixOf)
+import qualified Data.List.NonEmpty        as NEL
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
@@ -143,6 +134,7 @@ import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
 import qualified Data.Tree.DUAL            as D
 
+import           Diagrams.Core.Context
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
@@ -186,59 +178,63 @@ instance (Typeable n, RealFloat n) => TypeableFloat n
 --   * name/subdiagram associations (see "Diagrams.Core.Names")
 --
 --   * query functions (see "Diagrams.Core.Query")
-type UpAnnots b v n m = Deletable (Envelope v n)
-                    ::: Deletable (Trace v n)
-                    ::: Deletable (SubMap b v n m)
-                    ::: Query v n m
-                    ::: ()
 
--- | Monoidal annotations which travel down the diagram tree,
---   /i.e./ which accumulate along each path to a leaf (and which can
---   act on the upwards-travelling annotations):
---
---   * styles (see "Diagrams.Core.Style")
---
---   * names (see "Diagrams.Core.Names")
-type DownAnnots v n = (Transformation v n :+: Style v n)
-                  ::: Name
-                  ::: ()
+type Summary b v n m = Deletable (Envelope v n)
+                   ::: Deletable (Trace v n)
+                   ::: Query v n m
+                   ::: ()
 
-  -- Note that we have to put the transformations and styles together
-  -- using a coproduct because the transformations can act on the
-  -- styles.
+newtype QDiagram b v n m = QD (Contextual v n (RTree b v n Annotation, Summary b v n m))
+#if __GLASGOW_HASKELL__ >= 707
+  deriving Typeable
+#else
 
--- | Inject a transformation into a default downwards annotation
---   value.
-transfToAnnot :: Transformation v n -> DownAnnots v n
-transfToAnnot
-  = inj
-  . (inL :: Transformation v n -> Transformation v n :+: Style v n)
+instance forall b v. (Typeable b, Typeable1 v) => Typeable2 (QDiagram b v n) where
+  typeOf2 _ = mkTyConApp (mkTyCon3 "diagrams-core" "Diagrams.Core.Types" "QDiagram") [] `mkAppTy`
+              typeOf (undefined :: b)                                                   `mkAppTy`
+              typeOf1 (undefined :: v n)
+#endif
 
--- | Extract the (total) transformation from a downwards annotation
---   value.
-transfFromAnnot :: (Additive v, Num n) => DownAnnots v n -> Transformation v n
-transfFromAnnot = option mempty killR . fst
+instance Wrapped (QDiagram b v n m) where
+  type Unwrapped (QDiagram b v n m) =
+    Contextual v n (RTree b v n Annotation, Summary b v n m)
+  _Wrapped' = iso (\(QD d) -> d) QD
 
--- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
---   @QDiagram@ which expands to a real @QDiagram@ once it learns the
---   \"final context\" in which it will be rendered.  For example, in
---   order to decide how to draw an arrow, we must know the precise
---   transformation applied to it (since the arrow head and tail are
---   scale-invariant).
-data QDiaLeaf b v n m
-  = PrimLeaf (Prim b v n)
-  | DelayedLeaf (DownAnnots v n -> n -> n -> QDiagram b v n m)
-    -- ^ The @QDiagram@ produced by a @DelayedLeaf@ function /must/
-    --   already apply any transformation in the given
-    --   @DownAnnots@ (that is, the transformation will not
-    --   be applied by the context).
-  deriving Functor
+instance Rewrapped (QDiagram b v n m) (QDiagram b' v' n' m')
 
-withQDiaLeaf :: (Prim b v n -> r)
-            -> ((DownAnnots v n -> n -> n -> QDiagram b v n m) -> r)
-            -> QDiaLeaf b v n m -> r
-withQDiaLeaf f _ (PrimLeaf p)      = f p
-withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
+type instance V (QDiagram b v n m) = v
+type instance N (QDiagram b v n m) = n
+
+type Diagram b = QDiagram b (V b) (N b) Any
+
+-- | XXX Add comment
+(>>>=) :: Contextual v n a -> (a -> QDiagram b v n m) -> QDiagram b v n m
+ca >>>= k = QD $ ca >>= \a -> (op QD) (k a)
+
+-- | XXX Add comment
+(=<<<) :: (a -> QDiagram b v n m) -> Contextual v n a -> QDiagram b v n m
+(=<<<) = flip (>>>=)
+
+-- | Create a \"leaf\" diagram with just a summary value and no
+--   diagrammatic content.
+leafS :: Summary b v n m -> QDiagram b v n m
+leafS s = QD $ return (emptyRTree, s)
+
+-- | Project out a component of the summary in a type-directed way.
+getS :: (Monoid u, Summary b v n m :>: u) => QDiagram b v n m -> Contextual v n u
+getS = fmap (option mempty id . get . snd) . op QD
+
+applySpre :: (Semigroup m, Ord n) => Summary b v n m -> QDiagram b v n m -> QDiagram b v n m
+applySpre = over _Wrapped . applySpre'
+
+applySpre' :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
+applySpre' s = (fmap . second) (s<>)
+
+applySpost :: (Semigroup m, Ord n) => Summary b v n m -> QDiagram b v n m -> QDiagram b v n m
+applySpost = over _Wrapped . applySpost'
+
+applySpost' :: (Functor f, Semigroup s) => s -> f (t,s) -> f (t,s)
+applySpost' s = (fmap . second) (<>s)
 
 -- | Static annotations which can be placed at a particular node of a
 --   diagram tree.
@@ -251,13 +247,80 @@ data Annotation
 applyAnnotation
   :: (Metric v, OrderedField n, Semigroup m)
   => Annotation -> QDiagram b v n m -> QDiagram b v n m
-applyAnnotation an (QD dt) = QD (D.annot an dt)
+applyAnnotation an = over _Wrapped . fmap . first . over _Wrapped $ Node (RAnnot an) . (: [])
 
 -- | Make a diagram into a hyperlink.  Note that only some backends
 --   will honor hyperlink annotations.
 href :: (Metric v, OrderedField n, Semigroup m)
   => String -> QDiagram b v n m -> QDiagram b v n m
 href = applyAnnotation . Href
+
+-- | Create a \"point diagram\", which has no content, no trace, an
+--   empty query, and a point envelope.
+pointDiagram :: (Metric v, Fractional n)
+             => Point v n -> QDiagram b v n m
+pointDiagram p = leafS (inj . toDeletable $ pointEnvelope p)
+
+-- | Get the envelope of a diagram.
+envelope :: forall b v n m. (OrderedField n, Metric v, Monoid' m)
+         => Lens' (QDiagram b v n m) (Contextual v n (Envelope v n))
+envelope = lens (fmap unDelete . getS)  ((=<<<) . flip setEnvelope)
+
+-- | Replace the envelope of a diagram.
+setEnvelope :: forall b v m n. (OrderedField n, Metric v, Monoid' m)
+          => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
+setEnvelope e
+  = applySpre (inj . toDeletable $ e)
+  . applySpre (inj (deleteL :: Deletable (Envelope v n)))
+  . applySpost (inj (deleteR :: Deletable (Envelope v n)))
+ 
+-- | Get the trace of a diagram.
+trace :: (Metric v, OrderedField n, Semigroup m) =>
+         Lens' (QDiagram b v n m) (Contextual v n (Trace v n))
+trace = lens (fmap unDelete . getS) ((=<<<) . flip setTrace)
+
+-- | Replace the trace of a diagram.
+setTrace :: forall b v n m. (OrderedField n, Metric v, Semigroup m)
+         => Trace v n -> QDiagram b v n m -> QDiagram b v n m
+setTrace t
+  = applySpre (inj . toDeletable $ t)
+  . applySpre (inj (deleteL :: Deletable (Trace v n)))
+  . applySpost (inj (deleteR :: Deletable (Trace v n)))
+
+-- | Get the query function associated with a diagram.
+query :: Monoid m => QDiagram b v n m -> Contextual v n (Query v n m)
+query = getS
+
+-- | Sample a diagram's query function at a given point.
+sample :: Monoid m => QDiagram b v n m -> Point v n -> Contextual v n m
+sample d p = flip runQuery p <$> query d
+
+-- | Set the query value for 'True' points in a diagram (/i.e./ points
+--   \"inside\" the diagram); 'False' points will be set to 'mempty'.
+value :: Monoid m => m -> QDiagram b v n Any -> QDiagram b v n m
+value m = fmap fromAny
+  where fromAny (Any True)  = m
+        fromAny (Any False) = mempty
+
+-- | Reset the query values of a diagram to @True@/@False@: any values
+--   equal to 'mempty' are set to 'False'; any other values are set to
+--   'True'.
+resetValue :: (Eq m, Monoid m) => QDiagram b v n m -> QDiagram b v n Any
+resetValue = fmap toAny
+  where toAny m | m == mempty = Any False
+                | otherwise   = Any True
+
+-- | Set all the query values of a diagram to 'False'.
+clearValue :: QDiagram b v n m -> QDiagram b v n Any
+clearValue = fmap (const (Any False))
+
+-- | Create a diagram from a single primitive, along with an envelope,
+--   trace, subdiagram map, and query function.
+mkQD :: Prim b v n -> Envelope v n -> Trace v n -> Query v n m
+     -> QDiagram b v n m
+mkQD p e t q = QD . review _Wrapped' 
+               $ const (RTree (Node (RPrim p) [])
+               , toDeletable e *: toDeletable t *: q *: ())
 
 -- | Change the transparency of a 'Diagram' as a group.
 opacityGroup, groupOpacity :: (Metric v, OrderedField n, Semigroup m)
@@ -296,193 +359,6 @@ groupOpacity = applyAnnotation . OpacityGroup
 --   distinguished from 'Diagram', where @m@ is fixed to @Any@.  This
 --   is not really a very good name, but it's probably not worth
 --   changing it at this point.
-newtype QDiagram b v n m
-  = QD (D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m))
-#if __GLASGOW_HASKELL__ >= 707
-  deriving Typeable
-#else
-
-instance forall b v. (Typeable b, Typeable1 v) => Typeable2 (QDiagram b v) where
-  typeOf2 _ = mkTyConApp (mkTyCon3 "diagrams-core" "Diagrams.Core.Types" "QDiagram") [] `mkAppTy`
-              typeOf (undefined :: b)                                                   `mkAppTy`
-              typeOf1 (undefined :: v n)
-#endif
-
-instance Wrapped (QDiagram b v n m) where
-  type Unwrapped (QDiagram b v n m) =
-        D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m)
-  _Wrapped' = iso (\(QD d) -> d) QD
-
-instance Rewrapped (QDiagram b v n m) (QDiagram b' v' n' m')
-
-type instance V (QDiagram b v n m) = v
-type instance N (QDiagram b v n m) = n
-
--- | @Diagram b@ is a synonym for @'QDiagram' b (V b) (N b) 'Any'@.  That is,
---   the default sort of diagram is one where querying at a point
---   simply tells you whether the diagram contains that point or not.
---   Transforming a default diagram into one with a more interesting
---   query can be done via the 'Functor' instance of @'QDiagram' b v n@ or
---   the 'value' function.
-type Diagram b = QDiagram b (V b) (N b) Any
-
--- | Create a \"point diagram\", which has no content, no trace, an
---   empty query, and a point envelope.
-pointDiagram :: (Metric v, Fractional n)
-             => Point v n -> QDiagram b v n m
-pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
-
--- | A useful variant of 'getU' which projects out a certain
---   component.
-getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
-getU' = maybe mempty (option mempty id . get) . D.getU
-
--- | Get the envelope of a diagram.
-envelope :: forall b v n m. ( OrderedField n, Metric v
-                            , Monoid' m)
-         => Lens' (QDiagram b v n m) (Envelope v n)
-envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
-
--- | Replace the envelope of a diagram.
-setEnvelope :: forall b v n m. ( OrderedField n, Metric v
-                               , Monoid' m)
-          => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
-setEnvelope e =
-    over _Wrapped' ( D.applyUpre (inj . toDeletable $ e)
-                . D.applyUpre (inj (deleteL :: Deletable (Envelope v n)))
-                . D.applyUpost (inj (deleteR :: Deletable (Envelope v n)))
-              )
-
--- | Get the trace of a diagram.
-trace :: (Metric v, OrderedField n, Semigroup m) =>
-         Lens' (QDiagram b v n m) (Trace v n)
-trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
-
--- | Replace the trace of a diagram.
-setTrace :: forall b v n m. ( OrderedField n, Metric v
-                            , Semigroup m)
-         => Trace v n -> QDiagram b v n m -> QDiagram b v n m
-setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
-                         . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
-                         . D.applyUpost (inj (deleteR :: Deletable (Trace v n)))
-                       )
-
--- | Get the subdiagram map (/i.e./ an association from names to
---   subdiagrams) of a diagram.
-subMap :: (Metric v, Semigroup m, OrderedField n)
-       => Lens' (QDiagram b v n m) (SubMap b v n m)
-subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
-  where
-    setMap :: (Metric v, Semigroup m, OrderedField n) =>
-              SubMap b v n m -> QDiagram b v n m -> QDiagram b v n m
-    setMap m = over _Wrapped' ( D.applyUpre . inj . toDeletable $ m)
-
--- | Get a list of names of subdiagrams and their locations.
-names :: (Metric v, Semigroup m, OrderedField n)
-      => QDiagram b v n m -> [(Name, [Point v n])]
-names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
-
--- | Attach an atomic name to a certain subdiagram, computed from the
---   given diagram /with the mapping from name to subdiagram
---   included/.  The upshot of this knot-tying is that if @d' = d #
---   named x@, then @lookupName x d' == Just d'@ (instead of @Just
---   d@).
-nameSub :: (IsName nm , Metric v, OrderedField n, Semigroup m)
-  => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
-nameSub s n d = d'
-  where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
-
--- | Lookup the most recent diagram associated with (some
---   qualification of) the given name.
-lookupName :: (IsName nm, Metric v, Semigroup m, OrderedField n)
-           => nm -> QDiagram b v n m -> Maybe (Subdiagram b v n m)
-lookupName n d = lookupSub (toName n) (d^.subMap) >>= listToMaybe
-
--- | Given a name and a diagram transformation indexed by a
---   subdiagram, perform the transformation using the most recent
---   subdiagram associated with (some qualification of) the name,
---   or perform the identity transformation if the name does not exist.
-withName :: (IsName nm, Metric v
-            , Semigroup m, OrderedField n)
-         => nm -> (Subdiagram b v n m -> QDiagram b v n m -> QDiagram b v n m)
-         -> QDiagram b v n m -> QDiagram b v n m
-withName n f d = maybe id f (lookupName n d) d
-
--- | Given a name and a diagram transformation indexed by a list of
---   subdiagrams, perform the transformation using the
---   collection of all such subdiagrams associated with (some
---   qualification of) the given name.
-withNameAll :: (IsName nm, Metric v
-               , Semigroup m, OrderedField n)
-            => nm -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
-            -> QDiagram b v n m -> QDiagram b v n m
-withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (d^.subMap))) d
-
--- | Given a list of names and a diagram transformation indexed by a
---   list of subdiagrams, perform the transformation using the
---   list of most recent subdiagrams associated with (some qualification
---   of) each name.  Do nothing (the identity transformation) if any
---   of the names do not exist.
-withNames :: (IsName nm, Metric v
-             , Semigroup m, OrderedField n)
-          => [nm] -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
-          -> QDiagram b v n m -> QDiagram b v n m
-withNames ns f d = maybe id f ns' d
-  where
-    nd = d^.subMap
-    ns' = T.sequence (map ((listToMaybe=<<) . ($ nd) . lookupSub . toName) ns)
-
--- | \"Localize\" a diagram by hiding all the names, so they are no
---   longer visible to the outside.
-localize :: forall b v n m. ( Metric v
-                          , OrderedField n, Semigroup m
-                          )
-         => QDiagram b v n m -> QDiagram b v n m
-localize = over _Wrapped' ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v n m)))
-                   . D.applyUpost (inj (deleteR :: Deletable (SubMap b v n m)))
-                   )
-
-
--- | Get the query function associated with a diagram.
-query :: Monoid m => QDiagram b v n m -> Query v n m
-query = getU' . view _Wrapped'
-
--- | Sample a diagram's query function at a given point.
-sample :: Monoid m => QDiagram b v n m -> Point v n -> m
-sample = runQuery . query
-
--- | Set the query value for 'True' points in a diagram (/i.e./ points
---   \"inside\" the diagram); 'False' points will be set to 'mempty'.
-value :: Monoid m => m -> QDiagram b v n Any -> QDiagram b v n m
-value m = fmap fromAny
-  where fromAny (Any True)  = m
-        fromAny (Any False) = mempty
-
--- | Reset the query values of a diagram to @True@/@False@: any values
---   equal to 'mempty' are set to 'False'; any other values are set to
---   'True'.
-resetValue :: (Eq m, Monoid m) => QDiagram b v n m -> QDiagram b v n Any
-resetValue = fmap toAny
-  where toAny m | m == mempty = Any False
-                | otherwise   = Any True
-
--- | Set all the query values of a diagram to 'False'.
-clearValue :: QDiagram b v n m -> QDiagram b v n Any
-clearValue = fmap (const (Any False))
-
--- | Create a diagram from a single primitive, along with an envelope,
---   trace, subdiagram map, and query function.
-mkQD :: Prim b v n -> Envelope v n -> Trace v n -> SubMap b v n m -> Query v n m
-     -> QDiagram b v n m
-mkQD p = mkQD' (PrimLeaf p)
-
--- | Create a diagram from a generic QDiaLeaf, along with an envelope,
---   trace, subdiagram map, and query function.
-mkQD' :: QDiaLeaf b v n m -> Envelope v n -> Trace v n -> SubMap b v n m -> Query v n m
-      -> QDiagram b v n m
-mkQD' l e t n q
-  = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
-
 ------------------------------------------------------------
 --  Instances
 ------------------------------------------------------------
@@ -501,9 +377,10 @@ mkQD' l e t n q
 --   probably only makes sense in vector spaces of dimension lower
 --   than 3, but in theory it could make sense for, say, 3-dimensional
 --   diagrams when viewed by 4-dimensional beings.
+
 instance (Metric v, OrderedField n, Semigroup m)
   => Monoid (QDiagram b v n m) where
-  mempty  = QD D.empty
+  mempty  = QD (return (emptyRTree, mempty))
   mappend = (<>)
 
 instance (Metric v, OrderedField n, Semigroup m)
@@ -522,15 +399,9 @@ atop = (<>)
 infixl 6 `atop`
 
 ---- Functor
-
+--
 instance Functor (QDiagram b v n) where
-  fmap f = over (_Wrapping QD)
-           ( (D.mapU . second . second)
-             ( (first . fmap . fmap . fmap)   f
-             . (second . first . fmap . fmap) f
-             )
-           . (fmap . fmap) f
-           )
+  fmap = over (_Wrapping QD) . fmap . second . fmap . second . first . fmap . fmap
 
 ---- Applicative
 
@@ -550,11 +421,11 @@ instance Functor (QDiagram b v n) where
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
 ---- HasStyle
-
+--
 instance (Metric v, OrderedField n, Semigroup m)
       => HasStyle (QDiagram b v n m) where
-  applyStyle = over _Wrapped' . D.applyD . inj
-             . (inR :: Style v n -> Transformation v n :+: Style v n)
+  applyStyle s = (over (_Wrapping QD) . fmap . first 
+               . over (_Wrapping RTree)) (\t -> (Node (RStyle s) [t]))
 
 ---- Juxtaposable
 
@@ -566,13 +437,27 @@ instance (Metric v, OrderedField n, Monoid' m)
 
 instance (Metric v, OrderedField n, Monoid' m)
          => Enveloped (QDiagram b v n m) where
-  getEnvelope = view envelope
+  getEnvelope = undefined -- view envelope
 
+ -- XXX hmm, this is a real problem.  We *can't* just return an
+  -- Envelope for a diagram, we can only return a Contextual Envelope.
+  -- Maybe the type of getEnvelope needs to change??
+  --
+  -- Note, simply changing the type of getEnvelope to Contextual would
+  -- (unsurprisingly, perhaps) introduce an import loop, since
+  -- Contextual is defined in Diagrams.Core.Types which imports
+  -- Diagrams.Core.Envelope.  However, it looks like we could split
+  -- the Context type and Contextual monad out into a new module;
+  -- Context itself does not mention Envelope, only Summary.
+  
 ---- Traced
 
 instance (Metric v, OrderedField n, Semigroup m)
          => Traced (QDiagram b v n m) where
-  getTrace = view trace
+  getTrace = undefined --view trace
+
+-- XXX of course Traced has the same problem as Enveloped, described
+-- above
 
 ---- HasOrigin
 
@@ -586,17 +471,25 @@ instance (Metric v, OrderedField n, Semigroup m)
 
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
-instance (OrderedField n, Metric v, Semigroup m)
+instance (Metric v, OrderedField n, Semigroup m)
       => Transformable (QDiagram b v n m) where
-  transform = over _Wrapped' . D.applyD . transfToAnnot
+  transform = undefined -- over _Wrapped' . transform
+
+  --- XXX not sure why (over _Wrapped' . transform) doesn't type check.
+  --
+  -- Yields the error "Could not deduce (v ~ V ())".  Not sure where
+  -- the () is coming from.  Ah, I think it's coming from Summary,
+  -- perhaps?  Anyway, I am no longer convinced this implementation
+  -- even makes sense... Need to think about it more carefully.  How
+  -- to transform a diagram under the new fixpoint semantics scheme?
 
 ---- Qualifiable
 
 -- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
-instance (Metric v, OrderedField n, Semigroup m)
-      => Qualifiable (QDiagram b v n m) where
-  (|>) = over _Wrapped' . D.applyD . inj . toName
+-- instance (Metric v, OrderedField n, Semigroup m)
+      -- => Qualifiable (QDiagram b v n m) where
+  -- (|>) = over _Wrapped' . D.applyD . inj . toName
 
 
 ------------------------------------------------------------
@@ -608,14 +501,14 @@ instance (Metric v, OrderedField n, Semigroup m)
 --   paired with any accumulated information from the larger context
 --   (transformations, attributes, etc.).
 
-data Subdiagram b v n m = Subdiagram (QDiagram b v n m) (DownAnnots v n)
+data Subdiagram b v n m = Subdiagram (QDiagram b v n m) (Transformation v n) (Context v n)
 
 type instance V (Subdiagram b v n m) = v
 type instance N (Subdiagram b v n m) = n
 
 -- | Turn a diagram into a subdiagram with no accumulated context.
 mkSubdiagram :: QDiagram b v n m -> Subdiagram b v n m
-mkSubdiagram d = Subdiagram d empty
+mkSubdiagram d = undefined -- Subdiagram d empty empty
 
 -- | Create a \"point subdiagram\", that is, a 'pointDiagram' (with no
 --   content and a point envelope) treated as a subdiagram with local
@@ -627,33 +520,34 @@ subPoint :: (Metric v, OrderedField n, Semigroup m)
          => Point v n -> Subdiagram b v n m
 subPoint p = Subdiagram
                (pointDiagram origin)
-               (transfToAnnot $ translation (p .-. origin))
+               (translation (p .-. origin))
+               empty
 
 instance Functor (Subdiagram b v n) where
-  fmap f (Subdiagram d a) = Subdiagram (fmap f d) a
+  fmap f (Subdiagram d t c) = Subdiagram (fmap f d) t c
 
-instance (OrderedField n, Metric v, Monoid' m)
-      => Enveloped (Subdiagram b v n m) where
-  getEnvelope (Subdiagram d a) = transform (transfFromAnnot a) $ getEnvelope d
+-- instance (OrderedField n, Metric v, Monoid' m)
+      -- => Enveloped (Subdiagram b v n m) where
+  -- getEnvelope (Subdiagram d a) = transform (transfFromAnnot a) $ getEnvelope d
 
-instance (OrderedField n, Metric v, Semigroup m)
-      => Traced (Subdiagram b v n m) where
-  getTrace (Subdiagram d a) = transform (transfFromAnnot a) $ getTrace d
+-- instance (OrderedField n, Metric v, Semigroup m)
+      -- => Traced (Subdiagram b v n m) where
+  -- getTrace (Subdiagram d a) = transform (transfFromAnnot a) $ getTrace d
 
 instance (Metric v, OrderedField n)
       => HasOrigin (Subdiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
-
+  
 instance (Metric v, Floating n)
     => Transformable (Subdiagram b v n m) where
-  transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
+  transform t' (Subdiagram d t c) = Subdiagram d (t' <> t) c
 
 -- | Get the location of a subdiagram; that is, the location of its
 --   local origin /with respect to/ the vector space of its parent
 --   diagram.  In other words, the point where its local origin
 --   \"ended up\".
-location :: (Additive v, Num n) => Subdiagram b v n m -> Point v n
-location (Subdiagram _ a) = transform (transfFromAnnot a) origin
+-- location :: (Additive v, Num n) => Subdiagram b v n m -> Point v n
+-- location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 
 -- | Turn a subdiagram into a normal diagram, including the enclosing
 --   context.  Concretely, a subdiagram is a pair of (1) a diagram and
@@ -661,17 +555,17 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 --   attributes.  @getSub@ simply applies the transformation and
 --   attributes to the diagram to get the corresponding \"top-level\"
 --   diagram.
-getSub :: ( Metric v
-          , Floating n, Ord n
-          , Semigroup m
-          )
-       => Subdiagram b v n m -> QDiagram b v n m
-getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d
+-- getSub :: ( Metric v
+          -- , Floating n, Ord n
+          -- , Semigroup m
+          -- )
+       -- => Subdiagram b v n m -> QDiagram b v n m
+-- getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d
 
 -- | Extract the \"raw\" content of a subdiagram, by throwing away the
 --   context.
-rawSub :: Subdiagram b v n m -> QDiagram b v n m
-rawSub (Subdiagram d _) = d
+-- rawSub :: Subdiagram b v n m -> QDiagram b v n m
+-- rawSub (Subdiagram d _) = d
 
 ------------------------------------------------------------
 --  Subdiagram maps  ---------------------------------------
@@ -729,10 +623,6 @@ instance Qualifiable (SubMap b v n m) where
 --   and subdiagrams.
 fromNames :: IsName a => [(a, Subdiagram b v n m)] -> SubMap b v n m
 fromNames = SubMap . M.fromListWith (++) . map (toName *** (:[]))
-
--- | Add a name/diagram association to a submap.
-rememberAs :: IsName a => a -> QDiagram b v n m -> SubMap b v n m -> SubMap b v n m
-rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (SubMap b v n m) where
@@ -793,26 +683,6 @@ instance Renderable (Prim b v n) b where
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
 
-data DNode b v n a = DStyle (Style v n)
-                   | DTransform (Transformation v n)
-                   | DAnnot a
-                   | DDelay
-                     -- ^ @DDelay@ marks a point where a delayed subtree
-                     --   was expanded.  Such subtrees already take all
-                     --   non-frozen transforms above them into account,
-                     --   so when later processing the tree, upon
-                     --   encountering a @DDelay@ node we must drop any
-                     --   accumulated non-frozen transformation.
-                   | DPrim (Prim b v n)
-                   | DEmpty
-
--- | A 'DTree' is a raw tree representation of a 'QDiagram', with all
---   the @u@-annotations removed.  It is used as an intermediate type
---   by diagrams-core; backends should not need to make use of it.
---   Instead, backends can make use of 'RTree', which 'DTree' gets
---   compiled and optimized to.
-type DTree b v n a = Tree (DNode b v n a)
-
 data RNode b v n a = RStyle (Style v n) -- ^ A style node.
                    | RAnnot a
                    | RPrim (Prim b v n) -- ^ A primitive.
@@ -823,7 +693,24 @@ data RNode b v n a = RStyle (Style v n) -- ^ A style node.
 --   following invariant which backends may rely upon:
 --
 --   * @RPrim@ nodes never have any children.
-type RTree b v n a = Tree (RNode b v n a)
+newtype RTree b v n a = RTree (Tree (RNode b v n a ))
+
+instance Wrapped (RTree b v n a) where
+  type Unwrapped (RTree b v n a) = Tree (RNode b v n a)
+  _Wrapped' = iso (\(RTree t) -> t) RTree
+
+instance Rewrapped (RTree b v n a) (RTree b' v' n' a')
+
+type instance V (RTree b v n a) = v
+type instance N (RTree b v n a) = n
+
+instance Semigroup (RTree b v n a) where
+  RTree t1 <> RTree t2 = RTree (Node REmpty[t1,t2])
+  sconcat ts = RTree (Node REmpty . map (op RTree) . NEL.toList $ ts)
+
+-- | The empty @RTree@.
+emptyRTree :: RTree b v n a
+emptyRTree = RTree (Node REmpty [])
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
