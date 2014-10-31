@@ -165,7 +165,7 @@ toRTree globalToOutput d
     -- of product of diameters along each basis direction.  Note at
     -- this point the diagram has already had the globalToOutput
     -- transformation applied, so output = global = local units.
-    nToO = product (map (`diameter` d) basis') ** (1 / fromIntegral (dimension d))
+    nToO = product (map (`diameter` d) basis) ** (1 / fromIntegral (dimension d))
 
 -- | Apply a style transformation on 'RStyle' nodes; the identity for
 --   other 'RNode's.
