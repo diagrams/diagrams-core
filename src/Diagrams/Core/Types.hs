@@ -437,7 +437,7 @@ instance (Metric v, OrderedField n, Monoid' m)
 
 instance (Metric v, OrderedField n, Monoid' m)
          => Enveloped (QDiagram b v n m) where
-  getEnvelope = undefined -- view envelope
+  getEnvelope = view envelope
 
  -- XXX hmm, this is a real problem.  We *can't* just return an
   -- Envelope for a diagram, we can only return a Contextual Envelope.
