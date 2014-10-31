@@ -507,8 +507,8 @@ type instance V (Subdiagram b v n m) = v
 type instance N (Subdiagram b v n m) = n
 
 -- | Turn a diagram into a subdiagram with no accumulated context.
-mkSubdiagram :: QDiagram b v n m -> Subdiagram b v n m
-mkSubdiagram d = undefined -- Subdiagram d empty empty
+mkSubdiagram :: (Additive v, Num n) => QDiagram b v n m -> Subdiagram b v n m
+mkSubdiagram d = Subdiagram d mempty empty
 
 -- | Create a \"point subdiagram\", that is, a 'pointDiagram' (with no
 --   content and a point envelope) treated as a subdiagram with local
