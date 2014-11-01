@@ -454,7 +454,7 @@ instance (Metric v, OrderedField n, Monoid' m)
 
 instance (Metric v, OrderedField n, Semigroup m)
          => Traced (QDiagram b v n m) where
-  getTrace = undefined --view trace
+  getTrace = view trace
 
 -- XXX of course Traced has the same problem as Enveloped, described
 -- above
