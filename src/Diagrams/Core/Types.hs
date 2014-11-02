@@ -149,6 +149,7 @@ import           Diagrams.Core.V
 import           Linear.Affine
 import           Linear.Metric
 import           Linear.Vector
+import           Linear.V1
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -429,7 +430,7 @@ instance (Metric v, OrderedField n, Semigroup m)
 
 ---- Juxtaposable
 
-instance (Metric v, OrderedField n, Monoid' m)
+instance (Metric v, OrderedField n, Monoid' m, T.Traversable v)
       => Juxtaposable (QDiagram b v n m) where
   juxtapose = juxtaposeDefault
 
@@ -463,7 +464,7 @@ instance (Metric v, OrderedField n, Semigroup m)
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Metric v, T.Traversable v, OrderedField n, Monoid' m)
       => HasOrigin (QDiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
@@ -471,9 +472,17 @@ instance (Metric v, OrderedField n, Semigroup m)
 
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Metric v, T.Traversable v, OrderedField n, Monoid' m)
       => Transformable (QDiagram b v n m) where
-  transform = undefined -- over _Wrapped' . transform
+  transform t (QD c) = over trace (transform t) qd
+    where
+      qd  = over envelope (transform t) qd'
+      qd' = c >>>= \(rTree, summary) -> QD . return $ (transform t rTree, summary)
+
+  -- XXX I'm still not sure this is what we want? What to do with queries
+  -- We transform the 'RTree' using it's instance and the components of
+  -- 'Summary' separately.
+
 
   --- XXX not sure why (over _Wrapped' . transform) doesn't type check.
   --
@@ -688,6 +697,15 @@ data RNode b v n a = RStyle (Style v n) -- ^ A style node.
                    | RPrim (Prim b v n) -- ^ A primitive.
                    | REmpty
 
+type instance V (RNode b v n a) = v
+type instance N (RNode b v n a) = n
+
+instance (Additive v, T.Traversable v, Floating n) => Transformable (RNode b v n a) where
+  transform t (RStyle (Style v)) = RStyle $ transform t (Style v)
+  transform _ (RAnnot a)         = RAnnot a
+  transform t (RPrim (Prim v))   = RPrim $ transform t (Prim v)
+  transform _ REmpty             = REmpty
+
 -- | An 'RTree' is a compiled and optimized representation of a
 --   'QDiagram', which can be used by backends.  They have the
 --   following invariant which backends may rely upon:
@@ -703,6 +721,9 @@ instance Rewrapped (RTree b v n a) (RTree b' v' n' a')
 
 type instance V (RTree b v n a) = v
 type instance N (RTree b v n a) = n
+
+instance (Additive v, T.Traversable v, Floating n) => Transformable (RTree b v n a) where
+  transform t = over _Wrapped' (fmap $ transform t)
 
 instance Semigroup (RTree b v n a) where
   RTree t1 <> RTree t2 = RTree (Node REmpty[t1,t2])
