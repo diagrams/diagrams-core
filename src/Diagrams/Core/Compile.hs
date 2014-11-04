@@ -37,6 +37,7 @@ import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
 import           Data.Tree
 
+import           Diagrams.Core.Context
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
@@ -50,6 +51,26 @@ import           Linear.Metric hiding (qd)
 onRStyle :: (Style v n -> Style v n) -> RNode b v n a -> RNode b v n a
 onRStyle f (RStyle s) = RStyle (f s)
 onRStyle _ n          = n
+
+-- | Compile a @QDiagram@ into an 'RTree', rewriting styles with the
+--   given function along the way.  Suitable for use by backends when
+--   implementing 'renderData'.  The first argument is the
+--   transformation used to convert the diagram from local to output
+--   units.
+toRTree
+  :: (HasLinearMap v, Metric v
+#if __GLASGOW_HASKELL__ > 707
+     , Typeable v
+#else
+     , Typeable1 v
+#endif
+     , Typeable n, OrderedField n, Monoid m, Semigroup m)
+  => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
+
+-- XXX Of course we need a real 'Context' and to iterate the diagram.
+toRTree globalToOutput (QD d) = fst $ runContextual d initialContext
+  where
+    initialContext = (Option Nothing, (Option Nothing, ()))
 
 --------------------------------------------------
 
@@ -70,7 +91,7 @@ renderDiaT
      , Monoid' m
      )
   => b -> Options b v n -> QDiagram b v n m -> (Transformation v n, Result b v n)
-renderDiaT b opts d = undefined --(g2o, renderRTree b opts' . toRTree g2o $ d')
+renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
   where (opts', g2o, d') = adjustDia b opts d
 
 -- | Render a diagram.

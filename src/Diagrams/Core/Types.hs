@@ -149,7 +149,6 @@ import           Diagrams.Core.V
 import           Linear.Affine
 import           Linear.Metric
 import           Linear.Vector
-import           Linear.V1
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
