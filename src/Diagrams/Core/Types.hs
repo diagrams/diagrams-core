@@ -115,24 +115,21 @@ module Diagrams.Core.Types
 
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
-                                            review, (^.), _Wrapped, _Wrapping, op)
+                                            review, _Wrapped, _Wrapping, op)
 import           Control.Monad             (mplus)
 import           Data.Typeable
 import           Data.Functor              ((<$>))
 import           Data.List                 (isSuffixOf)
 import qualified Data.List.NonEmpty        as NEL
 import qualified Data.Map                  as M
-import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Tree
 
 import           Data.Monoid.Action
-import           Data.Monoid.Coproduct
 import           Data.Monoid.Deletable
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
-import qualified Data.Tree.DUAL            as D
 
 import           Diagrams.Core.Context
 import           Diagrams.Core.Envelope
@@ -473,10 +470,10 @@ instance (Metric v, T.Traversable v, OrderedField n, Monoid' m)
 --   components appropriately.
 instance (Metric v, T.Traversable v, OrderedField n, Monoid' m)
       => Transformable (QDiagram b v n m) where
-  transform t (QD c) = over trace (transform t) qd
+  transform t (QD c) = over trace (transform t) d
     where
-      qd  = over envelope (transform t) qd'
-      qd' = c >>>= \(rTree, summary) -> QD . return $ (transform t rTree, summary)
+      d  = over envelope (transform t) d'
+      d' = c >>>= \(rTree, summary) -> QD . return $ (transform t rTree, summary)
 
   -- XXX I'm still not sure this is what we want? What to do with queries
   -- We transform the 'RTree' using it's instance and the components of
