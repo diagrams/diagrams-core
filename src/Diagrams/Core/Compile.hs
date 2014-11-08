@@ -70,7 +70,7 @@ toRTree
 -- XXX Of course we need a real 'Context' and to iterate the diagram.
 toRTree globalToOutput (QD d) = fst $ runContextual d initialContext
   where
-    initialContext = (Option Nothing, (Option Nothing, ()))
+    initialContext = (Option Nothing, (Option Nothing, (Option Nothing, ())))
 
 --------------------------------------------------
 

@@ -49,7 +49,6 @@ module Diagrams.Core.Transform
        , determinant
        , avgScale
        , eye
-       , basis'
 
          -- * The Transformable class
 
@@ -218,17 +217,13 @@ fromSymmetric t = fromLinear t t
 -- | Get the dimension of an object whose vector space is an instance of
 --   @HasLinearMap@, e.g. transformations, paths, diagrams, etc.
 dimension :: forall a v. (V a ~ v, Additive v, Traversable v) => a -> Int
-dimension _ = length (basis' :: [v Int])
-
--- | Same as 'basis' from @linear@ but with 'Additive' constaint.
-basis' :: (Additive t, Traversable t, Num a) => [t a]
-basis' = basisFor (zero :: Additive v => v Int)
+dimension _ = length (basis :: [v Int])
 
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
 --   is mostly useful for implementing backends.
 onBasis :: (Additive v, Traversable v, Num n) => Transformation v n -> ([v n], v n)
-onBasis (Transformation (f :-: _) _ t) = (map f basis', t)
+onBasis (Transformation (f :-: _) _ t) = (map f basis, t)
 
 -- Remove the nth element from a list
 remove :: Int -> [a] -> [a]
@@ -256,7 +251,7 @@ listRep = toList
 -- | Convert a `Transformation v` to a matrix representation as a list of
 --   column vectors which are also lists.
 matrixRep :: (Additive v, Traversable v, Num n) => Transformation v n -> [[n]]
-matrixRep (Transformation (f :-: _) _ _) = map (toList . f) basis'
+matrixRep (Transformation (f :-: _) _ _) = map (toList . f) basis
 
 -- | Convert a `Transformation v` to a homogeneous matrix representation.
 --   The final list is the translation.

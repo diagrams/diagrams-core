@@ -42,6 +42,7 @@ import           Data.Semigroup
 --   * names (see "Diagrams.Core.Names")
 type Context v n = Style v n
                ::: Name
+               ::: (n, n) -- ^ global to output, normalized to output.
                ::: ()
 
 --------------------------------------------------
