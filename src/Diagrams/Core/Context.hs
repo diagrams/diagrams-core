@@ -17,6 +17,7 @@ module Diagrams.Core.Context
   ( Context
   , Contextual (..)
   , contextual
+  , emptyContext
   , runContextual
   )
   where
@@ -60,6 +61,9 @@ instance Wrapped (Contextual v n a) where
 --   Note @contextual = review _Wrapped'@.
 contextual :: (Context v n -> a) -> Contextual v n a
 contextual = Contextual . reader
+
+emptyContext :: Context v n
+emptyContext = (Option Nothing, (Option Nothing, (Option Nothing, ())))
 
 runContextual :: Contextual v n a -> (Context v n -> a)
 runContextual = view _Wrapped'

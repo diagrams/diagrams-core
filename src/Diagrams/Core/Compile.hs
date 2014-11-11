@@ -68,9 +68,7 @@ toRTree
   => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 
 -- XXX Of course we need a real 'Context' and to iterate the diagram.
-toRTree globalToOutput (QD d) = fst $ runContextual d initialContext
-  where
-    initialContext = (Option Nothing, (Option Nothing, (Option Nothing, ())))
+toRTree globalToOutput (QD d) = fst $ runContextual d emptyContext
 
 --------------------------------------------------
 
