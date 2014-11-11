@@ -78,3 +78,4 @@ instance (Semigroup a, Monoid a) => Monoid (Contextual v n a) where
 
 instance Transformable a => Transformable (Contextual v n a) where
   transform = over _Wrapped' . fmap . transform
+

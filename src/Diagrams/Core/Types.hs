@@ -98,7 +98,7 @@ module Diagrams.Core.Types
 
        , Backend(..)
        , RNode(..)
-       , RTree, emptyRTree
+       , RTree(..), emptyRTree
 
          -- ** Null backend
 
@@ -463,6 +463,9 @@ instance (Metric v, OrderedField n, Semigroup m)
 instance (Metric v, T.Traversable v, OrderedField n, Monoid' m)
       => HasOrigin (QDiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
+
+instance HasOrigin a => HasOrigin (Contextual v n a) where
+  moveOriginTo = over _Wrapped' . fmap . moveOriginTo
 
 ---- Transformable
 
