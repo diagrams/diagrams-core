@@ -16,11 +16,12 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Juxtapose
-       ( Juxtaposable(..), juxtaposeDefault
+       ( Juxtaposable(..), juxtaposeDefault, juxtaposeContextual
        ) where
 
 import           Control.Applicative
 import qualified Data.Map                as M
+import           Data.Semigroup
 import qualified Data.Set                as S
 
 import           Diagrams.Core.Context
@@ -55,6 +56,13 @@ juxtaposeDefault v a1 a2 = do
     (Just v1, Just v2) -> return $ moveOriginBy (v1 ^+^ v2) a2
     _                  -> return a2
 
+juxtaposeContextual :: (Juxtaposable a, HasOrigin a, Semigroup a)
+                    => Vn a -> Contextual (V a) (N a) a -> Contextual (V a) (N a) a
+                            -> Contextual (V a) (N a) a
+juxtaposeContextual v c1 c2 = contextual $ \ctx -> 
+  runContextual (juxtapose v (runContextual c1 ctx) 
+                             (runContextual c2 ctx)) ctx
+
 instance (Metric v, OrderedField n) => Juxtaposable (Envelope v n) where
   juxtapose = juxtaposeDefault
 
@@ -75,5 +83,5 @@ instance Juxtaposable a => Juxtaposable (b -> a) where
   juxtapose v f1 f2 = contextual $ \ctx b -> runContextual (juxtapose v (f1 b) (f2 b)) ctx
 
 instance Juxtaposable a => Juxtaposable (Measured n a) where
-  juxtapose v a1 a2 = contextual $ \ctx -> runContextual (juxtapose v a1 a2) ctx
+  juxtapose = juxtapose
 
