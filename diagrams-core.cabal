@@ -42,8 +42,8 @@ Library
                        semigroups >= 0.8.4 && < 0.16,
                        monoid-extras >= 0.3 && < 0.4,
                        dual-tree >= 0.2 && < 0.3,
-                       lens >= 4.0 && < 4.6,
-                       linear >= 1.11.3 && < 1.12,
+                       lens >= 4.0 && < 4.7,
+                       linear >= 1.11.3 && < 1.15,
                        adjunctions >= 4.0 && < 5.0,
                        distributive >=0.2.2 && < 1.0,
                        mtl
