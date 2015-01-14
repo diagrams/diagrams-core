@@ -39,14 +39,16 @@ module Diagrams.Core.Style
 
        ) where
 
-import           Control.Arrow           ((***))
-import           Control.Lens            hiding (Action, transform)-- (Rewrapped, Wrapped (..), iso, (%~), (&))
-import           Data.Typeable
-import qualified Data.HashMap.Strict     as HM
-import qualified Data.Map                as M
+import           Control.Arrow ((***))
+import           Control.Lens (At(..), Each(..), Index, Ixed(..),
+                               IxValue, Prism', Rewrapped,
+                               Traversable, Wrapped(..), _Wrapped, iso, prism')
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map as M
 import           Data.Monoid.Action
 import           Data.Semigroup
-import qualified Data.Set                as S
+import qualified Data.Set as S
+import           Data.Typeable
 
 import           Diagrams.Core.Transform
 import           Diagrams.Core.V
@@ -125,7 +127,7 @@ unwrapAttr :: AttributeClass a => Attribute v n -> Maybe a
 unwrapAttr (Attribute a)   = cast a
 unwrapAttr (MAttribute _)  = Nothing -- can't unwarp measured attributes
 unwrapAttr (TAttribute a)  = cast a
--- Measured is intentionally not an instance on 'AttributeClass' to avoid any 
+-- Measured is intentionally not an instance on 'AttributeClass' to avoid any
 -- mix ups.
 
 -- | Same as 'unwrapAttr' but for an 'MAttribute'.
@@ -194,7 +196,7 @@ instance Each (Style v n) (Style v' n') (Attribute v n) (Attribute v' n') where
   each = _Wrapped . each
   {-# INLINE each #-}
 
--- | Map the attributes of a style, with the possibility of changing the space 
+-- | Map the attributes of a style, with the possibility of changing the space
 --   / number type.
 attrMap :: (Attribute v n -> Attribute u n') -> Style v n -> Style u n'
 attrMap f (Style s) = Style $ HM.map f s
@@ -220,7 +222,7 @@ attrToStyle a = Style (HM.singleton (typeOf a) (mkAttr a))
 -- | Create a style from a single attribute.
 mAttrToStyle :: forall v n a. (AttributeClass a, Typeable n) => Measured n a -> Style v n
 mAttrToStyle a = Style (HM.singleton (typeOf (undefined :: a)) (mkMAttr a))
--- Note that we use type 'a' not 'Measured n a' so we don't have to rebuild 
+-- Note that we use type 'a' not 'Measured n a' so we don't have to rebuild
 -- when un-measuring the attributes.
 
 -- | Create a style from a single transformable attribute.
@@ -245,7 +247,7 @@ combineAttr a = inStyle $ HM.insertWith (<>) (typeOf a) (mkAttr a)
 
 unmeasureAttrs :: (Num n, Typeable n) => n -> n -> Style v n -> Style v n
 unmeasureAttrs g n = attrMap (unmeasureAttr g n)
--- Note that measured attributes are stored with their type, not their measured 
+-- Note that measured attributes are stored with their type, not their measured
 -- type, so there's no need to rebuild the whole map to rename them
 
 -- | Turn a 'MAttribute' into a 'Attribute'.
@@ -314,4 +316,3 @@ applyMAttr = applyStyle . mAttrToStyle
 --   structure.
 applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
 applyTAttr = applyStyle . tAttrToStyle
-

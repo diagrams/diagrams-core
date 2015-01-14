@@ -70,10 +70,10 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens            hiding (Action, transform)
-import qualified Data.Map                as M
+import           Control.Lens ((&), (.~), Rewrapped, Traversable, Wrapped(..), iso)
+import qualified Data.Map as M
 import           Data.Semigroup
-import qualified Data.Set                as S
+import qualified Data.Set as S
 
 import           Data.Monoid.Action
 import           Data.Monoid.Deletable
@@ -81,11 +81,11 @@ import           Data.Monoid.Deletable
 import           Linear.Affine
 import           Linear.Vector
 
-import           Data.Foldable           (Foldable, toList)
+import           Data.Foldable (Foldable, toList)
 import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
-import           Diagrams.Core.Points    ()
+import           Diagrams.Core.Points ()
 import           Diagrams.Core.Measure
 import           Diagrams.Core.V
 
@@ -303,8 +303,8 @@ Proofs for the specified properties:
 --   help shorten some of the ridiculously long constraint sets.
 class (HasBasis v, Traversable v) => HasLinearMap v
 instance (HasBasis v, Traversable v) => HasLinearMap v
--- Most (if not all) of the functions in linear that use Applicative could be 
--- defined in terms of Additive. Ideally we'd only use Additive but for now 
+-- Most (if not all) of the functions in linear that use Applicative could be
+-- defined in terms of Additive. Ideally we'd only use Additive but for now
 -- just stick both in a class.
 
 -- | An 'Additive' vector space whose representation is made up of basis elements.
@@ -417,4 +417,3 @@ scale :: (V a ~ v, N a ~ n, Additive v, Fractional n, Eq n, Transformable a)
       => n -> a -> a
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
-
