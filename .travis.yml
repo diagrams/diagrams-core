@@ -13,7 +13,7 @@ env:
 
 matrix:
   allow_failures:
-    - env: GHCVER=7.10.1
+    - env: GHCVER=7.10.1 SKIP_HADDOCK=true
     - env: GHCVER=7.4.2
 
 before_install:
