@@ -47,6 +47,7 @@ module Diagrams.Core.Transform
        , matrixRep
        , matrixHomRep
        , determinant
+       , isReflection
        , avgScale
        , eye
 
@@ -267,6 +268,11 @@ matrixHomRep t = mr ++ [toList tl]
 -- | The determinant of a `Transformation`.
 determinant :: (Additive v, Traversable v, Num n) => Transformation v n -> n
 determinant = det . matrixRep
+
+-- | Determine whether a `Transformation` includes a reflection
+--   component, that is, whether it reverses orientation.
+isReflection :: (Additive v, Traversable v, Num n, Ord n) => Transformation v n -> Bool
+isReflection = (<0) . determinant
 
 -- | Compute the \"average\" amount of scaling performed by a
 --   transformation.  Satisfies the properties
