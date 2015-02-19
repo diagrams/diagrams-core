@@ -249,8 +249,8 @@ det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
 listRep :: Foldable v => v n -> [n]
 listRep = toList
 
--- | Convert a `Transformation v` to a matrix representation as a list of
---   column vectors which are also lists.
+-- | Convert the linear part of a `Transformation` to a matrix
+--   representation as a list of column vectors which are also lists.
 matrixRep :: (Additive v, Traversable v, Num n) => Transformation v n -> [[n]]
 matrixRep (Transformation (f :-: _) _ _) = map (toList . f) basis
 
@@ -265,7 +265,7 @@ matrixHomRep t = mr ++ [toList tl]
     mr = matrixRep t
     tl = transl t
 
--- | The determinant of a `Transformation`.
+-- | The determinant of (the linear part of) a `Transformation`.
 determinant :: (Additive v, Traversable v, Num n) => Transformation v n -> n
 determinant = det . matrixRep
 
