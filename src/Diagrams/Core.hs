@@ -105,6 +105,7 @@ module Diagrams.Core
        , basis
        , dimension
        , determinant
+       , isReflection
 
          -- ** Invertible linear transformations
        , (:-:), (<->), linv, lapp
