@@ -51,6 +51,11 @@ import           Diagrams.Core.Style
 
 import           Linear.Metric hiding (qd)
 
+-- Typeable1 is a depreciated synonym in ghc > 707
+#if __GLASGOW_HASKELL__ >= 707
+#define Typeable1 Typeable
+#endif
+
 emptyDTree :: Tree (DNode b v n a)
 emptyDTree = Node DEmpty []
 
@@ -107,7 +112,8 @@ toDTree g n (QD qd)
 -- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
-fromDTree :: forall b v n. (Floating n, HasLinearMap v) => DTree b v n Annotation -> RTree b v n Annotation
+fromDTree :: forall b v n. (Floating n, HasLinearMap v)
+          => DTree b v n Annotation -> RTree b v n Annotation
 fromDTree = fromDTree' mempty
   where
     fromDTree' :: HasLinearMap v => Transformation v n -> DTree b v n Annotation -> RTree b v n Annotation
@@ -144,13 +150,8 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (HasLinearMap v, Metric v
-#if __GLASGOW_HASKELL__ > 707
-     , Typeable v
-#else
-     , Typeable1 v
-#endif
-     , Typeable n, OrderedField n, Monoid m, Semigroup m)
+  :: (HasLinearMap v, Metric v, Typeable1 v, Typeable n,
+      OrderedField n, Monoid m, Semigroup m)
   => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 toRTree globalToOutput d
   = (fmap . onRStyle) (unmeasureAttrs gToO nToO)
@@ -181,32 +182,16 @@ onRStyle _ n          = n
 --   transformation can be used, for example, to convert output/screen
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
-  :: ( Backend b v n , HasLinearMap v, Metric v
-#if __GLASGOW_HASKELL__ > 707
-     , Typeable v
-#else
-     , Typeable1 v
-#endif
-     , Typeable n
-     , OrderedField n
-     , Monoid' m
-     )
+  :: (Backend b v n , HasLinearMap v, Metric v, Typeable1 v,
+      Typeable n, OrderedField n, Monoid' m)
   => b -> Options b v n -> QDiagram b v n m -> (Transformation v n, Result b v n)
 renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
   where (opts', g2o, d') = adjustDia b opts d
 
 -- | Render a diagram.
 renderDia
-  :: ( Backend b v n , HasLinearMap v, Metric v
-#if __GLASGOW_HASKELL__ > 707
-     , Typeable v
-#else
-     , Typeable1 v
-#endif
-     , Typeable n
-     , OrderedField n
-     , Monoid' m
-     )
+  :: (Backend b v n , HasLinearMap v, Metric v, Typeable1 v,
+      Typeable n, OrderedField n, Monoid' m)
   => b -> Options b v n -> QDiagram b v n m -> Result b v n
 renderDia b opts d = snd (renderDiaT b opts d)
 
