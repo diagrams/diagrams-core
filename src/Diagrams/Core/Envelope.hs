@@ -38,7 +38,12 @@ module Diagrams.Core.Envelope
        , radius
        , extent
        , size
-       , envelopeVMay, envelopeV, envelopePMay, envelopeP, envelopeSMay, envelopeS
+       , envelopeVMay
+       , envelopeV
+       , envelopePMay
+       , envelopeP
+       , envelopeSMay
+       , envelopeS
 
          -- * Miscellaneous
        , OrderedField

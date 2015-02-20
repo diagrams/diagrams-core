@@ -9,7 +9,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Trace
--- Copyright   :  (c) 2012 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2012-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -161,7 +161,7 @@ deriving instance (Ord n) => Monoid (Trace v n)
 type instance V (Trace v n) = v
 type instance N (Trace v n) = n
 
-instance (Num n, Additive v) => HasOrigin (Trace v n) where
+instance (Additive v, Num n) => HasOrigin (Trace v n) where
   moveOriginTo (P u) = _Wrapping' Trace %~ \f p -> f (p .+^ u)
 
 instance Show (Trace v n) where
@@ -171,20 +171,20 @@ instance Show (Trace v n) where
 --  Transforming traces  -----------------------------------
 ------------------------------------------------------------
 
-instance (Num n, Additive v, Functor v) => Transformable (Trace v n) where
-  transform t = _Wrapped' %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
+instance (Additive v, Num n) => Transformable (Trace v n) where
+  transform t = _Wrapped %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
 
 ------------------------------------------------------------
 --  Traced class  ------------------------------------------
 ------------------------------------------------------------
 
 -- | @Traced@ abstracts over things which have a trace.
-class (Ord (N a), Additive (V a)) => Traced a where
+class (Additive (V a), Ord (N a)) => Traced a where
 
   -- | Compute the trace of an object.
   getTrace :: a -> Trace (V a) (N a)
 
-instance (Ord n, Additive v) => Traced (Trace v n) where
+instance (Additive v, Ord n) => Traced (Trace v n) where
   getTrace = id
 
 -- | The trace of a single point is the empty trace, /i.e./ the one
@@ -193,13 +193,13 @@ instance (Ord n, Additive v) => Traced (Trace v n) where
 --   directly at the given point, but due to floating-point inaccuracy
 --   this is problematic.  Note that the envelope for a single point
 --   is /not/ the empty envelope (see "Diagrams.Core.Envelope").
-instance (Ord n, Additive v) => Traced (Point v n) where
+instance (Additive v, Ord n) => Traced (Point v n) where
   getTrace = const mempty
 
 instance Traced t => Traced (TransInv t) where
   getTrace = getTrace . op TransInv
 
-instance (Traced a, Traced b, V a ~ V b, N a ~ N b) => Traced (a,b) where
+instance (Traced a, Traced b, SameSpace a b) => Traced (a,b) where
   getTrace (x,y) = getTrace x <> getTrace y
 
 instance (Traced b) => Traced [b] where

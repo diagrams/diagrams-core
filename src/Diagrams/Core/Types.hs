@@ -336,9 +336,8 @@ pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
 getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
 getU' = maybe mempty (option mempty id . get) . D.getU
 
--- | Get the envelope of a diagram.
-envelope :: forall b v n m. ( OrderedField n, Metric v
-                            , Monoid' m)
+-- | Lens onto the 'Envelope' of a 'QDiagram'.
+envelope :: (OrderedField n, Metric v, Monoid' m)
          => Lens' (QDiagram b v n m) (Envelope v n)
 envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
 
@@ -352,7 +351,7 @@ setEnvelope e =
                 . D.applyUpost (inj (deleteR :: Deletable (Envelope v n)))
               )
 
--- | Get the trace of a diagram.
+-- | Lens onto the 'Trace' of a 'QDiagram'.
 trace :: (Metric v, OrderedField n, Semigroup m) =>
          Lens' (QDiagram b v n m) (Trace v n)
 trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
@@ -366,8 +365,8 @@ setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
                          . D.applyUpost (inj (deleteR :: Deletable (Trace v n)))
                        )
 
--- | Get the subdiagram map (/i.e./ an association from names to
---   subdiagrams) of a diagram.
+-- | Lens onto the 'SubMap' of a 'QDiagram' (/i.e./ an association from
+--   names to subdiagrams).
 subMap :: (Metric v, Semigroup m, OrderedField n)
        => Lens' (QDiagram b v n m) (SubMap b v n m)
 subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
@@ -433,14 +432,11 @@ withNames ns f d = maybe id f ns' d
 
 -- | \"Localize\" a diagram by hiding all the names, so they are no
 --   longer visible to the outside.
-localize :: forall b v n m. ( Metric v
-                          , OrderedField n, Semigroup m
-                          )
+localize :: forall b v n m. (Metric v, OrderedField n, Semigroup m)
          => QDiagram b v n m -> QDiagram b v n m
 localize = over _Wrapped' ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v n m)))
                    . D.applyUpost (inj (deleteR :: Deletable (SubMap b v n m)))
                    )
-
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v n m -> Query v n m
@@ -660,10 +656,7 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 --   attributes.  @getSub@ simply applies the transformation and
 --   attributes to the diagram to get the corresponding \"top-level\"
 --   diagram.
-getSub :: ( Metric v
-          , Floating n, Ord n
-          , Semigroup m
-          )
+getSub :: (Metric v, OrderedField n, Semigroup m)
        => Subdiagram b v n m -> QDiagram b v n m
 getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d
 

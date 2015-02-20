@@ -76,13 +76,13 @@ moveOriginBy = moveOriginTo . P
 --   @
 --   moveTo (origin .^+ v) === translate v
 --   @
-moveTo :: (V t ~ v, N t ~ n, Num n, HasOrigin t, Additive v) => Point v n -> t -> t
+moveTo :: (InSpace v n t, HasOrigin t) => Point v n -> t -> t
 moveTo = moveOriginBy . (origin .-.)
 
 -- | A flipped variant of 'moveTo', provided for convenience.  Useful
 --   when writing a function which takes a point as an argument, such
 --   as when using 'withName' and friends.
-place :: (V t ~ v, N t ~ n, Additive v, Num n, HasOrigin t) => t -> Point v n -> t
+place :: (InSpace v n t, HasOrigin t) => t -> Point v n -> t
 place = flip moveTo
 
 instance HasOrigin t => HasOrigin (Measured n t) where
@@ -91,7 +91,7 @@ instance HasOrigin t => HasOrigin (Measured n t) where
 instance (Additive v, Num n) => HasOrigin (Point v n) where
   moveOriginTo (P u) p = p .-^ u
 
-instance (HasOrigin t, HasOrigin s, V t ~ V s, N t ~ N s) => HasOrigin (s, t) where
+instance (HasOrigin t, HasOrigin s, SameSpace s t) => HasOrigin (s, t) where
   moveOriginTo p (x,y) = (moveOriginTo p x, moveOriginTo p y)
 
 instance HasOrigin t => HasOrigin [t] where
