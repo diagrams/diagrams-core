@@ -4,11 +4,12 @@
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE LambdaCase            #-}
 
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Style
--- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -87,24 +88,32 @@ class (Typeable a, Semigroup a) => AttributeClass a
 --   and some are affected by transformations and can be modified
 --   generically.
 data Attribute (v :: * -> *) n :: * where
+  -- | A basic 'Attribute' that isn't affected by transforms.
   Attribute   :: AttributeClass a => a -> Attribute v n
+
+  -- | An attribute that is 'Measured'. Uses the average scale of a
+  --   transform to multiply the 'local' part of a measured attribute.
   MAttribute  :: AttributeClass a => Measured n a -> Attribute v n
+
+  -- | Fully transformable attributes that have a transformation applied
+  --   directly.
   TAttribute  :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
-
--- | Prism onto 'Attribute'.
-_Attribute :: AttributeClass a => Prism' (Attribute v n) a
-_Attribute = prism' Attribute (\(Attribute a) -> cast a)
-
--- | Prism onto 'MAttribute'.
-_MAttribute :: (AttributeClass a, Typeable n) => Prism' (Attribute v n) (Measured n a)
-_MAttribute = prism' MAttribute (\(MAttribute a) -> cast a)
-
--- | Prism onto 'TAttribute'.
-_TAttribute :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => Prism' (Attribute v n) a
-_TAttribute = prism' TAttribute (\(TAttribute a) -> cast a)
 
 type instance V (Attribute v n) = v
 type instance N (Attribute v n) = n
+
+-- | Prism onto an 'Attribute'.
+_Attribute :: AttributeClass a => Prism' (Attribute v n) a
+_Attribute = prism' Attribute $ \case Attribute a -> cast a; _ -> Nothing
+
+-- | Prism onto an 'MAttribute'.
+_MAttribute :: (AttributeClass a, Typeable n) => Prism' (Attribute v n) (Measured n a)
+_MAttribute = prism' MAttribute $ \case MAttribute a -> cast a; _ -> Nothing
+
+-- | Prism onto a 'TAttribute'.
+_TAttribute :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n)
+            => Prism' (Attribute v n) a
+_TAttribute = prism' TAttribute $ \case TAttribute a -> cast a; _ -> Nothing
 
 -- | Wrap up an attribute.
 mkAttr :: AttributeClass a => a -> Attribute v n
@@ -142,21 +151,21 @@ unwrapMAttr _              = Nothing
 instance Typeable n => Semigroup (Attribute v n) where
   (Attribute a1) <> a2 =
     case unwrapAttr a2 of
-      Nothing  -> a2
       Just a2' -> Attribute (a1 <> a2')
+      Nothing  -> a2
   (MAttribute (Measured a1)) <> a2 =
     case unwrapMAttr a2 of
       Just (Measured a2') -> MAttribute $ Measured (a1 <> a2')
       Nothing             -> a2
   (TAttribute a1) <> a2 =
     case unwrapAttr a2 of
-      Nothing  -> a2
       Just a2' -> TAttribute (a1 <> a2')
+      Nothing  -> a2
 
 instance (Additive v, Traversable v, Floating n) => Transformable (Attribute v n) where
-  transform _ (Attribute a)   = Attribute a
-  transform t (MAttribute a)  = MAttribute $ scaleLocal (avgScale t) a
-  transform t (TAttribute a)  = TAttribute (transform t a)
+  transform _ (Attribute a)  = Attribute a
+  transform t (MAttribute a) = MAttribute $ scaleLocal (avgScale t) a
+  transform t (TAttribute a) = TAttribute (transform t a)
 
 ------------------------------------------------------------
 --  Styles  ------------------------------------------------
@@ -245,6 +254,8 @@ addAttr a s = attrToStyle a <> s
 combineAttr :: forall a v n. (AttributeClass a, Typeable n) => a -> Style v n -> Style v n
 combineAttr a = inStyle $ HM.insertWith (<>) (typeOf a) (mkAttr a)
 
+-- | Replace all 'MAttribute's with 'Attribute's using the 'global' and
+--   'normalized' scales.
 unmeasureAttrs :: (Num n, Typeable n) => n -> n -> Style v n -> Style v n
 unmeasureAttrs g n = attrMap (unmeasureAttr g n)
 -- Note that measured attributes are stored with their type, not their measured
