@@ -1,11 +1,12 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE TypeFamilies     #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
 
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.V
--- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -14,8 +15,9 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.V
-       ( V, N, Vn, InSpace, SameSpace
-       ) where
+  ( V , N , Vn
+  , InSpace, SameSpace
+  ) where
 
 import           Data.Map
 import           Data.Monoid.Coproduct
@@ -33,7 +35,7 @@ import           Linear.Vector
 -- | Many sorts of objects have an associated vector space in which
 --   they \"live\".  The type function @V@ maps from object types to
 --   the associated vector space. The resulting vector space has kind @* -> *@
---   which means it takes another value (a number) and returns a concrete 
+--   which means it takes another value (a number) and returns a concrete
 --   vector. For example 'V2' has kind @* -> *@ and @V2 Double@ is a vector.
 type family V a :: * -> *
 
@@ -68,11 +70,18 @@ type instance N (Deletable m) = N m
 type instance N (Split m)     = N m
 type instance N (m :+: n)     = N m
 
--- | Conveient type alias to retrieve the vector type associated with an 
---   object's vector space. This is usually used as @Vn a ~ v n@ where @v@ is 
+-- | Conveient type alias to retrieve the vector type associated with an
+--   object's vector space. This is usually used as @Vn a ~ v n@ where @v@ is
 --   the vector space and @n@ is the numerical field.
 type Vn a = V a (N a)
 
-type InSpace v n a = (V a ~ v, N a ~ n, Additive v, Num n)
-type SameSpace a b = (V a ~ V b, N a ~ N b)
+-- | @InSpace v n a@ means the object @a@ belongs to the space @v n@
+--   where @v@ is 'Additive' and @n@ is a 'Num'.
+class (V a ~ v, N a ~ n, Additive v, Num n) => InSpace v n a
+instance (V a ~ v, N a ~ n, Additive v, Num n) => InSpace v n a
+
+-- | @SameSpace a b@ means the objects @a@ and @b@ belong to the same
+--   space @v n@.
+class (V a ~ V b, N a ~ N b) => SameSpace a b
+instance (V a ~ V b, N a ~ N b) => SameSpace a b
 
