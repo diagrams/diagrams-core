@@ -88,15 +88,8 @@ class (Typeable a, Semigroup a) => AttributeClass a
 --   and some are affected by transformations and can be modified
 --   generically.
 data Attribute (v :: * -> *) n :: * where
-  -- | A basic 'Attribute' that isn't affected by transforms.
   Attribute   :: AttributeClass a => a -> Attribute v n
-
-  -- | An attribute that is 'Measured'. Uses the average scale of a
-  --   transform to multiply the 'local' part of a measured attribute.
   MAttribute  :: AttributeClass a => Measured n a -> Attribute v n
-
-  -- | Fully transformable attributes that have a transformation applied
-  --   directly.
   TAttribute  :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
 
 type instance V (Attribute v n) = v
