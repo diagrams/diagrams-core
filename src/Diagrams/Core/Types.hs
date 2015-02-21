@@ -8,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE LambdaCase              #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
@@ -101,14 +102,20 @@ module Diagrams.Core.Types
          -- $prim
 
        , Prim(..)
+       , _Prim
 
          -- * Backends
 
        , Backend(..)
-       , DNode(..)
        , DTree
-       , RNode(..)
+       , DNode(..)
+
        , RTree
+       , RNode(..)
+       , _RStyle
+       , _RAnnot
+       , _RPrim
+       , _REmpty
 
          -- ** Null backend
 
@@ -125,7 +132,7 @@ module Diagrams.Core.Types
 
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
-                                            (^.), _Wrapped, _Wrapping)
+                                            (^.), _Wrapped, _Wrapping, Prism', prism')
 import           Control.Monad             (mplus)
 import           Data.Typeable
 import           Data.List                 (isSuffixOf)
@@ -768,6 +775,9 @@ lookupSub a (SubMap m)
 data Prim b v n where
   Prim :: (Transformable p, Typeable p, Renderable p b) => p -> Prim b (V p) (N p)
 
+_Prim :: (Transformable p, Typeable p, Renderable p b) => Prism' (Prim b (V p) (N p)) p
+_Prim = prism' Prim (\(Prim p) -> cast p)
+
 type instance V (Prim b v n) = v
 type instance N (Prim b v n) = n
 
@@ -785,6 +795,13 @@ instance Renderable (Prim b v n) b where
 -- Backends  -----------------------------------------------
 ------------------------------------------------------------
 
+-- | A 'DTree' is a raw tree representation of a 'QDiagram', with all
+--   the @u@-annotations removed.  It is used as an intermediate type
+--   by diagrams-core; backends should not need to make use of it.
+--   Instead, backends can make use of 'RTree', which 'DTree' gets
+--   compiled and optimized to.
+type DTree b v n a = Tree (DNode b v n a)
+
 data DNode b v n a = DStyle (Style v n)
                    | DTransform (Transformation v n)
                    | DAnnot a
@@ -798,24 +815,33 @@ data DNode b v n a = DStyle (Style v n)
                    | DPrim (Prim b v n)
                    | DEmpty
 
--- | A 'DTree' is a raw tree representation of a 'QDiagram', with all
---   the @u@-annotations removed.  It is used as an intermediate type
---   by diagrams-core; backends should not need to make use of it.
---   Instead, backends can make use of 'RTree', which 'DTree' gets
---   compiled and optimized to.
-type DTree b v n a = Tree (DNode b v n a)
-
-data RNode b v n a = RStyle (Style v n) -- ^ A style node.
-                   | RAnnot a
-                   | RPrim (Prim b v n) -- ^ A primitive.
-                   | REmpty
-
 -- | An 'RTree' is a compiled and optimized representation of a
 --   'QDiagram', which can be used by backends.  They have the
 --   following invariant which backends may rely upon:
 --
 --   * @RPrim@ nodes never have any children.
 type RTree b v n a = Tree (RNode b v n a)
+
+data RNode b v n a = RStyle (Style v n) -- ^ A style node.
+                   | RAnnot a
+                   | RPrim (Prim b v n) -- ^ A primitive.
+                   | REmpty
+
+-- | Prism onto a style of an 'RNode'.
+_RStyle :: Prism' (RNode b v n a) (Style v n)
+_RStyle = prism' RStyle $ \case RStyle s -> Just s; _ -> Nothing
+
+-- | Prism onto an annotation of an 'RNode'.
+_RAnnot :: Prism' (RNode b v n a) a
+_RAnnot = prism' RAnnot $ \case RAnnot a -> Just a; _ -> Nothing
+
+-- | Prism onto a 'Prim' of an 'RNode'.
+_RPrim :: Prism' (RNode b v n a) (Prim b v n)
+_RPrim = prism' RPrim $ \case RPrim p -> Just p; _ -> Nothing
+
+-- | Prism onto an empty 'RNode'.
+_REmpty :: Prism' (RNode b v n a) ()
+_REmpty = prism' (const REmpty) $ \case REmpty -> Just (); _ -> Nothing
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
