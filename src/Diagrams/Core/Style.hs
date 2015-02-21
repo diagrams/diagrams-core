@@ -66,10 +66,10 @@ module Diagrams.Core.Style
 
 import           Control.Applicative
 import           Control.Arrow           ((***))
-import           Control.Lens            hiding (Action, transform)
+import           Control.Lens            hiding (transform)
 import qualified Data.HashMap.Strict     as HM
 import qualified Data.Map                as M
-import           Data.Monoid.Action
+import           Data.Monoid.Action      as A
 import           Data.Semigroup
 import qualified Data.Set                as S
 import           Data.Typeable
@@ -240,7 +240,7 @@ instance (Additive v, Traversable v, Floating n) => Transformable (Style v n) wh
   transform t = over each (transform t)
 
 -- | Styles have no action on other monoids.
-instance Action (Style v n) m
+instance A.Action (Style v n) m
 
 -- making styles -------------------------------------------------------
 
