@@ -128,10 +128,28 @@ instance Typeable n => Semigroup (Attribute v n) where
   (TAttribute a1) <> (preview _TAttribute -> Just a2) = TAttribute (a1 <> a2)
   _               <> a2                               = a2
 
+-- | 'TAttribute's are transformed directly, 'MAttribute's have their
+--   local scale multiplied by the average scale of the transform.
+--   Plain 'Attribute's are unaffected.
 instance (Additive v, Traversable v, Floating n) => Transformable (Attribute v n) where
   transform _ (Attribute a)  = Attribute a
   transform t (MAttribute a) = MAttribute $ scaleLocal (avgScale t) a
   transform t (TAttribute a) = TAttribute (transform t a)
+
+-- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
+--   safe) check on the type of the result. If the required type
+--   matches the type of the attribute, the attribute value is
+--   returned wrapped in @Just@; if the types do not match, @Nothing@
+--   is returned.
+--
+--   Measured attributes cannot be extrated from this function until
+--   they have been unmeasured with 'unmeasureAttribute'. If you want a
+--   measured attibute use the '_MAttribute' prism.
+unwrapAttribute :: AttributeClass a => Attribute v n -> Maybe a
+unwrapAttribute (Attribute a)  = cast a
+unwrapAttribute (MAttribute _) = Nothing
+unwrapAttribute (TAttribute a) = cast a
+{-# INLINE unwrapAttribute #-}
 
 -- | Prism onto an 'Attribute'.
 _Attribute :: AttributeClass a => Prism' (Attribute v n) a
@@ -149,20 +167,6 @@ _TAttribute :: (V a ~ v, N a ~ n, AttributeClass a, Transformable a)
 _TAttribute = prism' TAttribute $ \case TAttribute a -> cast a; _ -> Nothing
 {-# INLINE _TAttribute #-}
 
--- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
---   safe) check on the type of the result. If the required type
---   matches the type of the attribute, the attribute value is
---   returned wrapped in @Just@; if the types do not match, @Nothing@
---   is returned.
---
---   Measured attributes cannot be extrated from this function until
---   they have been unmeasured with 'unmeasureAttribute'. If you want a
---   measured attibute use the '_MAttribute' prism.
-unwrapAttribute :: AttributeClass a => Attribute v n -> Maybe a
-unwrapAttribute (Attribute a)   = cast a
-unwrapAttribute (MAttribute _)  = Nothing
-unwrapAttribute (TAttribute a)  = cast a
-
 -- | Turn an 'MAttribute' into an 'Attribute' using the given 'global'
 --   and 'normalized' scale.
 unmeasureAttribute :: (Num n, Typeable n)
@@ -170,7 +174,8 @@ unmeasureAttribute :: (Num n, Typeable n)
 unmeasureAttribute g n (MAttribute m) = Attribute (fromMeasured g n m)
 unmeasureAttribute _ _ a              = a
 
--- | Type of an attribute that is stored with a style.
+-- | Type of an attribute that is stored with a style. Measured
+--   attributes return the type as if it where unmeasured.
 attributeType :: Attribute v n -> TypeRep
 attributeType (Attribute a)  = typeOf a
 attributeType (MAttribute a) = mType a
@@ -225,15 +230,15 @@ instance At (Style v n) where
   at k = _Wrapped' . at k
   {-# INLINE at #-}
 
+-- | Combine a style by combining the attributes; if the two styles have
+--   attributes of the same type they are combined according to their
+--   semigroup structure.
 instance Typeable n => Semigroup (Style v n) where
   Style s1 <> Style s2 = Style $ HM.unionWith (<>) s1 s2
 
--- | The empty style contains no attributes; composition of styles is
---   a union of attributes; if the two styles have attributes of the
---   same type they are combined according to their semigroup
---   structure.
+-- | The empty style contains no attributes.
 instance Typeable n => Monoid (Style v n) where
-  mempty = Style HM.empty
+  mempty  = Style HM.empty
   mappend = (<>)
 
 instance (Additive v, Traversable v, Floating n) => Transformable (Style v n) where
@@ -266,7 +271,7 @@ getAttr :: forall a v n. AttributeClass a => Style v n -> Maybe a
 getAttr (Style s) = HM.lookup ty s >>= unwrapAttribute
   where ty = typeOf (undefined :: a)
   -- unwrapAttribute can fail if someone tries to unwrap a measured
-  -- attirbute before it gets "unmeasured"
+  -- attribute before it gets "unmeasured"
 
 -- | Replace all 'MAttribute's with 'Attribute's using the 'global' and
 --   'normalized' scales.

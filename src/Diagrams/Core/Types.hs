@@ -368,9 +368,9 @@ setTrace :: forall b v n m. ( OrderedField n, Metric v
                             , Semigroup m)
          => Trace v n -> QDiagram b v n m -> QDiagram b v n m
 setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
-                         . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
-                         . D.applyUpost (inj (deleteR :: Deletable (Trace v n)))
-                       )
+                            . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
+                            . D.applyUpost (inj (deleteR :: Deletable (Trace v n)))
+                            )
 
 -- | Lens onto the 'SubMap' of a 'QDiagram' (/i.e./ an association from
 --   names to subdiagrams).
