@@ -7,7 +7,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Compile
--- Copyright   :  (c) 2013 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2013-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -63,7 +63,8 @@ uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
 uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
-toDTree :: (HasLinearMap v, Floating n, Typeable n) => n -> n -> QDiagram b v n m -> Maybe (DTree b v n Annotation)
+toDTree :: (HasLinearMap v, Floating n, Typeable n)
+        => n -> n -> QDiagram b v n m -> Maybe (DTree b v n Annotation)
 toDTree g n (QD qd)
   = foldDUAL
 
