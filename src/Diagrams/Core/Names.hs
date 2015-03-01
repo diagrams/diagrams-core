@@ -80,7 +80,6 @@ instance IsName Int
 instance IsName Float
 instance IsName Double
 instance IsName Integer
-instance IsName String
 instance IsName a => IsName [a]
 instance (IsName a, IsName b) => IsName (a,b)
 instance (IsName a, IsName b, IsName c) => IsName (a,b,c)
