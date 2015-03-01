@@ -111,9 +111,9 @@ class (Typeable a, Semigroup a) => AttributeClass a
 --   and some are affected by transformations and can be modified
 --   generically.
 data Attribute (v :: * -> *) n :: * where
-  Attribute   :: AttributeClass a => a -> Attribute v n
-  MAttribute  :: AttributeClass a => Measured n a -> Attribute v n
-  TAttribute  :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
+  Attribute  :: AttributeClass a => a -> Attribute v n
+  MAttribute :: AttributeClass a => Measured n a -> Attribute v n
+  TAttribute :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n
 
 type instance V (Attribute v n) = v
 type instance N (Attribute v n) = n
@@ -134,7 +134,7 @@ instance Typeable n => Semigroup (Attribute v n) where
 instance (Additive v, Traversable v, Floating n) => Transformable (Attribute v n) where
   transform _ (Attribute a)  = Attribute a
   transform t (MAttribute a) = MAttribute $ scaleLocal (avgScale t) a
-  transform t (TAttribute a) = TAttribute (transform t a)
+  transform t (TAttribute a) = TAttribute $ transform t a
 
 -- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
 --   safe) check on the type of the result. If the required type

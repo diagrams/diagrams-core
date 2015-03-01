@@ -9,7 +9,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Names
--- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -19,20 +19,20 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Names
-       (-- * Names
-        -- ** Atomic names
-         AName(..)
+  (-- * Names
+   -- ** Atomic names
+    AName(..)
+  , _AName
 
-        -- ** Names
-       , Name(..), IsName(..), (.>)
+   -- ** Names
+  , Name(..), IsName(..), (.>)
 
-        -- ** Qualifiable
-       , Qualifiable(..)
+   -- ** Qualifiable
+  , Qualifiable(..)
 
-       ) where
+  ) where
 
-import           Control.Lens            (over, Wrapped(..), Rewrapped, iso, _Unwrapping')
-import           Data.List               (intercalate)
+import           Control.Lens            hiding ((.>), (|>))
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
@@ -80,8 +80,8 @@ instance IsName Int
 instance IsName Float
 instance IsName Double
 instance IsName Integer
-instance IsName String
 instance IsName a => IsName [a]
+instance IsName a => IsName (Maybe a)
 instance (IsName a, IsName b) => IsName (a,b)
 instance (IsName a, IsName b, IsName c) => IsName (a,b,c)
 
@@ -107,7 +107,12 @@ instance Ord AName where
       Nothing  -> typeOf a1 `compare` typeOf a2
 
 instance Show AName where
-  show (AName a) = show a
+  showsPrec d (AName a) = showParen (d > 10) $
+    showString "AName " . showsPrec 11 a
+
+-- | Prism onto 'AName'.
+_AName :: (Typeable a, Ord a, Show a) => Prism' AName a
+_AName = prism' AName (\(AName a) -> cast a)
 
 -- | A (qualified) name is a (possibly empty) sequence of atomic names.
 newtype Name = Name [AName]
@@ -120,7 +125,14 @@ instance Wrapped Name where
 instance Rewrapped Name Name
 
 instance Show Name where
-  show (Name ns) = intercalate " .> " $ map show ns
+  showsPrec d (Name xs) = case xs of
+    []     -> showParen (d > 10) $ showString "Name []"
+    [n]    -> showParen (d > 10) $ showString "toName " . showsName 11 n
+    (n:ns) -> showParen (d > 5)  $ showsName 6 n . go ns
+      where
+        go (y:ys) = showString " .> " . showsName 6 y . go ys
+        go _      = id
+    where showsName dd (AName a) = showsPrec dd a
 
 instance IsName Name where
   toName = id
