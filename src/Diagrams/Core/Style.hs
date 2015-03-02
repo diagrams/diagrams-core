@@ -136,6 +136,14 @@ instance (Additive v, Traversable v, Floating n) => Transformable (Attribute v n
   transform t (MAttribute a) = MAttribute $ scaleLocal (avgScale t) a
   transform t (TAttribute a) = TAttribute $ transform t a
 
+-- | Shows the kind of attribute and the type contained in the
+--   attribute.
+instance Typeable n => Show (Attribute v n) where
+  showsPrec d attr = showParen (d > 10) $ case attr of
+    Attribute a  -> showString "Attribute "  . showsPrec 11 (typeOf a)
+    MAttribute a -> showString "MAttribute " . showsPrec 11 (mType a)
+    TAttribute a -> showString "TAttribute " . showsPrec 11 (typeOf a)
+
 -- | Unwrap an unknown 'Attribute' type, performing a dynamic (but
 --   safe) check on the type of the result. If the required type
 --   matches the type of the attribute, the attribute value is
@@ -247,6 +255,11 @@ instance (Additive v, Traversable v, Floating n) => Transformable (Style v n) wh
 -- | Styles have no action on other monoids.
 instance A.Action (Style v n) m
 
+-- | Show the attributes in the style.
+instance Typeable n => Show (Style v n) where
+  showsPrec d sty = showParen (d > 10) $
+    showString "Style " . showsPrec d (sty ^.. each)
+
 -- making styles -------------------------------------------------------
 
 -- | Turn an attribute into a style. An easier way to make a style is to
@@ -281,29 +294,30 @@ unmeasureAttrs g n = over each (unmeasureAttribute g n)
 -- style lenses --------------------------------------------------------
 
 mkAttrLens :: forall v n a. Typeable a
-           => Prism' (Attribute v n) a
+           => (a -> TypeRep)
+           -> Prism' (Attribute v n) a
            -> Lens' (Style v n) (Maybe a)
-mkAttrLens p f sty =
+mkAttrLens tyF p f sty =
   f (sty ^? ix ty . p) <&> \mAtt -> sty & at ty .~ (review p <$> mAtt)
-  where ty = typeOf (undefined :: a)
+  where ty = tyF (undefined :: a)
 {-# INLINE mkAttrLens #-}
 
 -- | Lens onto a plain attribute of a style.
 atAttr :: AttributeClass a
        => Lens' (Style v n) (Maybe a)
-atAttr = mkAttrLens _Attribute
+atAttr = mkAttrLens typeOf _Attribute
 {-# INLINE atAttr #-}
 
 -- | Lens onto a measured attribute of a style.
 atMAttr :: (AttributeClass a, Typeable n)
         => Lens' (Style v n) (Maybe (Measured n a))
-atMAttr = mkAttrLens _MAttribute
+atMAttr = mkAttrLens mType _MAttribute
 {-# INLINE atMAttr #-}
 
 -- | Lens onto a transformable attribute of a style.
 atTAttr :: (V a ~ v, N a ~ n, AttributeClass a, Transformable a)
         => Lens' (Style v n) (Maybe a)
-atTAttr = mkAttrLens _TAttribute
+atTAttr = mkAttrLens typeOf _TAttribute
 {-# INLINE atTAttr #-}
 
 -- applying styles -----------------------------------------------------
