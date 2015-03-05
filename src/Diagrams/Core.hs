@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core
--- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -22,7 +22,7 @@
 -- The diagrams library relies heavily on custom types and classes. Many
 -- of the relevant definitions are in the "Diagrams.Core.Types" module.
 -- Indeed the definition of the diagram type @QDiagram@ is contained in:
--- 'Diagrams.Core.Types.QDiagram'. 
+-- 'Diagrams.Core.Types.QDiagram'.
 --
 -- The best place to start when learning
 -- about diagrams\' types is the user manual:
@@ -32,11 +32,11 @@
 --
 -- * "Diagrams.Core.Types"
 --
---     * @Annotation@, 
+--     * @Annotation@,
 --     * @UpAnnots b v m@, @DownAnnots v@,
 --     * @QDiaLeaf b v m@, @Measure v@,
 --     * @Subdiagram b v m@,  @SubMap b v m@,
---     * @Prim b v@, @Backend b v@, 
+--     * @Prim b v@, @Backend b v@,
 --     * @DNode b v a@, @DTree b v a@,
 --     * @RNode b v a@, @RTree b v a@,
 --     * @NullBackend@, @Renderable t b@,
@@ -149,10 +149,11 @@ module Diagrams.Core
          -- * Attributes and styles
 
        , AttributeClass
-       , Attribute, mkAttr, mkTAttr, unwrapAttr
+       , Attribute (..)
 
        , Style, HasStyle(..)
-       , getAttr, combineAttr
+       , getAttr
+       , atAttr, atMAttr, atTAttr
        , applyAttr, applyMAttr, applyTAttr
 
          -- * Envelopes

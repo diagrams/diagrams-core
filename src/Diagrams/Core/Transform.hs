@@ -309,15 +309,10 @@ Proofs for the specified properties:
 --   help shorten some of the ridiculously long constraint sets.
 class (HasBasis v, Traversable v) => HasLinearMap v
 instance (HasBasis v, Traversable v) => HasLinearMap v
--- Most (if not all) of the functions in linear that use Applicative could be
--- defined in terms of Additive. Ideally we'd only use Additive but for now
--- just stick both in a class.
 
 -- | An 'Additive' vector space whose representation is made up of basis elements.
 class (Additive v, Representable v, Rep v ~ E v) => HasBasis v
 instance (Additive v, Representable v, Rep v ~ E v) => HasBasis v
-
-
 
 -- | Type class for things @t@ which can be transformed.
 class Transformable t where
