@@ -87,7 +87,6 @@ import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Points ()
-import           Diagrams.Core.Measure
 import           Diagrams.Core.V
 
 ------------------------------------------------------------
@@ -351,9 +350,6 @@ instance ( V t ~ v, N t ~ n, V t ~ V s, N t ~ N s, Functor v, Num n
          => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
 
-instance Transformable t => Transformable (Measured n t) where
-  transform = fmap . transform
-
 instance Transformable t => Transformable [t] where
   transform = map . transform
 
@@ -418,3 +414,4 @@ scale :: (InSpace v n a, Eq n, Fractional n, Transformable a)
       => n -> a -> a
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s
+
