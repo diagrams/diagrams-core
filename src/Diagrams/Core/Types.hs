@@ -600,7 +600,7 @@ instance (OrderedField n, Metric v, Semigroup m)
 --   now be referred to using the qualification prefix.
 instance (Metric v, OrderedField n, Semigroup m)
       => Qualifiable (QDiagram b v n m) where
-  (>|) = over _Wrapped' . D.applyD . inj . toName
+  (.>>) = over _Wrapped' . D.applyD . inj . toName
 
 
 ------------------------------------------------------------
@@ -724,7 +724,7 @@ instance (Metric v, Floating n)
 --   ns@ is the same 'SubMap' except with every name qualified by
 --   @a@.
 instance Qualifiable (SubMap b v n m) where
-  a >| (SubMap m) = SubMap $ M.mapKeys (a >|) m
+  a .>> (SubMap m) = SubMap $ M.mapKeys (a .>>) m
 
 -- | Construct a 'SubMap' from a list of associations between names
 --   and subdiagrams.
@@ -737,7 +737,7 @@ rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (SubMap b v n m) where
-  act = (>|)
+  act = (.>>)
 
 instance Action Name a => Action Name (Deletable a) where
   act n (Deletable l a r) = Deletable l (act n a) r

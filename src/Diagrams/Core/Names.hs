@@ -146,35 +146,35 @@ a1 .> a2 = toName a1 <> toName a2
 --   prefixing them with a name.
 class Qualifiable q where
   -- | Qualify with the given name.
-  (>|) :: IsName a => a -> q -> q
+  (.>>) :: IsName a => a -> q -> q
 
 -- | Of course, names can be qualified using @(.>)@.
 instance Qualifiable Name where
-  (>|) = (.>)
+  (.>>) = (.>)
 
 instance Qualifiable a => Qualifiable (TransInv a) where
-  (>|) n = over (_Unwrapping' TransInv) (n >|)
+  (.>>) n = over (_Unwrapping' TransInv) (n .>>)
 
 instance (Qualifiable a, Qualifiable b) => Qualifiable (a,b) where
-  n >| (a,b) = (n >| a, n >| b)
+  n .>> (a,b) = (n .>> a, n .>> b)
 
 instance (Qualifiable a, Qualifiable b, Qualifiable c) => Qualifiable (a,b,c) where
-  n >| (a,b,c) = (n >| a, n >| b, n >| c)
+  n .>> (a,b,c) = (n .>> a, n .>> b, n .>> c)
 
 instance Qualifiable a => Qualifiable [a] where
-  n >| as = map (n >|) as
+  n .>> as = map (n .>>) as
 
 instance (Ord a, Qualifiable a) => Qualifiable (S.Set a) where
-  n >| s = S.map (n >|) s
+  n .>> s = S.map (n .>>) s
 
 instance Qualifiable a => Qualifiable (M.Map k a) where
-  n >| m = fmap (n >|) m
+  n .>> m = fmap (n .>>) m
 
 instance Qualifiable a => Qualifiable (b -> a) where
-  n >| f = (n >|) . f
+  n .>> f = (n .>>) . f
 
 instance Qualifiable a => Qualifiable (Measured n a) where
-  n >| m = fmap (n >|) m
+  n .>> m = fmap (n .>>) m
 
-infixr 5 >|
+infixr 5 .>>
 infixr 5 .>
