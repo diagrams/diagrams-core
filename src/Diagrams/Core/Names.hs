@@ -118,6 +118,11 @@ _AName = prism' AName (\(AName a) -> cast a)
 newtype Name = Name [AName]
   deriving (Eq, Ord, Semigroup, Monoid, Typeable)
 
+instance Rewrapped Name Name
+instance Wrapped Name where
+  type Unwrapped Name = [AName]
+  _Wrapped' = iso (\(Name ns) -> ns) Name
+
 instance Show Name where
   showsPrec d (Name xs) = case xs of
     []     -> showParen (d > 10) $ showString "Name []"
