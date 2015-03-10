@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports       #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Query
@@ -56,4 +57,3 @@ instance (Additive v, Num n) => HasOrigin (Query v n m) where
 
 instance (Additive v, Num n) => Transformable (Query v n m) where
   transform t (Query f) = Query $ f . papply (inv t)
-

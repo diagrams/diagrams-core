@@ -9,6 +9,8 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE ViewPatterns          #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-imports       #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Style
