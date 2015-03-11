@@ -1,17 +1,17 @@
-{-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE EmptyDataDecls             #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE LambdaCase              #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans       #-}
 -- We have some orphan Action instances here, but since Action is a multi-param
@@ -131,16 +131,18 @@ module Diagrams.Core.Types
        ) where
 
 import           Control.Arrow             (first, second, (***))
-import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
-                                            (^.), _Wrapped, _Wrapping, Prism', prism')
+import           Control.Lens              (Lens', Prism', Rewrapped,
+                                            Wrapped (..), iso, lens, over,
+                                            prism', view, (^.), _Wrapped,
+                                            _Wrapping)
 import           Control.Monad             (mplus)
-import           Data.Typeable
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Tree
+import           Data.Typeable
 
 import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
@@ -598,7 +600,7 @@ instance (OrderedField n, Metric v, Semigroup m)
 --   now be referred to using the qualification prefix.
 instance (Metric v, OrderedField n, Semigroup m)
       => Qualifiable (QDiagram b v n m) where
-  (|>) = over _Wrapped' . D.applyD . inj . toName
+  (.>>) = over _Wrapped' . D.applyD . inj . toName
 
 
 ------------------------------------------------------------
@@ -722,7 +724,7 @@ instance (Metric v, Floating n)
 --   ns@ is the same 'SubMap' except with every name qualified by
 --   @a@.
 instance Qualifiable (SubMap b v n m) where
-  a |> (SubMap m) = SubMap $ M.mapKeys (a |>) m
+  a .>> (SubMap m) = SubMap $ M.mapKeys (a .>>) m
 
 -- | Construct a 'SubMap' from a list of associations between names
 --   and subdiagrams.
@@ -735,7 +737,7 @@ rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (SubMap b v n m) where
-  act = (|>)
+  act = (.>>)
 
 instance Action Name a => Action Name (Deletable a) where
   act n (Deletable l a r) = Deletable l (act n a) r
