@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -49,14 +50,16 @@ module Diagrams.Core.Envelope
        , OrderedField
        ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative     ((<$>))
-import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped, op, over,
-                                          _Wrapping', (&), (.~))
+#endif
+import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped,
+                                          op, over, (&), (.~), _Wrapping')
+import           Data.Functor.Rep
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
 import qualified Data.Set                as S
-import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Points
@@ -277,4 +280,3 @@ extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
 -- | The smallest positive vector that bounds the envelope of an object.
 size :: (V a ~ v, N a ~ n, Enveloped a, HasBasis v) => a -> v n
 size d = tabulate $ \(E l) -> diameter (zero & l .~ 1) d
-

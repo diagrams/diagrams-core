@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -48,7 +49,9 @@ module Diagrams.Core.Trace
 
        ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative
+#endif
 import           Control.Lens
 import           Data.List               (sort)
 import qualified Data.Map                as M
@@ -422,4 +425,3 @@ maxRayTraceP p v a = (p .+^) <$> maxRayTraceV p v a
 -- >
 -- > mkTraceDiasABC :: TraceDiaOpts -> Diagram B
 -- > mkTraceDiasABC tdo = mkTraceDias (map (\p -> tdo { basePt = p }) [pointA, pointB, pointC])
-
