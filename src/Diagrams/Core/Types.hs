@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
@@ -831,19 +830,19 @@ data RNode b v n a = RStyle (Style v n) -- ^ A style node.
 
 -- | Prism onto a style of an 'RNode'.
 _RStyle :: Prism' (RNode b v n a) (Style v n)
-_RStyle = prism' RStyle $ \case RStyle s -> Just s; _ -> Nothing
+_RStyle = prism' RStyle $ \n -> case n of RStyle s -> Just s; _ -> Nothing
 
 -- | Prism onto an annotation of an 'RNode'.
 _RAnnot :: Prism' (RNode b v n a) a
-_RAnnot = prism' RAnnot $ \case RAnnot a -> Just a; _ -> Nothing
+_RAnnot = prism' RAnnot $ \n -> case n of RAnnot a -> Just a; _ -> Nothing
 
 -- | Prism onto a 'Prim' of an 'RNode'.
 _RPrim :: Prism' (RNode b v n a) (Prim b v n)
-_RPrim = prism' RPrim $ \case RPrim p -> Just p; _ -> Nothing
+_RPrim = prism' RPrim $ \n -> case n of RPrim p -> Just p; _ -> Nothing
 
 -- | Prism onto an empty 'RNode'.
 _REmpty :: Prism' (RNode b v n a) ()
-_REmpty = prism' (const REmpty) $ \case REmpty -> Just (); _ -> Nothing
+_REmpty = prism' (const REmpty) $ \n -> case n of REmpty -> Just (); _ -> Nothing
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an

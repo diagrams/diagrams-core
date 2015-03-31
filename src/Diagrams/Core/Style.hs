@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -163,18 +162,18 @@ unwrapAttribute (TAttribute a) = cast a
 
 -- | Prism onto an 'Attribute'.
 _Attribute :: AttributeClass a => Prism' (Attribute v n) a
-_Attribute = prism' Attribute $ \case Attribute a -> cast a; _ -> Nothing
+_Attribute = prism' Attribute $ \t -> case t of Attribute a -> cast a; _ -> Nothing
 {-# INLINE _Attribute #-}
 
 -- | Prism onto an 'MAttribute'.
 _MAttribute :: (AttributeClass a, Typeable n) => Prism' (Attribute v n) (Measured n a)
-_MAttribute = prism' MAttribute $ \case MAttribute a -> cast a; _ -> Nothing
+_MAttribute = prism' MAttribute $ \t -> case t of MAttribute a -> cast a; _ -> Nothing
 {-# INLINE _MAttribute #-}
 
 -- | Prism onto a 'TAttribute'.
 _TAttribute :: (V a ~ v, N a ~ n, AttributeClass a, Transformable a)
             => Prism' (Attribute v n) a
-_TAttribute = prism' TAttribute $ \case TAttribute a -> cast a; _ -> Nothing
+_TAttribute = prism' TAttribute $ \t -> case t of TAttribute a -> cast a; _ -> Nothing
 {-# INLINE _TAttribute #-}
 
 -- | Turn an 'MAttribute' into an 'Attribute' using the given 'global'
