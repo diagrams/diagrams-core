@@ -205,6 +205,7 @@ module Diagrams.Core
 
        , href
        , opacityGroup
+       , groupOpacity
 
        , setEnvelope, setTrace
 
