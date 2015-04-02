@@ -38,13 +38,13 @@ Library
   Build-depends:       base >= 4.2 && < 4.8,
                        containers >= 0.4.2 && < 0.6,
                        semigroups >= 0.8.4 && < 0.17,
-                       vector-space >= 0.8.4 && < 0.10,
+                       vector-space >= 0.8.4 && < 0.11,
                        vector-space-points >= 0.1 && < 0.3,
                        MemoTrie >= 0.4.7 && < 0.7,
                        newtype >= 0.2 && < 0.3,
                        monoid-extras >= 0.3 && < 0.4,
                        dual-tree >= 0.2 && < 0.3,
-                       lens >= 4.0 && < 4.8
+                       lens >= 4.0 && < 4.10
   hs-source-dirs:      src
 
   Other-extensions:    DeriveDataTypeable
