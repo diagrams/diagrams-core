@@ -49,6 +49,12 @@
     - `Style`'s internal representation now uses a hashmap of the
       `TypeRep`.
 
+1.2.0.6 (2 April 2015)
+----------------------
+
+ - allow `lens-4.9`
+ - allow `vector-space-0.10`
+
 1.2.0.5 (13 Jan 2015)
 ---------------------
 
