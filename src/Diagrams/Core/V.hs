@@ -75,13 +75,13 @@ type instance N (m :+: n)     = N m
 --   the vector space and @n@ is the numerical field.
 type Vn a = V a (N a)
 
--- | @InSpace v n a@ means the object @a@ belongs to the space @v n@
+-- | @InSpace v n a@ means the type @a@ belongs to the vector space @v n@,
 --   where @v@ is 'Additive' and @n@ is a 'Num'.
 class (V a ~ v, N a ~ n, Additive v, Num n) => InSpace v n a
 instance (V a ~ v, N a ~ n, Additive v, Num n) => InSpace v n a
 
--- | @SameSpace a b@ means the objects @a@ and @b@ belong to the same
---   space @v n@.
+-- | @SameSpace a b@ means the types @a@ and @b@ belong to the same
+--   vector space @v n@.
 class (V a ~ V b, N a ~ N b) => SameSpace a b
 instance (V a ~ V b, N a ~ N b) => SameSpace a b
 
