@@ -956,7 +956,7 @@ class Backend b v n where
 --   @
 --
 --   There's even more ambiguity here.  Whereas 'image' always returns
---   a 'Diagram', the 'circle' function can produce any 'PathLike'
+--   a 'Diagram', the 'circle' function can produce any 'TrailLike'
 --   type, and the 'width' function can consume any 'Enveloped' type,
 --   so GHC has no idea what type to pick to go in the middle.
 --   However, the solution is the same:
