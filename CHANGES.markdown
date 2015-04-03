@@ -5,9 +5,9 @@
 
     - Update for ghc-7.10.
 
-    - Use `linear` for vector space package.
+    - Switch from `vector-space` to `linear` for linear algebra.
 
-    - `OpacityGroup` annotation for setting the opacity of a diagrams, as
+    - `OpacityGroup` annotation for setting the opacity of diagrams as
       a group. Opacity groups can be applied with the `opacityGroup` or
       `groupOpacity` functions.
 
@@ -21,12 +21,12 @@
 
 * **Dependency/version changes**
 
-    - Allow `base-4.9`
-    - Allow `lens-4.8`
+    - Allow `base-4.8`
+    - Allow `lens-4.9`
 
 * **New instances**
 
-    - `Show` instances for 'Attribute` and `Style`.
+    - `Show` instances for `Attribute` and `Style`.
     - `Each`, `Ixed` and `At` instances for and `Style`.
 
 * **API changes**
