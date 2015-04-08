@@ -1,5 +1,55 @@
 # Change Log
 
+## [v1.3]() (2015-04-08)
+
+* **New features**
+
+    - Update for ghc-7.10.
+
+    - Switch from `vector-space` to `linear` for linear algebra.
+
+    - `OpacityGroup` annotation for setting the opacity of diagrams as
+      a group. Opacity groups can be applied with the `opacityGroup` or
+      `groupOpacity` functions.
+
+    - Added `atAttr`, `atMAttr` and `atTAttr` lenses onto the attributes
+      of styles.
+
+    - `InSpace` and `SameSpace` synonyms.
+
+    - `size` function for computing the range of an enveloped object in
+      the basis vectors.
+
+* **Dependency/version changes**
+
+    - Allow `base-4.8`
+    - Allow `lens-4.9`
+
+* **New instances**
+
+    - `Show` instances for `Attribute` and `Style`.
+    - `Each`, `Ixed` and `At` instances for and `Style`.
+
+* **API changes**
+
+    - `Measure` has a new internal representation. `Local`, `Global`,
+      `Normalized`, and `Output` have been renamed to `local`, `global`,
+      `normalized` and `output` respectivly. `Measure` is now defined in
+      `Diagrams.Core.Measure`.
+
+    - `GTAttribute` has been removed. `MAttribute` now holds measured
+      attributes and no longer requires a `Data` instance.
+
+    - `V` is now a `* -> *` kind type family.
+
+    - New type family `N` for the number type of an object, `Scalar`
+      type family no longer exists.
+
+    - `(|>)` has moved to `(.>>)` to make room for lens's snoc operator.
+
+    - `Style`'s internal representation now uses a hashmap of the
+      `TypeRep`.
+      
 ## [v1.2.0.6](https://github.com/diagrams/diagrams-core/tree/v1.2.0.6) (2015-04-03)
 
 [Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.5...v1.2.0.6)
