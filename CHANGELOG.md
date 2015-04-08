@@ -20,6 +20,8 @@
     - `size` function for computing the range of an enveloped object in
       the basis vectors.
 
+    - "Grouping" for transparent things [\#21](https://github.com/diagrams/diagrams-core/issues/21)
+
 * **Dependency/version changes**
 
     - Allow `base-4.8`
@@ -50,18 +52,6 @@
     - `Style`'s internal representation now uses a hashmap of the
       `TypeRep`.
       
-## [v1.2.0.6](https://github.com/diagrams/diagrams-core/tree/v1.2.0.6) (2015-04-03)
-
-[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.5...v1.2.0.6)
-
-**Implemented enhancements:**
-
-- "Grouping" for transparent things [\#21](https://github.com/diagrams/diagrams-core/issues/21)
-
-**Closed issues:**
-
-- Please add support for recent versions of vector-space [\#78](https://github.com/diagrams/diagrams-core/issues/78)
-
 **Merged pull requests:**
 
 - Pre 1.3 [\#82](https://github.com/diagrams/diagrams-core/pull/82) ([cchalmers](https://github.com/cchalmers))
@@ -71,20 +61,6 @@
 - Style lenses [\#80](https://github.com/diagrams/diagrams-core/pull/80) ([cchalmers](https://github.com/cchalmers))
 
 - Add isReflection [\#79](https://github.com/diagrams/diagrams-core/pull/79) ([byorgey](https://github.com/byorgey))
-
-## [v1.2.0.5](https://github.com/diagrams/diagrams-core/tree/v1.2.0.5) (2015-01-13)
-
-[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.4...v1.2.0.5)
-
-## [v1.2.0.4](https://github.com/diagrams/diagrams-core/tree/v1.2.0.4) (2014-12-04)
-
-[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.3...v1.2.0.4)
-
-## [v1.2.0.3](https://github.com/diagrams/diagrams-core/tree/v1.2.0.3) (2014-11-17)
-
-[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.2...v1.2.0.3)
-
-**Merged pull requests:**
 
 - Linear update [\#77](https://github.com/diagrams/diagrams-core/pull/77) ([cchalmers](https://github.com/cchalmers))
 
@@ -98,11 +74,29 @@
 
 - Bump linear upper version bounds [\#75](https://github.com/diagrams/diagrams-core/pull/75) ([RyanGlScott](https://github.com/RyanGlScott))
 
-- Port to linear [\#70](https://github.com/diagrams/diagrams-core/pull/70) ([cchalmers](https://github.com/cchalmers))
-
 - Change Measure back to not using Scalar v [\#65](https://github.com/diagrams/diagrams-core/pull/65) ([Mathnerd314](https://github.com/Mathnerd314))
 
-- dynamic typing [\#63](https://github.com/diagrams/diagrams-core/pull/63) ([jeffreyrosenbluth](https://github.com/jeffreyrosenbluth))
+- Remove gratuitous Data constraints [\#69](https://github.com/diagrams/diagrams-core/pull/69) ([Mathnerd314](https://github.com/Mathnerd314))
+
+## [v1.2.0.6](https://github.com/diagrams/diagrams-core/tree/v1.2.0.6) (2015-04-03)
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.5...v1.2.0.6)
+
+**Closed issues:**
+
+- Please add support for recent versions of vector-space [\#78](https://github.com/diagrams/diagrams-core/issues/78)
+
+## [v1.2.0.5](https://github.com/diagrams/diagrams-core/tree/v1.2.0.5) (2015-01-13)
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.4...v1.2.0.5)
+
+## [v1.2.0.4](https://github.com/diagrams/diagrams-core/tree/v1.2.0.4) (2014-12-04)
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.3...v1.2.0.4)
+
+## [v1.2.0.3](https://github.com/diagrams/diagrams-core/tree/v1.2.0.3) (2014-11-17)
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.2.0.2...v1.2.0.3)
 
 ## [v1.2.0.2](https://github.com/diagrams/diagrams-core/tree/v1.2.0.2) (2014-08-22)
 
@@ -110,13 +104,7 @@
 
 **Closed issues:**
 
-- Out of date git repo? [\#68](https://github.com/diagrams/diagrams-core/issues/68)
-
 - Warn against GND for IsName [\#67](https://github.com/diagrams/diagrams-core/issues/67)
-
-**Merged pull requests:**
-
-- Remove gratuitous Data constraints [\#69](https://github.com/diagrams/diagrams-core/pull/69) ([Mathnerd314](https://github.com/Mathnerd314))
 
 ## [v1.2.0.1](https://github.com/diagrams/diagrams-core/tree/v1.2.0.1) (2014-06-04)
 
