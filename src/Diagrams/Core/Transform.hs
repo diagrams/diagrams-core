@@ -142,9 +142,11 @@ lapp (f :-: _) = f
 --   The reason we need to keep track of transposes is because it
 --   turns out that when transforming a shape according to some linear
 --   map L, the shape's /normal vectors/ transform according to L's
---   inverse transpose.  This is exactly what we need when
---   transforming bounding functions, which are defined in terms of
---   /perpendicular/ (i.e. normal) hyperplanes.
+--   inverse transpose.  (For a more detailed explanation and proof,
+--   see <https://wiki.haskell.org/Diagrams/Dev/Transformations>.)
+--   This is exactly what we need when transforming bounding
+--   functions, which are defined in terms of /perpendicular/
+--   (i.e. normal) hyperplanes.
 --
 --   For more general, non-invertible transformations, see
 --   @Diagrams.Deform@ (in @diagrams-lib@).
