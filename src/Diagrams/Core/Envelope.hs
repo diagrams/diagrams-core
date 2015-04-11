@@ -9,16 +9,16 @@
 {-# LANGUAGE UndecidableInstances       #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Envelope
+-- Module      :  Diagrams.Core.Envelope
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- "Graphics.Rendering.Diagrams" defines the core library of primitives
--- forming the basis of an embedded domain-specific language for
--- describing and rendering diagrams.
+-- diagrams-core defines the core library of primitives forming the
+-- basis of an embedded domain-specific language for describing and
+-- rendering diagrams.
 --
--- The @Envelope@ module defines a data type and type class for
+-- The @Diagrams.Core.Envelope@ module defines a data type and type class for
 -- \"envelopes\", aka functional bounding regions.
 --
 -----------------------------------------------------------------------------
