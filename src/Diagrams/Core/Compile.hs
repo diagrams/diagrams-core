@@ -110,40 +110,25 @@ toDTree g n (QD qd)
       (\a t -> Node (DAnnot a) [t])
       qd
 
--- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
+-- | Convert a @DTree@ to an @RTree@ which can be used directly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
-fromDTree :: forall b v n. (Floating n, HasLinearMap v)
+fromDTree :: (HasLinearMap v, Floating n)
           => DTree b v n Annotation -> RTree b v n Annotation
-fromDTree = fromDTree' mempty
+fromDTree = go mempty
   where
-    fromDTree' :: HasLinearMap v => Transformation v n -> DTree b v n Annotation -> RTree b v n Annotation
-    -- We put the accumulated transformation (accTr) and the prim
-    -- into an RPrim node.
-    fromDTree' accTr (Node (DPrim p) _)
-      = Node (RPrim (transform accTr p)) []
-
-    -- Styles are transformed then stored in their own node
-    -- and accTr is push down the tree.
-    fromDTree' accTr (Node (DStyle s) ts)
-      = Node (RStyle (transform accTr s)) (fmap (fromDTree' accTr) ts)
-
-    -- Transformations are accumulated and pushed down as well.
-    fromDTree' accTr (Node (DTransform tr) ts)
-      = Node REmpty (fmap (fromDTree' (accTr <> tr)) ts)
-
-    fromDTree' accTr (Node (DAnnot a) ts)
-      = Node (RAnnot a) (fmap (fromDTree' accTr) ts)
-
-    -- Drop accumulated transformations upon encountering a DDelay
-    -- node --- the tree unfolded beneath it already took into account
-    -- any transformation at this point.
-    fromDTree' _ (Node DDelay ts)
-      = Node REmpty (fmap (fromDTree' mempty) ts)
-
-    -- DEmpty nodes become REmpties, again accTr flows through.
-    fromDTree' accTr (Node _ ts)
-      = Node REmpty (fmap (fromDTree' accTr) ts)
+    go t (Node n ns) = case n of
+      DPrim p       -> Node (RPrim $ transform t p) []
+      DStyle s      -> Node (RStyle $ transform t s) ts'
+      DAnnot a      -> Node (RAnnot a) ts'
+      DTransform t' -> Node REmpty $ tts (t <> t')
+      DDelay        -> Node REmpty $ tts mempty
+      _             -> Node REmpty ts'
+      where
+        -- apply a transform to the node's trees
+        tts t' = fmap (go t') ns
+        -- trees with accumulated transform applied
+        ts'    = tts s
 
 -- | Compile a @QDiagram@ into an 'RTree', rewriting styles with the
 --   given function along the way.  Suitable for use by backends when
