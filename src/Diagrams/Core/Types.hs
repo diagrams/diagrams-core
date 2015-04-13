@@ -829,6 +829,23 @@ data RNode b v n a = RStyle (Style v n) -- ^ A style node.
                    | RPrim (Prim b v n) -- ^ A primitive.
                    | REmpty
 
+-- instances
+
+type instance V (RNode b v n a) = v
+type instance N (RNode b v n a) = n
+
+instance (Additive v, T.Traversable v, Floating n, Typeable n)
+    => Transformable (RNode b v n a) where
+  transform t n = case n of
+    RStyle s -> RStyle (transform t s)
+    RPrim p  -> RPrim  (transform t p)
+    a        -> a
+
+instance Typeable n => HasStyle (RNode b v n a) where
+  applyStyle = over _RStyle . applyStyle
+
+-- prisms
+
 -- | Prism onto a style of an 'RNode'.
 _RStyle :: Prism' (RNode b v n a) (Style v n)
 _RStyle = prism' RStyle $ \n -> case n of RStyle s -> Just s; _ -> Nothing
@@ -844,6 +861,7 @@ _RPrim = prism' RPrim $ \n -> case n of RPrim p -> Just p; _ -> Nothing
 -- | Prism onto an empty 'RNode'.
 _REmpty :: Prism' (RNode b v n a) ()
 _REmpty = prism' (const REmpty) $ \n -> case n of REmpty -> Just (); _ -> Nothing
+
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an

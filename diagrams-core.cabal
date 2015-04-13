@@ -46,6 +46,7 @@ Library
                        linear >= 1.11.3 && < 1.19,
                        adjunctions >= 4.0 && < 5.0,
                        distributive >=0.2.2 && < 1.0,
+                       hashable,
                        mtl
   hs-source-dirs:      src
 
