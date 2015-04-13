@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE ViewPatterns          #-}
+{-# LANGUAGE UndecidableInstances          #-}
 
 {-# OPTIONS_GHC -fno-warn-unused-imports       #-}
 
@@ -113,7 +114,19 @@ import           Linear.Vector
 --   simply guarantees 'Typeable' and 'Semigroup' constraints.  The
 --   'Semigroup' instance for an attribute determines how it will combine
 --   with other attributes of the same type.
-class (Typeable a, Semigroup a) => AttributeClass a
+class (Typeable a, Semigroup a) => AttributeClass a where
+  type AttrType a :: AttrKind
+
+class (AttrType a ~ Attr, AttributeClass a) => PlainAttr a
+instance (AttrType a ~ Attr, AttributeClass a) => PlainAttr a
+class (AttrType a ~ MAttr, AttributeClass a) => MeasuredAttr a
+instance (AttrType a ~ MAttr, AttributeClass a) => MeasuredAttr a
+class (AttrType a ~ TAttr, AttributeClass a, Transformable a) => TransformableAttr a
+instance (AttrType a ~ TAttr, AttributeClass a, Transformable a) => TransformableAttr a
+
+-- | Used as kind to label attributes with one parameter. This prevents
+--   accidently wrapping an attribute up incorrectly.
+data AttrKind = Attr | MAttr | TAttr
 
 -- | An existential wrapper type to hold attributes.  Some attributes
 --   are simply inert/static; some are affected by transformations;
@@ -312,19 +325,19 @@ mkAttrLens tyF p f sty =
 {-# INLINE mkAttrLens #-}
 
 -- | Lens onto a plain attribute of a style.
-atAttr :: AttributeClass a
+atAttr :: PlainAttr a
        => Lens' (Style v n) (Maybe a)
 atAttr = mkAttrLens typeOf _Attribute
 {-# INLINE atAttr #-}
 
 -- | Lens onto a measured attribute of a style.
-atMAttr :: (AttributeClass a, Typeable n)
+atMAttr :: (MeasuredAttr a, Typeable n)
         => Lens' (Style v n) (Maybe (Measured n a))
 atMAttr = mkAttrLens mType _MAttribute
 {-# INLINE atMAttr #-}
 
 -- | Lens onto a transformable attribute of a style.
-atTAttr :: (V a ~ v, N a ~ n, AttributeClass a, Transformable a)
+atTAttr :: (V a ~ v, N a ~ n, TransformableAttr a)
         => Lens' (Style v n) (Maybe a)
 atTAttr = mkAttrLens typeOf _TAttribute
 {-# INLINE atTAttr #-}
@@ -364,20 +377,20 @@ instance HasStyle a => HasStyle (Maybe a)
 instance HasStyle a => HasStyle (Map k a)
 instance HasStyle a => HasStyle (IntMap a)
 instance HasStyle a => HasStyle (HashMap k a)
+instance HasStyle b => HasStyle (Measured n b)
 
-instance HasStyle b => HasStyle (Measured n b) where
 -- | Apply an attribute to an instance of 'HasStyle' (such as a
 --   diagram or a style). If the object already has an attribute of
 --   the same type, the new attribute is combined on the left with the
 --   existing attribute, according to their semigroup structure.
-applyAttr :: (AttributeClass a, HasStyle d) => a -> d -> d
+applyAttr :: (PlainAttr a, HasStyle d) => a -> d -> d
 applyAttr = applyStyle . attributeToStyle . Attribute
 
 -- | Apply a measured attribute to an instance of 'HasStyle' (such as a
 --   diagram or a style). If the object already has an attribute of
 --   the same type, the new attribute is combined on the left with the
 --   existing attribute, according to their semigroup structure.
-applyMAttr :: (AttributeClass a, N d ~ n, HasStyle d, Typeable n) => Measured n a -> d -> d
+applyMAttr :: (MeasuredAttr a, N d ~ n, HasStyle d, Typeable n) => Measured n a -> d -> d
 applyMAttr = applyStyle . attributeToStyle . MAttribute
 
 -- | Apply a transformable attribute to an instance of 'HasStyle'
@@ -385,6 +398,6 @@ applyMAttr = applyStyle . attributeToStyle . MAttribute
 --   attribute of the same type, the new attribute is combined on the
 --   left with the existing attribute, according to their semigroup
 --   structure.
-applyTAttr :: (AttributeClass a, Transformable a, V a ~ V d, N a ~ N d, HasStyle d) => a -> d -> d
+applyTAttr :: (TransformableAttr a, SameSpace a d, HasStyle d) => a -> d -> d
 applyTAttr = applyStyle . attributeToStyle . TAttribute
 
