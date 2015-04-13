@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE DefaultSignatures          #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports       #-}
 -----------------------------------------------------------------------------
 -- |
@@ -73,9 +74,15 @@ module Diagrams.Core.Transform
 
 import           Control.Lens            (Rewrapped, Traversable, Wrapped (..),
                                           iso, (&), (.~))
-import qualified Data.Map                as M
+import           Data.IntMap             (IntMap)
+import           Data.Map                (Map)
 import           Data.Semigroup
 import qualified Data.Set                as S
+import qualified Data.HashSet            as HS
+import           Data.Tree               (Tree)
+import           Data.HashMap.Lazy       (HashMap)
+import           Data.Sequence           (Seq)
+import           Data.Hashable (Hashable)
 
 import           Data.Monoid.Action
 import           Data.Monoid.Deletable
@@ -317,10 +324,13 @@ class (Additive v, Representable v, Rep v ~ E v) => HasBasis v
 instance (Additive v, Representable v, Rep v ~ E v) => HasBasis v
 
 -- | Type class for things @t@ which can be transformed.
-class Transformable t where
+class Transformable a where
 
   -- | Apply a transformation to an object.
-  transform :: Transformation (V t) (N t) -> t -> t
+  transform :: Transformation (V a) (N a) -> a -> a
+
+  default transform :: Functor f => Transformation (V a) (N a) -> f a -> f a
+  transform = fmap . transform
 
 instance (Additive v, Num n) => Transformable (Transformation v n) where
   transform t1 t2 = t1 <> t2
@@ -328,18 +338,13 @@ instance (Additive v, Num n) => Transformable (Transformation v n) where
 instance (Additive v, Num n) => HasOrigin (Transformation v n) where
   moveOriginTo p = translate (origin .-. p)
 
-instance (Transformable t, Transformable s, V t ~ V s, N t ~ N s)
-      => Transformable (t, s) where
-  transform t (x,y) =  ( transform t x
-                       , transform t y
-                       )
+instance (SameSpace a b, Transformable a, Transformable b)
+    => Transformable (a, b) where
+  transform t (x,y) =  (transform t x , transform t y)
 
-instance (Transformable t, Transformable s, Transformable u, V s ~ V t, N s ~ N t, V s ~ V u, N s ~ N u)
-      => Transformable (t,s,u) where
-  transform t (x,y,z) = ( transform t x
-                        , transform t y
-                        , transform t z
-                        )
+instance (SameSpace a b, SameSpace b c, Transformable a, Transformable b, Transformable c)
+    => Transformable (a,b,c) where
+  transform t (a,b,c) = (transform t a, transform t b, transform t c)
 
 -- Transform functions by conjugation. That is, reverse-transform argument and
 -- forward-transform result. Intuition: If someone shrinks you, you see your
@@ -347,26 +352,27 @@ instance (Transformable t, Transformable s, Transformable u, V s ~ V t, N s ~ N 
 -- rotating left. Etc. This technique was used extensively in Pan for modular
 -- construction of image filters. Works well for curried functions, since all
 -- arguments get inversely transformed.
-
-instance ( V t ~ v, N t ~ n, V t ~ V s, N t ~ N s, Functor v, Num n
-         , Transformable t, Transformable s)
-         => Transformable (s -> t) where
-  transform tr f = transform tr . f . transform (inv tr)
-
-instance Transformable t => Transformable [t] where
-  transform = map . transform
-
-instance (Transformable t, Ord t) => Transformable (S.Set t) where
-  transform = S.map . transform
-
-instance Transformable t => Transformable (M.Map k t) where
-  transform = M.map . transform
+instance (SameSpace a b, Functor (V b), Num (N b), Transformable a, Transformable b)
+    => Transformable (a -> b) where
+  transform t f = transform t . f . transform (inv t)
 
 instance (Additive v, Num n) => Transformable (Point v n) where
   transform = papply
 
-instance Transformable m => Transformable (Deletable m) where
-  transform = fmap . transform
+instance (Transformable a, Ord a) => Transformable (S.Set a) where
+  transform = S.map . transform
+
+instance (Transformable a, Hashable a, Eq a) => Transformable (HS.HashSet a) where
+  transform = HS.map . transform
+
+instance Transformable a => Transformable [a]
+instance Transformable a => Transformable (Seq a)
+instance Transformable a => Transformable (Tree a)
+instance Transformable a => Transformable (Maybe a)
+instance Transformable a => Transformable (Map k a)
+instance Transformable a => Transformable (IntMap a)
+instance Transformable a => Transformable (HashMap k a)
+instance Transformable m => Transformable (Deletable m)
 
 ------------------------------------------------------------
 --  Translational invariance  ------------------------------

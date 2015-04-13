@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -73,6 +74,13 @@ import qualified Data.Map                as M
 import           Data.Monoid.Action      as A
 import           Data.Semigroup
 import qualified Data.Set                as S
+import qualified Data.HashSet            as HS
+import           Data.Tree               (Tree)
+import           Data.HashMap.Lazy       (HashMap)
+import           Data.Sequence           (Seq)
+import           Data.Map                (Map)
+import           Data.IntMap             (IntMap)
+import           Data.Hashable (Hashable)
 import           Data.Typeable
 
 import           Diagrams.Core.Measure
@@ -329,27 +337,35 @@ class HasStyle a where
   --   existing style.
   applyStyle :: Style (V a) (N a) -> a -> a
 
+  default applyStyle :: Functor f => Style (V a) (N a) -> f a -> f a
+  applyStyle = fmap . applyStyle
+
 instance Typeable n => HasStyle (Style v n) where
   applyStyle = mappend
 
-instance (HasStyle a, HasStyle b, V a ~ V b, N a ~ N b) => HasStyle (a,b) where
-  applyStyle s = applyStyle s *** applyStyle s
+instance (SameSpace a b, HasStyle a, HasStyle b)
+    => HasStyle (a,b) where
+  applyStyle s (a,b) = (applyStyle s a, applyStyle s b)
 
-instance HasStyle a => HasStyle [a] where
-  applyStyle = fmap . applyStyle
-
-instance HasStyle b => HasStyle (a -> b) where
-  applyStyle = fmap . applyStyle
-
-instance HasStyle a => HasStyle (M.Map k a) where
-  applyStyle = fmap . applyStyle
+instance (SameSpace a b, SameSpace b c, HasStyle a, HasStyle b, HasStyle c)
+    => HasStyle (a,b,c) where
+  applyStyle s (a,b,c) = (applyStyle s a, applyStyle s b, applyStyle s c)
 
 instance (HasStyle a, Ord a) => HasStyle (S.Set a) where
   applyStyle = S.map . applyStyle
 
-instance HasStyle b => HasStyle (Measured n b) where
-  applyStyle = fmap . applyStyle
+instance (HasStyle a, Hashable a, Eq a) => HasStyle (HS.HashSet a) where
+  applyStyle = HS.map . applyStyle
 
+instance HasStyle a => HasStyle [a]
+instance HasStyle a => HasStyle (Seq a)
+instance HasStyle a => HasStyle (Tree a)
+instance HasStyle a => HasStyle (Maybe a)
+instance HasStyle a => HasStyle (Map k a)
+instance HasStyle a => HasStyle (IntMap a)
+instance HasStyle a => HasStyle (HashMap k a)
+
+instance HasStyle b => HasStyle (Measured n b) where
 -- | Apply an attribute to an instance of 'HasStyle' (such as a
 --   diagram or a style). If the object already has an attribute of
 --   the same type, the new attribute is combined on the left with the
