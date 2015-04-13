@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -34,81 +35,65 @@ module Diagrams.Core.Compile
   )
   where
 
-import           Data.Typeable
-import qualified Data.List.NonEmpty        as NEL
+import           Data.List.NonEmpty        (NonEmpty (..))
 import           Data.Maybe                (fromMaybe)
 import           Data.Monoid.Coproduct
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
 import           Data.Tree
-import           Data.Tree.DUAL
+import           Data.Tree.DUAL            (foldDUAL)
+import           Data.Typeable
 
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
+import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
-import           Diagrams.Core.Style
 
-import           Linear.Metric hiding (qd)
+import           Linear.Metric             hiding (qd)
 
 -- Typeable1 is a depreciated synonym in ghc > 707
 #if __GLASGOW_HASKELL__ >= 707
 #define Typeable1 Typeable
 #endif
 
-emptyDTree :: Tree (DNode b v n a)
+emptyDTree :: DTree b v n a
 emptyDTree = Node DEmpty []
-
-uncurry3 :: (a -> b -> c -> r) -> (a, b, c) -> r
-uncurry3 f (x, y, z) = f x y z
 
 -- | Convert a @QDiagram@ into a raw tree.
 toDTree :: (HasLinearMap v, Floating n, Typeable n)
-        => n -> n -> QDiagram b v n m -> Maybe (DTree b v n Annotation)
-toDTree g n (QD qd)
-  = foldDUAL
+        => n -> n -> QDiagram b v n m -> DTree b v n Annotation
+toDTree g n (QD qd) = fromMaybe emptyDTree $
+  foldDUAL leaf uannot branch dannot annot qd
+  where
+    -- We ignore the accumulated d-annotations for prims (since we
+    -- instead distribute them incrementally throughout the tree as they
+    -- occur), or pass them to the continuation in the case of a delayed
+    -- node.
+    leaf da = \case
+      PrimLeaf p    -> Node (DPrim p) []
+      -- Pass accumilated d-annotations to make a delayed diagram. Mark
+      -- with DDelay to prevent transforming again.
+      DelayedLeaf f ->
+        let dia = f da g n
+        in  Node DDelay [toDTree g n dia]
 
-      -- Prims at the leaves.  We ignore the accumulated d-annotations
-      -- for prims (since we instead distribute them incrementally
-      -- throughout the tree as they occur), or pass them to the
-      -- continuation in the case of a delayed node.
-      (\d -> withQDiaLeaf
+    -- u-only leaves => empty DTree. We don't care about the
+    -- u-annotations.
+    uannot = emptyDTree
 
-               -- Prim: make a leaf node
-               (\p -> Node (DPrim p) [])
+    branch = \case
+      t :| [] -> t
+      t :| ts -> Node DEmpty (t:ts)
 
-               -- Delayed tree: pass the accumulated d-annotations to
-               -- the continuation, convert the result to a DTree, and
-               -- splice it in, adding a DDelay node to mark the point
-               -- of the splice.
-               (Node DDelay . (:[]) . fromMaybe emptyDTree . toDTree g n . ($ (d, g, n)) . uncurry3)
-      )
+    dannot d t = case get d of
+      Option Nothing   -> t
+      Option (Just d') ->
+        let (tr,sty) = untangle d'
+            -- the style is already transformed so place it above
+        in  Node (DStyle sty) [Node (DTransform tr) [t]]
 
-      -- u-only leaves --> empty DTree. We don't care about the
-      -- u-annotations.
-      emptyDTree
-
-      -- a non-empty list of child trees.
-      (\ts -> case NEL.toList ts of
-                [t] -> t
-                ts' -> Node DEmpty ts'
-      )
-
-      -- Internal d-annotations.  We untangle the interleaved
-      -- transformations and style, and carefully place the style
-      -- /above/ the transform in the tree (since by calling
-      -- 'untangle' we have already performed the action of the
-      -- transform on the style).
-      (\d t -> case get d of
-                 Option Nothing   -> t
-                 Option (Just d') ->
-                   let (tr,sty) = untangle d'
-                   in  Node (DStyle sty) [Node (DTransform tr) [t]]
-      )
-
-      -- Internal a-annotations.
-      (\a t -> Node (DAnnot a) [t])
-      qd
+    annot a t = Node (DAnnot a) [t]
 
 -- | Convert a @DTree@ to an @RTree@ which can be used directly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
@@ -142,7 +127,6 @@ toRTree
 toRTree globalToOutput d
   = (fmap . onRStyle) (unmeasureAttrs gToO nToO)
   . fromDTree
-  . fromMaybe (Node DEmpty [])
   . toDTree gToO nToO
   $ d
   where
