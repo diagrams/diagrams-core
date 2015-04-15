@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE LambdaCase  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans       #-}
 -- We have some orphan Action instances here, but since Action is a multi-param
@@ -350,14 +351,19 @@ envelope :: (OrderedField n, Metric v, Monoid' m)
 envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
-setEnvelope :: forall b v n m. ( OrderedField n, Metric v
-                               , Monoid' m)
-          => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
-setEnvelope e =
-    over _Wrapped' ( D.applyUpre (inj . toDeletable $ e)
-                . D.applyUpre (inj (deleteL :: Deletable (Envelope v n)))
-                . D.applyUpost (inj (deleteR :: Deletable (Envelope v n)))
-              )
+setEnvelope :: (OrderedField n, Metric v, Semigroup m)
+            => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
+setEnvelope = injD
+
+-- | Inject a 'Deleteable' up annotation and delete all other
+injD :: (Metric v, OrderedField n, Semigroup m, UpAnnots b v n m :>: Deletable a, Monoid' a)
+     => a -> QDiagram b v n m -> QDiagram b v n m
+injD a = over _Wrapped' setEnv'
+  where
+    -- everything between deleteL and deleteR is gets deleted, so only e
+    -- remains
+    setEnv' d = D.leafU (inj (da <> deleteL)) <> d <> D.leafU (inj (deleteR `asTypeOf` da))
+    da        = toDeletable a
 
 -- | Lens onto the 'Trace' of a 'QDiagram'.
 trace :: (Metric v, OrderedField n, Semigroup m) =>
@@ -365,13 +371,9 @@ trace :: (Metric v, OrderedField n, Semigroup m) =>
 trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
-setTrace :: forall b v n m. ( OrderedField n, Metric v
-                            , Semigroup m)
+setTrace :: (OrderedField n, Metric v, Semigroup m)
          => Trace v n -> QDiagram b v n m -> QDiagram b v n m
-setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
-                            . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
-                            . D.applyUpost (inj (deleteR :: Deletable (Trace v n)))
-                            )
+setTrace = injD
 
 -- | Lens onto the 'SubMap' of a 'QDiagram' (/i.e./ an association from
 --   names to subdiagrams).
@@ -381,7 +383,7 @@ subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
   where
     setMap :: (Metric v, Semigroup m, OrderedField n) =>
               SubMap b v n m -> QDiagram b v n m -> QDiagram b v n m
-    setMap m = over _Wrapped' ( D.applyUpre . inj . toDeletable $ m)
+    setMap m = over _Wrapped' (D.applyUpre . inj . toDeletable $ m)
 
 -- | Get a list of names of subdiagrams and their locations.
 names :: (Metric v, Semigroup m, OrderedField n)
@@ -418,8 +420,7 @@ withName n f d = maybe id f (lookupName n d) d
 --   subdiagrams, perform the transformation using the
 --   collection of all such subdiagrams associated with (some
 --   qualification of) the given name.
-withNameAll :: (IsName nm, Metric v
-               , Semigroup m, OrderedField n)
+withNameAll :: (IsName nm, Metric v, Semigroup m, OrderedField n)
             => nm -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
             -> QDiagram b v n m -> QDiagram b v n m
 withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (d^.subMap))) d
@@ -429,8 +430,7 @@ withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (d^.subMap))) d
 --   list of most recent subdiagrams associated with (some qualification
 --   of) each name.  Do nothing (the identity transformation) if any
 --   of the names do not exist.
-withNames :: (IsName nm, Metric v
-             , Semigroup m, OrderedField n)
+withNames :: (IsName nm, Metric v, Semigroup m, OrderedField n)
           => [nm] -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
           -> QDiagram b v n m -> QDiagram b v n m
 withNames ns f d = maybe id f ns' d
@@ -471,7 +471,7 @@ resetValue = fmap toAny
 
 -- | Set all the query values of a diagram to 'False'.
 clearValue :: QDiagram b v n m -> QDiagram b v n Any
-clearValue = fmap (const (Any False))
+clearValue = fmap (const mempty)
 
 -- | Create a diagram from a single primitive, along with an envelope,
 --   trace, subdiagram map, and query function.
@@ -511,7 +511,7 @@ instance (Metric v, OrderedField n, Semigroup m)
 
 instance (Metric v, OrderedField n, Semigroup m)
   => Semigroup (QDiagram b v n m) where
-  (QD d1) <> (QD d2) = QD (d2 <> d1)
+  QD d1 <> QD d2 = QD (d2 <> d1)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
 
@@ -527,13 +527,36 @@ infixl 6 `atop`
 ---- Functor
 
 instance Functor (QDiagram b v n) where
-  fmap f = over (_Wrapping QD)
-           ( (D.mapU . second . second)
-             ( (first . fmap . fmap . fmap)   f
-             . (second . first . fmap . fmap) f
-             )
-           . (fmap . fmap) f
-           )
+  -- fmap f = over (_Wrapping QD)
+  --          ( (D.mapU . second . second)
+  --            ( (first . fmap . fmap . fmap)   f -- submap
+  --            . (second . first . fmap . fmap) f -- query
+  --            ) -- up annotations
+  --          . (fmap . fmap) f -- leaf
+  --          )
+  fmap f = over _Wrapped
+    ( D.mapU (mapUpQ f) -- up annotations
+    . (fmap . fmap) f   -- leaf
+    )
+
+mapUpQ :: (m -> m') -> UpAnnots b v n m -> UpAnnots b v n m'
+mapUpQ f (mEnv, (mTr, (mSm, (mQ, ())))) =
+  (mEnv, (mTr, ((fmap . fmap . fmap) f mSm, ((fmap . fmap) f mQ, ()))))
+
+-- g :: (Query v n m -> Query v n m') -> UpAnnots b v n m -> UpAnnots b v n m'
+-- g f = alt $ \case
+--   Option (Just a) -> Option (Just (f a))
+--   _               -> Option Nothing
+
+-- alt' :: (l :>: a) => (a -> a) -> l -> l
+-- alt' f = alt $ \case
+--   Option (Just a) -> Option (Just (f a))
+--   _               -> Option Nothing
+
+        --    ( (D.mapU . second . second)
+        --        ((first . fmap . fmap . fmap) f . (second . first . fmap . fmap) f)
+        --    . (fmap . fmap) f $ d
+        --    )
 
 ---- Applicative
 
@@ -719,7 +742,7 @@ instance (Metric v, Floating n)
   => Transformable (SubMap b v n m) where
   transform = over _Wrapped' . transform
 
--- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a |>
+-- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a .>>
 --   ns@ is the same 'SubMap' except with every name qualified by
 --   @a@.
 instance Qualifiable (SubMap b v n m) where
@@ -803,18 +826,17 @@ instance Renderable (Prim b v n) b where
 --   compiled and optimized to.
 type DTree b v n a = Tree (DNode b v n a)
 
-data DNode b v n a = DStyle (Style v n)
-                   | DTransform (Transformation v n)
-                   | DAnnot a
-                   | DDelay
-                     -- ^ @DDelay@ marks a point where a delayed subtree
-                     --   was expanded.  Such subtrees already take all
-                     --   non-frozen transforms above them into account,
-                     --   so when later processing the tree, upon
-                     --   encountering a @DDelay@ node we must drop any
-                     --   accumulated non-frozen transformation.
-                   | DPrim (Prim b v n)
-                   | DEmpty
+data DNode b v n a
+  = DStyle (Style v n)
+  | DTransform (Transformation v n)
+  | DAnnot a
+  | DDelay -- ^ @DDelay@ marks a point where a delayed subtree
+           --   was expanded.  Such subtrees already take all non-frozen
+           --   transforms above them into account, so when later
+           --   processing the tree, upon encountering a @DDelay@ node
+           --   we must drop any accumulated non-frozen transformation.
+  | DPrim (Prim b v n)
+  | DEmpty
 
 -- | An 'RTree' is a compiled and optimized representation of a
 --   'QDiagram', which can be used by backends.  They have the
@@ -823,10 +845,11 @@ data DNode b v n a = DStyle (Style v n)
 --   * @RPrim@ nodes never have any children.
 type RTree b v n a = Tree (RNode b v n a)
 
-data RNode b v n a = RStyle (Style v n) -- ^ A style node.
-                   | RAnnot a
-                   | RPrim (Prim b v n) -- ^ A primitive.
-                   | REmpty
+data RNode b v n a
+  = RStyle (Style v n)
+  | RPrim (Prim b v n)
+  | RAnnot a
+  | REmpty
 
 -- instances
 

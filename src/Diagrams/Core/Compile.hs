@@ -113,7 +113,7 @@ fromDTree = go mempty
         -- apply a transform to the node's trees
         tts t' = fmap (go t') ns
         -- trees with accumulated transform applied
-        ts'    = tts s
+        ts'    = tts t
 
 -- | Compile a @QDiagram@ into an 'RTree', rewriting styles with the
 --   given function along the way.  Suitable for use by backends when
@@ -137,6 +137,17 @@ toRTree globalToOutput d
     -- this point the diagram has already had the globalToOutput
     -- transformation applied, so output = global = local units.
     nToO = product (map (`diameter` d) basis) ** (1 / fromIntegral (dimension d))
+
+-- rTree :: Iso' (QDiagram b v n Any) (DTree b v n Annotation)
+-- rTree = iso (toRTree mempty) fromRTree
+
+-- fromRTree :: RTree b v n Annotation -> QDiagram b v n Any
+-- fromRTree (Node n rs) = case n of
+--   RPrim p  -> mkQD p mempty mempty mempty mempty
+--   RStyle s -> applyStyle s d
+--   RAnnot a -> applyAnnotation a d
+--   _        -> d
+--   where d = foldMap fromRTree rs
 
 -- | Apply a style transformation on 'RStyle' nodes; the identity for
 --   other 'RNode's.
