@@ -346,6 +346,11 @@ instance (SameSpace a b, SameSpace b c, Transformable a, Transformable b, Transf
     => Transformable (a,b,c) where
   transform t (a,b,c) = (transform t a, transform t b, transform t c)
 
+instance (SameSpace a b, SameSpace b c, SameSpace c d,
+          Transformable a, Transformable b, Transformable c, Transformable d)
+    => Transformable (a,b,c,d) where
+  transform t (a,b,c,d) = (transform t a, transform t b, transform t c, transform t d)
+
 -- Transform functions by conjugation. That is, reverse-transform argument and
 -- forward-transform result. Intuition: If someone shrinks you, you see your
 -- environment enlarged. If you rotate right, you see your environment

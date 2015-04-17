@@ -1,16 +1,18 @@
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE DeriveDataTypeable    #-}
-{-# LANGUAGE DeriveFunctor         #-}
-{-# LANGUAGE EmptyDataDecls        #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans       #-}
 -- We have some orphan Action instances here, but since Action is a multi-param
@@ -50,11 +52,12 @@ module Diagrams.Core.Types
        , applyAnnotation, href, opacityGroup, groupOpacity
 
          -- *** Dynamic (monoidal) annotations
-       , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
+       , UpAnnots, DownAnnots, downT, transfFromAnnot
 
          -- ** Basic type definitions
-       , QDiaLeaf(..), withQDiaLeaf
-       , QDiagram(..), Diagram
+       , QDiaLeaf(..)
+       , QDiagram(..)
+       , Diagram
 
          -- * Operations on diagrams
          -- ** Creating diagrams
@@ -107,15 +110,6 @@ module Diagrams.Core.Types
          -- * Backends
 
        , Backend(..)
-       , DTree
-       , DNode(..)
-
-       , RTree
-       , RNode(..)
-       , _RStyle
-       , _RAnnot
-       , _RPrim
-       , _REmpty
 
          -- ** Null backend
 
@@ -130,26 +124,20 @@ module Diagrams.Core.Types
 
        ) where
 
-import           Control.Arrow             (first, second, (***))
-import           Control.Lens              (Lens', Prism', Rewrapped,
-                                            Wrapped (..), iso, lens, over,
-                                            prism', view, (^.), _Wrapped,
-                                            _Wrapping)
+import           Control.Arrow             (second, (***))
+import           Control.Lens              hiding (transform)
 import           Control.Monad             (mplus)
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
 import qualified Data.Traversable          as T
-import           Data.Tree
 import           Data.Typeable
 
 import           Data.Monoid.Action
 import           Data.Monoid.Coproduct
-import           Data.Monoid.Deletable
-import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
-import qualified Data.Tree.DUAL            as D
+import qualified Data.Tree.DUAL.Internal   as D
 
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
@@ -175,9 +163,11 @@ class (Typeable n, RealFloat n) => TypeableFloat n
 instance (Typeable n, RealFloat n) => TypeableFloat n
 -- use class instead of type constraint so users don't need constraint kinds pragma
 
-------------------------------------------------------------
---  Diagrams  ----------------------------------------------
-------------------------------------------------------------
+------------------------------------------------------------------------
+-- Diagrams
+------------------------------------------------------------------------
+
+-- Anotations ----------------------------------------------------------
 
 -- | Monoidal annotations which travel up the diagram tree, /i.e./ which
 --   are aggregated from component diagrams to the whole:
@@ -194,38 +184,87 @@ instance (Typeable n, RealFloat n) => TypeableFloat n
 --   * name/subdiagram associations (see "Diagrams.Core.Names")
 --
 --   * query functions (see "Diagrams.Core.Query")
-type UpAnnots b v n m = Deletable (Envelope v n)
-                    ::: Deletable (Trace v n)
-                    ::: Deletable (SubMap b v n m)
-                    ::: Query v n m
-                    ::: ()
+newtype UpAnnots b v n m = UpAnnots (Envelope v n, Trace v n, SubMap b v n m, Query v n m)
+  deriving (Semigroup, Monoid, Functor)
+
+type instance V (UpAnnots b v n m) = v
+type instance N (UpAnnots b v n m) = n
+
+instance r ~ UpAnnots b' v' n' m' => Rewrapped (UpAnnots b v n m) r
+instance Wrapped (UpAnnots b v n m) where
+  type Unwrapped (UpAnnots b v n m) = (Envelope v n, Trace v n, SubMap b v n m, Query v n m)
+  _Wrapped' = iso (\(UpAnnots a) -> a) UpAnnots
+
+instance (Metric v, OrderedField n) => Transformable (UpAnnots b v n m) where
+  transform = over _Wrapped . transform
+
+-- | Affine traversal over the top level upwards annotations. Does
+--   nothing for empty diagram.
+upAnnots :: Traversal' (QDiagram b v n m) (UpAnnots b v n m)
+upAnnots = _Wrapped' . D._u
+
+-- | Traversal over the envelope of a diagram. Does nothing for the
+--   empty diagram.
+envelope :: Traversal' (QDiagram b v n m) (Envelope v n)
+envelope = upAnnots . _Wrapped' . _1
+
+-- | Traversal over the trace of a diagram. Does nothing for the
+--   empty diagram.
+trace :: Traversal' (QDiagram b v n m) (Trace v n)
+trace = upAnnots . _Wrapped' . _2
+
+-- | Traversal over the 'Subdiagram' mapping of a diagram. Does nothing
+--   for the empty diagram.
+subMap :: Traversal' (QDiagram b v n m) (SubMap b v n m)
+subMap = upAnnots . _Wrapped' . _3
+
+-- | Traversal over the query of a diagram. Does nothing for the
+--   empty diagram.
+query :: Traversal' (QDiagram b v n m) (Query v n m)
+query = upAnnots . _Wrapped' . _4
+
+-- are these still needed?
+
+-- | Replace the envelope of a diagram. Note this is different from
+--   @'set' 'envelope'@ because it will set the envelope for the empty
+--   diagram.
+setEnvelope :: (OrderedField n, Metric v, Monoid' m)
+            => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
+setEnvelope e (QD D.EmptyDUAL) = QD $ D.leafU (mempty & _Wrapped' . _1 .~ e)
+setEnvelope e dia              = set envelope e dia
+
+-- | Replace the envelope of a diagram. Note this is different from
+--   @'set' 'trace@ because it will set the trace for the empty
+--   diagram.
+setTrace :: (OrderedField n, Metric v, Monoid' m)
+         => Trace v n -> QDiagram b v n m -> QDiagram b v n m
+setTrace t (QD D.EmptyDUAL) = QD $ D.leafU (mempty & _Wrapped' . _2 .~ t)
+setTrace t dia              = set trace t dia
 
 -- | Monoidal annotations which travel down the diagram tree,
 --   /i.e./ which accumulate along each path to a leaf (and which can
 --   act on the upwards-travelling annotations):
 --
 --   * styles (see "Diagrams.Core.Style")
---
---   * names (see "Diagrams.Core.Names")
-type DownAnnots v n = (Transformation v n :+: Style v n)
-                  ::: Name
-                  ::: ()
+type DownAnnots v n = Transformation v n :+: Style v n
 
-  -- Note that we have to put the transformations and styles together
-  -- using a coproduct because the transformations can act on the
-  -- styles.
+  -- Note that we  put the transformations and styles together using a
+  -- coproduct because the transformations can act on the styles.
 
--- | Inject a transformation into a default downwards annotation
---   value.
-transfToAnnot :: Transformation v n -> DownAnnots v n
-transfToAnnot
-  = inj
-  . (inL :: Transformation v n -> Transformation v n :+: Style v n)
+-- | Make a downwards annotation from a transform.
+downT :: Transformation v n -> DownAnnots v n
+downT = inL
+
+-- | Make a downwards annotation from a style.
+downSty :: Style v n -> DownAnnots v n
+downSty = inR
 
 -- | Extract the (total) transformation from a downwards annotation
 --   value.
 transfFromAnnot :: (Additive v, Num n) => DownAnnots v n -> Transformation v n
-transfFromAnnot = option mempty killR . fst
+transfFromAnnot = killR
+
+-- Leafs ---------------------------------------------------------------
 
 -- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
 --   @QDiagram@ which expands to a real @QDiagram@ once it learns the
@@ -242,23 +281,25 @@ data QDiaLeaf b v n m
     --   be applied by the context).
   deriving Functor
 
-withQDiaLeaf :: (Prim b v n -> r)
-            -> ((DownAnnots v n -> n -> n -> QDiagram b v n m) -> r)
-            -> QDiaLeaf b v n m -> r
-withQDiaLeaf f _ (PrimLeaf p)      = f p
-withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
+-- Static annotation ---------------------------------------------------
 
 -- | Static annotations which can be placed at a particular node of a
 --   diagram tree.
-data Annotation
+data Annotation b (v :: * -> *) n
   = Href String    -- ^ Hyperlink
   | OpacityGroup Double
   deriving Show
 
+type instance V (Annotation b v n) = v
+type instance N (Annotation b v n) = n
+
+instance Transformable (Annotation b v n) where
+  transform _ = id
+
 -- | Apply a static annotation at the root of a diagram.
 applyAnnotation
   :: (Metric v, OrderedField n, Semigroup m)
-  => Annotation -> QDiagram b v n m -> QDiagram b v n m
+  => Annotation b v n -> QDiagram b v n m -> QDiagram b v n m
 applyAnnotation an (QD dt) = QD (D.annot an dt)
 
 -- | Make a diagram into a hyperlink.  Note that only some backends
@@ -273,6 +314,7 @@ opacityGroup, groupOpacity :: (Metric v, OrderedField n, Semigroup m)
 opacityGroup = applyAnnotation . OpacityGroup
 groupOpacity = applyAnnotation . OpacityGroup
 
+-- QDiagram ------------------------------------------------------------
 
 -- | The fundamental diagram type.  The type variables are as follows:
 --
@@ -305,7 +347,7 @@ groupOpacity = applyAnnotation . OpacityGroup
 --   is not really a very good name, but it's probably not worth
 --   changing it at this point.
 newtype QDiagram b v n m
-  = QD (D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m))
+  = QD (D.DUALTree (DownAnnots v n) (UpAnnots b v n m) (Annotation b v n) (QDiaLeaf b v n m))
 #if __GLASGOW_HASKELL__ >= 707
   deriving Typeable
 #else
@@ -318,7 +360,7 @@ instance forall b v. (Typeable b, Typeable1 v) => Typeable2 (QDiagram b v) where
 
 instance Wrapped (QDiagram b v n m) where
   type Unwrapped (QDiagram b v n m) =
-        D.DUALTree (DownAnnots v n) (UpAnnots b v n m) Annotation (QDiaLeaf b v n m)
+        D.DUALTree (DownAnnots v n) (UpAnnots b v n m) (Annotation b v n) (QDiaLeaf b v n m)
   _Wrapped' = iso (\(QD d) -> d) QD
 
 instance Rewrapped (QDiagram b v n m) (QDiagram b' v' n' m')
@@ -336,53 +378,10 @@ type Diagram b = QDiagram b (V b) (N b) Any
 
 -- | Create a \"point diagram\", which has no content, no trace, an
 --   empty query, and a point envelope.
-pointDiagram :: (Metric v, Fractional n)
-             => Point v n -> QDiagram b v n m
-pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
+pointDiagram :: (Metric v, OrderedField n, Monoid m) => Point v n -> QDiagram b v n m
+pointDiagram p = QD $ D.leafU (mempty & _Wrapped . _1 .~ pointEnvelope p)
 
--- | A useful variant of 'getU' which projects out a certain
---   component.
-getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
-getU' = maybe mempty (option mempty id . get) . D.getU
-
--- | Lens onto the 'Envelope' of a 'QDiagram'.
-envelope :: (OrderedField n, Metric v, Monoid' m)
-         => Lens' (QDiagram b v n m) (Envelope v n)
-envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
-
--- | Replace the envelope of a diagram.
-setEnvelope :: forall b v n m. ( OrderedField n, Metric v
-                               , Monoid' m)
-          => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
-setEnvelope e =
-    over _Wrapped' ( D.applyUpre (inj . toDeletable $ e)
-                . D.applyUpre (inj (deleteL :: Deletable (Envelope v n)))
-                . D.applyUpost (inj (deleteR :: Deletable (Envelope v n)))
-              )
-
--- | Lens onto the 'Trace' of a 'QDiagram'.
-trace :: (Metric v, OrderedField n, Semigroup m) =>
-         Lens' (QDiagram b v n m) (Trace v n)
-trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
-
--- | Replace the trace of a diagram.
-setTrace :: forall b v n m. ( OrderedField n, Metric v
-                            , Semigroup m)
-         => Trace v n -> QDiagram b v n m -> QDiagram b v n m
-setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
-                            . D.applyUpre (inj (deleteL :: Deletable (Trace v n)))
-                            . D.applyUpost (inj (deleteR :: Deletable (Trace v n)))
-                            )
-
--- | Lens onto the 'SubMap' of a 'QDiagram' (/i.e./ an association from
---   names to subdiagrams).
-subMap :: (Metric v, Semigroup m, OrderedField n)
-       => Lens' (QDiagram b v n m) (SubMap b v n m)
-subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
-  where
-    setMap :: (Metric v, Semigroup m, OrderedField n) =>
-              SubMap b v n m -> QDiagram b v n m -> QDiagram b v n m
-    setMap m = over _Wrapped' ( D.applyUpre . inj . toDeletable $ m)
+-- Names ---------------------------------------------------------------
 
 -- | Get a list of names of subdiagrams and their locations.
 names :: (Metric v, Semigroup m, OrderedField n)
@@ -397,7 +396,7 @@ names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 nameSub :: (IsName nm , Metric v, OrderedField n, Semigroup m)
   => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
 nameSub s n d = d'
-  where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
+  where d' = over subMap (fromNames [(n,s d')] <>) d
 
 -- | Lookup the most recent diagram associated with (some
 --   qualification of) the given name.
@@ -430,8 +429,7 @@ withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (d^.subMap))) d
 --   list of most recent subdiagrams associated with (some qualification
 --   of) each name.  Do nothing (the identity transformation) if any
 --   of the names do not exist.
-withNames :: (IsName nm, Metric v
-             , Semigroup m, OrderedField n)
+withNames :: (IsName nm, Metric v, Semigroup m, OrderedField n)
           => [nm] -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
           -> QDiagram b v n m -> QDiagram b v n m
 withNames ns f d = maybe id f ns' d
@@ -441,19 +439,13 @@ withNames ns f d = maybe id f ns' d
 
 -- | \"Localize\" a diagram by hiding all the names, so they are no
 --   longer visible to the outside.
-localize :: forall b v n m. (Metric v, OrderedField n, Semigroup m)
+localize :: (Metric v, OrderedField n, Semigroup m)
          => QDiagram b v n m -> QDiagram b v n m
-localize = over _Wrapped' ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v n m)))
-                   . D.applyUpost (inj (deleteR :: Deletable (SubMap b v n m)))
-                   )
-
--- | Get the query function associated with a diagram.
-query :: Monoid m => QDiagram b v n m -> Query v n m
-query = getU' . view _Wrapped'
+localize = set subMap mempty
 
 -- | Sample a diagram's query function at a given point.
 sample :: Monoid m => QDiagram b v n m -> Point v n -> m
-sample = runQuery . query
+sample = runQuery . view query
 
 -- | Set the query value for 'True' points in a diagram (/i.e./ points
 --   \"inside\" the diagram); 'False' points will be set to 'mempty'.
@@ -484,14 +476,26 @@ mkQD p = mkQD' (PrimLeaf p)
 --   trace, subdiagram map, and query function.
 mkQD' :: QDiaLeaf b v n m -> Envelope v n -> Trace v n -> SubMap b v n m -> Query v n m
       -> QDiagram b v n m
-mkQD' l e t n q
-  = QD $ D.leaf (toDeletable e *: toDeletable t *: toDeletable n *: q *: ()) l
+mkQD' l e t n q = QD $ D.leaf (UpAnnots (e,t,n,q)) l
 
-------------------------------------------------------------
---  Instances
-------------------------------------------------------------
+-- should this be in Diagrams.Combinators?
 
----- Monoid
+-- | A convenient synonym for 'mappend' on diagrams, designed to be
+--   used infix (to help remember which diagram goes on top of which
+--   when combining them, namely, the first on top of the second).
+atop :: (OrderedField n, Metric v, Semigroup m)
+     => QDiagram b v n m -> QDiagram b v n m -> QDiagram b v n m
+atop = (<>)
+
+infixl 6 `atop`
+
+-- Instances -----------------------------------------------------------
+
+instance (Metric v, OrderedField n, Semigroup m)
+  => Semigroup (QDiagram b v n m) where
+  QD d1 <> QD d2 = QD (d2 <> d1)
+    -- swap order so that primitives of d2 come first, i.e. will be
+    -- rendered first, i.e. will be on the bottom.
 
 -- | Diagrams form a monoid since each of their components do: the
 --   empty diagram has no primitives, an empty envelope, an empty
@@ -507,34 +511,13 @@ mkQD' l e t n q
 --   diagrams when viewed by 4-dimensional beings.
 instance (Metric v, OrderedField n, Semigroup m)
   => Monoid (QDiagram b v n m) where
-  mempty  = QD D.empty
+  mempty  = QD mempty
   mappend = (<>)
 
-instance (Metric v, OrderedField n, Semigroup m)
-  => Semigroup (QDiagram b v n m) where
-  (QD d1) <> (QD d2) = QD (d2 <> d1)
-    -- swap order so that primitives of d2 come first, i.e. will be
-    -- rendered first, i.e. will be on the bottom.
-
--- | A convenient synonym for 'mappend' on diagrams, designed to be
---   used infix (to help remember which diagram goes on top of which
---   when combining them, namely, the first on top of the second).
-atop :: (OrderedField n, Metric v, Semigroup m)
-     => QDiagram b v n m -> QDiagram b v n m -> QDiagram b v n m
-atop = (<>)
-
-infixl 6 `atop`
-
----- Functor
-
 instance Functor (QDiagram b v n) where
-  fmap f = over (_Wrapping QD)
-           ( (D.mapU . second . second)
-             ( (first . fmap . fmap . fmap)   f
-             . (second . first . fmap . fmap) f
-             )
-           . (fmap . fmap) f
-           )
+  fmap f = over _Wrapped
+             $ (D._u . mapped %~ f) -- up annots
+             . (fmap . fmap) f      -- leaves
 
 ---- Applicative
 
@@ -553,59 +536,42 @@ instance Functor (QDiagram b v n) where
 --   (Diagram ps1 bs1 ns1 smp1) <*> (Diagram ps2 bs2 ns2 smp2)
 --     = Diagram (ps1 <> ps2) (bs1 <> bs2) (ns1 <> ns2) (smp1 <*> smp2)
 
----- HasStyle
-
-instance (Metric v, OrderedField n, Semigroup m)
-      => HasStyle (QDiagram b v n m) where
-  applyStyle = over _Wrapped' . D.applyD . inj
-             . (inR :: Style v n -> Transformation v n :+: Style v n)
-
----- Juxtaposable
+instance (Metric v, OrderedField n, Semigroup m) => HasStyle (QDiagram b v n m) where
+  applyStyle = over _Wrapped' . D.down . downSty
 
 instance (Metric v, OrderedField n, Monoid' m)
-      => Juxtaposable (QDiagram b v n m) where
+    => Juxtaposable (QDiagram b v n m) where
   juxtapose = juxtaposeDefault
 
----- Enveloped
-
 instance (Metric v, OrderedField n, Monoid' m)
-         => Enveloped (QDiagram b v n m) where
+    => Enveloped (QDiagram b v n m) where
   getEnvelope = view envelope
 
----- Traced
-
 instance (Metric v, OrderedField n, Semigroup m)
-         => Traced (QDiagram b v n m) where
+    => Traced (QDiagram b v n m) where
   getTrace = view trace
-
----- HasOrigin
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
 instance (Metric v, OrderedField n, Semigroup m)
-      => HasOrigin (QDiagram b v n m) where
+    => HasOrigin (QDiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
-
----- Transformable
 
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
 instance (OrderedField n, Metric v, Semigroup m)
-      => Transformable (QDiagram b v n m) where
-  transform = over _Wrapped' . D.applyD . transfToAnnot
-
----- Qualifiable
+    => Transformable (QDiagram b v n m) where
+  transform = over _Wrapped' . D.down . downT
 
 -- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
 instance (Metric v, OrderedField n, Semigroup m)
-      => Qualifiable (QDiagram b v n m) where
-  (.>>) = over _Wrapped' . D.applyD . inj . toName
+    => Qualifiable (QDiagram b v n m) where
+  n .>> d = over subMap (n .>>) d
 
-
-------------------------------------------------------------
+------------------------------------------------------------------------
 --  Subdiagrams
-------------------------------------------------------------
+------------------------------------------------------------------------
 
 -- | A @Subdiagram@ represents a diagram embedded within the context
 --   of a larger diagram.  Essentially, it consists of a diagram
@@ -619,7 +585,7 @@ type instance N (Subdiagram b v n m) = n
 
 -- | Turn a diagram into a subdiagram with no accumulated context.
 mkSubdiagram :: QDiagram b v n m -> Subdiagram b v n m
-mkSubdiagram d = Subdiagram d empty
+mkSubdiagram d = Subdiagram d mempty
 
 -- | Create a \"point subdiagram\", that is, a 'pointDiagram' (with no
 --   content and a point envelope) treated as a subdiagram with local
@@ -627,11 +593,11 @@ mkSubdiagram d = Subdiagram d empty
 --   @mkSubdiagram . pointDiagram@, which would result in a subdiagram
 --   with local origin at the parent origin, rather than at the given
 --   point.
-subPoint :: (Metric v, OrderedField n, Semigroup m)
+subPoint :: (Metric v, OrderedField n, Monoid' m)
          => Point v n -> Subdiagram b v n m
 subPoint p = Subdiagram
                (pointDiagram origin)
-               (transfToAnnot $ translation (p .-. origin))
+               (downT $ translation (p .-. origin))
 
 instance Functor (Subdiagram b v n) where
   fmap f (Subdiagram d a) = Subdiagram (fmap f d) a
@@ -650,7 +616,7 @@ instance (Metric v, OrderedField n)
 
 instance (Metric v, Floating n)
     => Transformable (Subdiagram b v n m) where
-  transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
+  transform t (Subdiagram d a) = Subdiagram d (downT t <> a)
 
 -- | Get the location of a subdiagram; that is, the location of its
 --   local origin /with respect to/ the vector space of its parent
@@ -667,16 +633,16 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 --   diagram.
 getSub :: (Metric v, OrderedField n, Semigroup m)
        => Subdiagram b v n m -> QDiagram b v n m
-getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d
+getSub (Subdiagram d a) = over _Wrapped' (D.down a) d
 
 -- | Extract the \"raw\" content of a subdiagram, by throwing away the
 --   context.
 rawSub :: Subdiagram b v n m -> QDiagram b v n m
 rawSub (Subdiagram d _) = d
 
-------------------------------------------------------------
---  Subdiagram maps  ---------------------------------------
-------------------------------------------------------------
+------------------------------------------------------------------------
+-- Subdiagram maps
+------------------------------------------------------------------------
 
 -- | A 'SubMap' is a map associating names to subdiagrams. There can
 --   be multiple associations for any given name.
@@ -709,44 +675,37 @@ instance Semigroup (SubMap b v n m) where
 --   will associate that name to the concatenation of the information
 --   associated with that name.
 instance Monoid (SubMap b v n m) where
-  mempty  = SubMap M.empty
+  mempty  = SubMap mempty
   mappend = (<>)
 
-instance (OrderedField n, Metric v)
-      => HasOrigin (SubMap b v n m) where
+instance (OrderedField n, Metric v) => HasOrigin (SubMap b v n m) where
   moveOriginTo = over _Wrapped' . moveOriginTo
 
-instance (Metric v, Floating n)
-  => Transformable (SubMap b v n m) where
+instance (Metric v, Floating n) => Transformable (SubMap b v n m) where
   transform = over _Wrapped' . transform
 
--- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a |>
+-- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a .>>
 --   ns@ is the same 'SubMap' except with every name qualified by
 --   @a@.
 instance Qualifiable (SubMap b v n m) where
-  a .>> (SubMap m) = SubMap $ M.mapKeys (a .>>) m
+  a .>> SubMap m = SubMap $ M.mapKeys (a .>>) m
 
 -- | Construct a 'SubMap' from a list of associations between names
 --   and subdiagrams.
 fromNames :: IsName a => [(a, Subdiagram b v n m)] -> SubMap b v n m
 fromNames = SubMap . M.fromListWith (++) . map (toName *** (:[]))
 
--- | Add a name/diagram association to a submap.
+-- | Add a name/diagram association to a subMap.
 rememberAs :: IsName a => a -> QDiagram b v n m -> SubMap b v n m -> SubMap b v n m
 rememberAs n b = over _Wrapped' $ M.insertWith (++) (toName n) [mkSubdiagram b]
 
--- | A name acts on a name map by qualifying every name in it.
+-- | Qualify every name in the 'SubMap'.
 instance Action Name (SubMap b v n m) where
   act = (.>>)
 
-instance Action Name a => Action Name (Deletable a) where
-  act n (Deletable l a r) = Deletable l (act n a) r
-
--- Names do not act on other things.
-
-instance Action Name (Query v n m)
-instance Action Name (Envelope v n)
-instance Action Name (Trace v n)
+-- | Qualify every name in the 'SubMap'.
+instance Action Name (UpAnnots b v n m) where
+  act = over (_Wrapped . _3) . act
 
 -- | Look for the given name in a name map, returning a list of
 --   subdiagrams associated with that name.  If no names match the
@@ -761,9 +720,9 @@ lookupSub a (SubMap m)
         flattenNames xs = Just . concatMap snd $ xs
         n = toName a
 
-------------------------------------------------------------
---  Primitives  --------------------------------------------
-------------------------------------------------------------
+------------------------------------------------------------------------
+-- Subdiagram maps
+------------------------------------------------------------------------
 
 -- $prim
 -- Ultimately, every diagram is essentially a tree whose leaves are /primitives/,
@@ -793,82 +752,16 @@ instance Transformable (Prim b v n) where
 instance Renderable (Prim b v n) b where
   render b (Prim p) = render b p
 
-------------------------------------------------------------
--- Backends  -----------------------------------------------
-------------------------------------------------------------
-
--- | A 'DTree' is a raw tree representation of a 'QDiagram', with all
---   the @u@-annotations removed.  It is used as an intermediate type
---   by diagrams-core; backends should not need to make use of it.
---   Instead, backends can make use of 'RTree', which 'DTree' gets
---   compiled and optimized to.
-type DTree b v n a = Tree (DNode b v n a)
-
-data DNode b v n a = DStyle (Style v n)
-                   | DTransform (Transformation v n)
-                   | DAnnot a
-                   | DDelay
-                     -- ^ @DDelay@ marks a point where a delayed subtree
-                     --   was expanded.  Such subtrees already take all
-                     --   non-frozen transforms above them into account,
-                     --   so when later processing the tree, upon
-                     --   encountering a @DDelay@ node we must drop any
-                     --   accumulated non-frozen transformation.
-                   | DPrim (Prim b v n)
-                   | DEmpty
-
--- | An 'RTree' is a compiled and optimized representation of a
---   'QDiagram', which can be used by backends.  They have the
---   following invariant which backends may rely upon:
---
---   * @RPrim@ nodes never have any children.
-type RTree b v n a = Tree (RNode b v n a)
-
-data RNode b v n a = RStyle (Style v n) -- ^ A style node.
-                   | RAnnot a
-                   | RPrim (Prim b v n) -- ^ A primitive.
-                   | REmpty
-
--- instances
-
-type instance V (RNode b v n a) = v
-type instance N (RNode b v n a) = n
-
-instance (Additive v, T.Traversable v, Floating n, Typeable n)
-    => Transformable (RNode b v n a) where
-  transform t n = case n of
-    RStyle s -> RStyle (transform t s)
-    RPrim p  -> RPrim  (transform t p)
-    a        -> a
-
-instance Typeable n => HasStyle (RNode b v n a) where
-  applyStyle = over _RStyle . applyStyle
-
--- prisms
-
--- | Prism onto a style of an 'RNode'.
-_RStyle :: Prism' (RNode b v n a) (Style v n)
-_RStyle = prism' RStyle $ \n -> case n of RStyle s -> Just s; _ -> Nothing
-
--- | Prism onto an annotation of an 'RNode'.
-_RAnnot :: Prism' (RNode b v n a) a
-_RAnnot = prism' RAnnot $ \n -> case n of RAnnot a -> Just a; _ -> Nothing
-
--- | Prism onto a 'Prim' of an 'RNode'.
-_RPrim :: Prism' (RNode b v n a) (Prim b v n)
-_RPrim = prism' RPrim $ \n -> case n of RPrim p -> Just p; _ -> Nothing
-
--- | Prism onto an empty 'RNode'.
-_REmpty :: Prism' (RNode b v n a) ()
-_REmpty = prism' (const REmpty) $ \n -> case n of REmpty -> Just (); _ -> Nothing
-
+------------------------------------------------------------------------
+-- Backends
+------------------------------------------------------------------------
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
 --   instance of the 'Backend' class.
 --
 --   A minimal complete definition consists of 'Render', 'Result',
---   'Options', and 'renderRTree'. However, most backends will want to
+--   'Options', and 'renderDia'. However, most backends will want to
 --   implement 'adjustDia' as well; the default definition does
 --   nothing.  Some useful standard definitions are provided in the
 --   @Diagrams.TwoD.Adjust@ module from the @diagrams-lib@ package.
@@ -905,7 +798,7 @@ class Backend b v n where
   -- | Given some options, take a representation of a diagram as a
   --   tree and render it.  The 'RTree' has already been simplified
   --   and has all measurements converted to @Output@ units.
-  renderRTree :: b -> Options b v n -> RTree b v n Annotation -> Result b v n
+  renderDUAL :: Monoid' m => b -> Options b v n -> Transformation v n -> QDiagram b v n m -> Result b v n
 
   -- See Note [backend token]
 
@@ -1019,7 +912,7 @@ instance Backend NullBackend v n where
   type Result NullBackend v n = ()
   data Options NullBackend v n
 
-  renderRTree _ _ _ = ()
+  renderDUAL _ _ _ _ = ()
 
 -- | The Renderable type class connects backends to primitives which
 --   they know how to render.

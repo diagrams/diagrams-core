@@ -46,8 +46,9 @@ type family V a :: * -> *
 
 -- Note, to use these instances one often needs a constraint of the form
 --   V a ~ V b, etc.
-type instance V (a,b)   = V a
-type instance V (a,b,c) = V a
+type instance V (a,b)     = V a
+type instance V (a,b,c  ) = V a
+type instance V (a,b,c,d) = V a
 
 type instance V (a -> b)      = V b
 type instance V [a]           = V a
@@ -68,8 +69,9 @@ type instance V (m :+: n)     = V m
 -- | The numerical field for the object, the number type used for calculations.
 type family N a :: *
 
-type instance N (a,b)   = N a
-type instance N (a,b,c) = N a
+type instance N (a,b)     = N a
+type instance N (a,b,c)   = N a
+type instance N (a,b,c,d) = N a
 
 type instance N (a -> b)   = N b
 type instance N [a]        = N a
