@@ -1,6 +1,6 @@
 # Change Log
 
-## [v1.3]() (2015-04-08)
+## [v1.3](https://github.com/diagrams/diagrams-core/tree/v1.3) (2015-04-19)
 
 * **New features**
 
