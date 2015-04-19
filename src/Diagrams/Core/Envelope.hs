@@ -110,6 +110,9 @@ import           Linear.Vector
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://www.cis.upenn.edu/~byorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
 newtype Envelope v n = Envelope (Option (v n -> Max n))
 
+type instance V (Envelope v n) = v
+type instance N (Envelope v n) = n
+
 instance Wrapped (Envelope v n) where
   type Unwrapped (Envelope v n) = Option (v n -> Max n)
   _Wrapped' = iso (\(Envelope e) -> e) Envelope
@@ -126,25 +129,21 @@ mkEnvelope :: (v n -> n) -> Envelope v n
 mkEnvelope = Envelope . Option . Just . (Max .)
 
 -- | Create an envelope for the given point.
-pointEnvelope :: (Fractional n, Metric v) => Point v n -> Envelope v n
+pointEnvelope :: (Metric v, Fractional n) => Point v n -> Envelope v n
 pointEnvelope p = moveTo p (mkEnvelope $ const 0)
 
 -- | Envelopes form a semigroup with pointwise maximum as composition.
---   Hence, if @e1@ is the envelope for diagram @d1@, and
---   @e2@ is the envelope for @d2@, then @e1 \`mappend\` e2@
---   is the envelope for @d1 \`atop\` d2@.
+--   Hence, if @e1@ is the envelope for diagram @d1@, and @e2@ is the
+--   envelope for @d2@, then @e1 \`mappend\` e2@ is the envelope for @d1
+--   \`atop\` d2@.
 deriving instance Ord n => Semigroup (Envelope v n)
 
--- | The special empty envelope is the identity for the
---   'Monoid' instance.
+-- | The special empty envelope is the identity for the 'Monoid'
+--   instance.
 deriving instance Ord n => Monoid (Envelope v n)
-
 
 --   XXX add some diagrams here to illustrate!  Note that Haddock supports
 --   inline images, using a \<\<url\>\> syntax.
-
-type instance V (Envelope v n) = v
-type instance N (Envelope v n) = n
 
 -- | The local origin of an envelope is the point with respect to
 --   which bounding queries are made, /i.e./ the point from which the
@@ -192,13 +191,13 @@ class (Metric (V a), OrderedField (N a)) => Enveloped a where
 instance (Metric v, OrderedField n) => Enveloped (Envelope v n) where
   getEnvelope = id
 
-instance (OrderedField n, Metric v) => Enveloped (Point v n) where
+instance (Metric v, OrderedField n) => Enveloped (Point v n) where
   getEnvelope p = moveTo p . mkEnvelope $ const 0
 
 instance Enveloped t => Enveloped (TransInv t) where
   getEnvelope = getEnvelope . op TransInv
 
-instance (Enveloped a, Enveloped b, V a ~ V b, N a ~ N b) => Enveloped (a,b) where
+instance (SameSpace a b, Enveloped a, Enveloped b) => Enveloped (a,b) where
   getEnvelope (x,y) = getEnvelope x <> getEnvelope y
 
 instance Enveloped b => Enveloped [b] where
@@ -228,12 +227,12 @@ envelopeV v = fromMaybe zero . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction, or @Nothing@ for the empty envelope.
-envelopePMay :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Maybe (Point v n)
+envelopePMay :: (InSpace v n a, Enveloped a) => v n -> a -> Maybe (Point v n)
 envelopePMay v = fmap P . envelopeVMay v
 
 -- | Compute the point on a separating hyperplane in the given
 --   direction.  Returns the origin for the empty envelope.
-envelopeP :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Point v n
+envelopeP :: (InSpace v n a, Enveloped a) => v n -> a -> Point v n
 envelopeP v = P . envelopeV v
 
 -- | Equivalent to the norm of 'envelopeVMay':
@@ -245,7 +244,7 @@ envelopeP v = P . envelopeV v
 --   Note that the 'envelopeVMay' / 'envelopePMay' functions above should be
 --   preferred, as this requires a call to norm.  However, it is more
 --   efficient than calling norm on the results of those functions.
-envelopeSMay :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Maybe n
+envelopeSMay :: (InSpace v n a, Enveloped a) => v n -> a -> Maybe n
 envelopeSMay v = fmap ((* norm v) . ($ v)) . appEnvelope . getEnvelope
 
 -- | Equivalent to the norm of 'envelopeV':
@@ -257,26 +256,26 @@ envelopeSMay v = fmap ((* norm v) . ($ v)) . appEnvelope . getEnvelope
 --   Note that the 'envelopeV' / 'envelopeP' functions above should be
 --   preferred, as this requires a call to norm. However, it is more
 --   efficient than calling norm on the results of those functions.
-envelopeS :: (V a ~ v, N a ~ n, Enveloped a, Num n) => v n -> a -> n
+envelopeS :: (InSpace v n a, Enveloped a, Num n) => v n -> a -> n
 envelopeS v = fromMaybe 0 . envelopeSMay v
 
 -- | Compute the diameter of a enveloped object along a particular
 --   vector.  Returns zero for the empty envelope.
-diameter :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> n
+diameter :: (InSpace v n a, Enveloped a) => v n -> a -> n
 diameter v a = maybe 0 (\(lo,hi) -> (hi - lo) * norm v) (extent v a)
 
 -- | Compute the \"radius\" (1\/2 the diameter) of an enveloped object
 --   along a particular vector.
-radius :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> n
+radius :: (InSpace v n a, Enveloped a) => v n -> a -> n
 radius v = (0.5*) . diameter v
 
 -- | Compute the range of an enveloped object along a certain
 --   direction.  Returns a pair of scalars @(lo,hi)@ such that the
 --   object extends from @(lo *^ v)@ to @(hi *^ v)@. Returns @Nothing@
 --   for objects with an empty envelope.
-extent :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Maybe (n, n)
+extent :: (InSpace v n a, Enveloped a) => v n -> a -> Maybe (n, n)
 extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
 
 -- | The smallest positive vector that bounds the envelope of an object.
-size :: (V a ~ v, N a ~ n, Enveloped a, HasBasis v) => a -> v n
+size :: (InSpace v n a, HasBasis v, Enveloped a) => a -> v n
 size d = tabulate $ \(E l) -> diameter (zero & l .~ 1) d
