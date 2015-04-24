@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -8,16 +9,16 @@
 {-# LANGUAGE UndecidableInstances       #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Diagrams.Envelope
+-- Module      :  Diagrams.Core.Envelope
 -- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
--- "Graphics.Rendering.Diagrams" defines the core library of primitives
--- forming the basis of an embedded domain-specific language for
--- describing and rendering diagrams.
+-- diagrams-core defines the core library of primitives forming the
+-- basis of an embedded domain-specific language for describing and
+-- rendering diagrams.
 --
--- The @Envelope@ module defines a data type and type class for
+-- The @Diagrams.Core.Envelope@ module defines a data type and type class for
 -- \"envelopes\", aka functional bounding regions.
 --
 -----------------------------------------------------------------------------
@@ -38,20 +39,27 @@ module Diagrams.Core.Envelope
        , radius
        , extent
        , size
-       , envelopeVMay, envelopeV, envelopePMay, envelopeP, envelopeSMay, envelopeS
+       , envelopeVMay
+       , envelopeV
+       , envelopePMay
+       , envelopeP
+       , envelopeSMay
+       , envelopeS
 
          -- * Miscellaneous
        , OrderedField
        ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative     ((<$>))
-import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped, op, over,
-                                          _Wrapping', (&), (.~))
+#endif
+import           Control.Lens            (Rewrapped, Wrapped (..), iso, mapped,
+                                          op, over, (&), (.~), _Wrapping')
+import           Data.Functor.Rep
 import qualified Data.Map                as M
 import           Data.Maybe              (fromMaybe)
 import           Data.Semigroup
 import qualified Data.Set                as S
-import           Data.Functor.Rep
 
 import           Diagrams.Core.Context
 import           Diagrams.Core.HasOrigin
@@ -273,4 +281,3 @@ extent v a = (fmap (( fmap (\f -> (-f (negated v), f v))) . appEnvelope)) (getEn
 -- | The smallest positive vector that bounds the envelope of an object.
 size :: (V a ~ v, N a ~ n, Enveloped a, HasBasis v) => a -> Contextual v n (v n)
 size d = undefined --fmap (tabulate $ \(E l) -> diameter (zero & l .~ 1)) d
-

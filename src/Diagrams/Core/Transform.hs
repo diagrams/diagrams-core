@@ -7,11 +7,11 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE UndecidableInstances       #-}
-
+{-# OPTIONS_GHC -fno-warn-unused-imports       #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Transform
--- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -47,6 +47,7 @@ module Diagrams.Core.Transform
        , matrixRep
        , matrixHomRep
        , determinant
+       , isReflection
        , avgScale
        , eye
 
@@ -70,7 +71,8 @@ module Diagrams.Core.Transform
 
        ) where
 
-import           Control.Lens            hiding (Action, transform)
+import           Control.Lens            (Rewrapped, Traversable, Wrapped (..),
+                                          iso, (&), (.~))
 import qualified Data.Map                as M
 import           Data.Semigroup
 import qualified Data.Set                as S
@@ -86,7 +88,6 @@ import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Points    ()
-import           Diagrams.Core.Measure
 import           Diagrams.Core.V
 
 ------------------------------------------------------------
@@ -141,9 +142,11 @@ lapp (f :-: _) = f
 --   The reason we need to keep track of transposes is because it
 --   turns out that when transforming a shape according to some linear
 --   map L, the shape's /normal vectors/ transform according to L's
---   inverse transpose.  This is exactly what we need when
---   transforming bounding functions, which are defined in terms of
---   /perpendicular/ (i.e. normal) hyperplanes.
+--   inverse transpose.  (For a more detailed explanation and proof,
+--   see <https://wiki.haskell.org/Diagrams/Dev/Transformations>.)
+--   This is exactly what we need when transforming bounding
+--   functions, which are defined in terms of /perpendicular/
+--   (i.e. normal) hyperplanes.
 --
 --   For more general, non-invertible transformations, see
 --   @Diagrams.Deform@ (in @diagrams-lib@).
@@ -248,8 +251,8 @@ det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
 listRep :: Foldable v => v n -> [n]
 listRep = toList
 
--- | Convert a `Transformation v` to a matrix representation as a list of
---   column vectors which are also lists.
+-- | Convert the linear part of a `Transformation` to a matrix
+--   representation as a list of column vectors which are also lists.
 matrixRep :: (Additive v, Traversable v, Num n) => Transformation v n -> [[n]]
 matrixRep (Transformation (f :-: _) _ _) = map (toList . f) basis
 
@@ -264,9 +267,14 @@ matrixHomRep t = mr ++ [toList tl]
     mr = matrixRep t
     tl = transl t
 
--- | The determinant of a `Transformation`.
+-- | The determinant of (the linear part of) a `Transformation`.
 determinant :: (Additive v, Traversable v, Num n) => Transformation v n -> n
 determinant = det . matrixRep
+
+-- | Determine whether a `Transformation` includes a reflection
+--   component, that is, whether it reverses orientation.
+isReflection :: (Additive v, Traversable v, Num n, Ord n) => Transformation v n -> Bool
+isReflection = (<0) . determinant
 
 -- | Compute the \"average\" amount of scaling performed by a
 --   transformation.  Satisfies the properties
@@ -303,15 +311,10 @@ Proofs for the specified properties:
 --   help shorten some of the ridiculously long constraint sets.
 class (HasBasis v, Traversable v) => HasLinearMap v
 instance (HasBasis v, Traversable v) => HasLinearMap v
--- Most (if not all) of the functions in linear that use Applicative could be 
--- defined in terms of Additive. Ideally we'd only use Additive but for now 
--- just stick both in a class.
 
 -- | An 'Additive' vector space whose representation is made up of basis elements.
 class (Additive v, Representable v, Rep v ~ E v) => HasBasis v
 instance (Additive v, Representable v, Rep v ~ E v) => HasBasis v
-
-
 
 -- | Type class for things @t@ which can be transformed.
 class Transformable t where
@@ -349,9 +352,6 @@ instance ( V t ~ v, N t ~ n, V t ~ V s, N t ~ N s, Functor v, Num n
          , Transformable t, Transformable s)
          => Transformable (s -> t) where
   transform tr f = transform tr . f . transform (inv tr)
-
-instance Transformable t => Transformable (Measured n t) where
-  transform = fmap . transform
 
 instance Transformable t => Transformable [t] where
   transform = map . transform
@@ -413,7 +413,7 @@ scaling s = fromSymmetric lin
   where lin = (s *^) <-> (^/ s)
 
 -- | Scale uniformly in every dimension by the given scalar.
-scale :: (V a ~ v, N a ~ n, Additive v, Fractional n, Eq n, Transformable a)
+scale :: (InSpace v n a, Eq n, Fractional n, Transformable a)
       => n -> a -> a
 scale 0 = error "scale by zero!  Halp!"  -- XXX what should be done here?
 scale s = transform $ scaling s

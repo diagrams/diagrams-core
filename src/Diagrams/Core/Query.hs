@@ -2,10 +2,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports       #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Query
--- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -15,9 +16,8 @@
 -----------------------------------------------------------------------------
 
 module Diagrams.Core.Query
-       ( Query (Query)
-       , runQuery
-       ) where
+  ( Query (..)
+  ) where
 
 import           Control.Applicative
 import           Control.Lens            (Rewrapped, Wrapped (..), iso)
@@ -44,7 +44,7 @@ newtype Query v n m = Query { runQuery :: Point v n -> m }
   deriving (Functor, Applicative, Semigroup, Monoid)
 
 instance Wrapped (Query v n m) where
-  type Unwrapped (Query v n m) = (Point v n -> m)
+  type Unwrapped (Query v n m) = Point v n -> m
   _Wrapped' = iso runQuery Query
 
 instance Rewrapped (Query v a m) (Query v' a' m')
@@ -57,4 +57,3 @@ instance (Additive v, Num n) => HasOrigin (Query v n m) where
 
 instance (Additive v, Num n) => Transformable (Query v n m) where
   transform t (Query f) = Query $ f . papply (inv t)
-

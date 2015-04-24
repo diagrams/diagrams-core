@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies               #-}
 module Diagrams.Core.Measure
   ( Measured (..)
   , Measure
@@ -20,20 +20,28 @@ import           Control.Applicative
 import           Control.Lens
 import qualified Control.Monad.Reader as R
 import           Data.Distributive
-import           Data.Typeable
+import           Data.Functor.Rep
 import           Data.Semigroup
+import           Data.Typeable
 
-import Diagrams.Core.V
+import           Diagrams.Core.V
 
 import           Linear.Vector
 
--- (local, global, normalized) -> output
+-- | 'Measured n a' is an object that depends on 'local', 'normalized'
+--   and 'global' scales. The 'normalized' and 'global' scales are
+--   calculated when rendering a diagram.
+--
+--   For attributes, the 'local' scale gets multiplied by the average
+--   scale of the transform.
 newtype Measured n a = Measured { unmeasure :: (n,n,n) -> a }
   deriving (Typeable, Functor, Applicative, Monad, Additive, R.MonadReader (n,n,n))
+-- (local, global, normalized) -> output
 
 type instance V (Measured n a) = V a
 type instance N (Measured n a) = N a
 
+-- | A measure is a 'Measured' number.
 type Measure n = Measured n n
 
 -- | @fromMeasured globalScale normalizedScale measure -> a@
@@ -52,7 +60,7 @@ local x = views _1 (*x)
 global :: Num n => n -> Measure n
 global x = views _2 (*x)
 
--- | Normalized units get scaled so that one normalized unit is the size of the 
+-- | Normalized units get scaled so that one normalized unit is the size of the
 --   final diagram.
 normalized :: Num n => n -> Measure n
 normalized x = views _3 (*x)
@@ -115,9 +123,13 @@ instance Monoid a => Monoid (Measured n a) where
   mempty  = pure mempty
   mappend = liftA2 mappend
 
-
 instance Distributive (Measured n) where
   distribute a = Measured $ \x -> fmap (\(Measured m) -> m x) a
+
+instance Representable (Measured n) where
+  type Rep (Measured n) = (n,n,n)
+  tabulate = Measured
+  index    = unmeasure
 
 instance Profunctor Measured where
   lmap f (Measured m) = Measured $ \(l,g,n) -> m (f l, f g, f n)

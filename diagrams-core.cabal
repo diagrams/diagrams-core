@@ -1,5 +1,5 @@
 Name:                diagrams-core
-Version:             1.2
+Version:             1.3
 Synopsis:            Core libraries for diagrams EDSL
 Description:         The core modules underlying diagrams,
                      an embedded domain-specific language
@@ -13,9 +13,9 @@ Bug-reports:         https://github.com/diagrams/diagrams-core/issues
 Category:            Graphics
 Build-type:          Simple
 Cabal-version:       >=1.10
-Extra-source-files:  CHANGES.markdown, README.markdown, diagrams/*.svg
+Extra-source-files:  CHANGELOG.md, README.markdown, diagrams/*.svg
 extra-doc-files:     diagrams/*.svg
-Tested-with:         GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.1
+Tested-with:         GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.1
 Source-repository head
   type:     git
   location: git://github.com/diagrams/diagrams-core.git
@@ -37,14 +37,14 @@ Library
                        Diagrams.Core.Types,
                        Diagrams.Core.V
 
-  Build-depends:       base >= 4.2 && < 4.8,
+  Build-depends:       base >= 4.2 && < 4.9,
                        containers >= 0.4.2 && < 0.6,
                        unordered-containers >= 0.2 && < 0.2.6,
-                       semigroups >= 0.8.4 && < 0.16,
-                       monoid-extras >= 0.3 && < 0.4,
+                       semigroups >= 0.8.4 && < 0.17,
+                       monoid-extras >= 0.3 && < 0.5,
                        dual-tree >= 0.2 && < 0.3,
-                       lens >= 4.0 && < 4.6,
-                       linear >= 1.11.3 && < 1.12,
+                       lens >= 4.0 && < 4.10,
+                       linear >= 1.11.3 && < 1.19,
                        adjunctions >= 4.0 && < 5.0,
                        distributive >=0.2.2 && < 1.0,
                        mtl

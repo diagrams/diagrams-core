@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core
--- Copyright   :  (c) 2011 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -22,7 +22,7 @@
 -- The diagrams library relies heavily on custom types and classes. Many
 -- of the relevant definitions are in the "Diagrams.Core.Types" module.
 -- Indeed the definition of the diagram type @QDiagram@ is contained in:
--- 'Diagrams.Core.Types.QDiagram'. 
+-- 'Diagrams.Core.Types.QDiagram'.
 --
 -- The best place to start when learning
 -- about diagrams\' types is the user manual:
@@ -32,61 +32,61 @@
 --
 -- * "Diagrams.Core.Types"
 --
---     * @Annotation@, 
---     * @UpAnnots b v m@, @DownAnnots v@,
---     * @QDiaLeaf b v m@, @Measure v@,
---     * @Subdiagram b v m@,  @SubMap b v m@,
---     * @Prim b v@, @Backend b v@, 
---     * @DNode b v a@, @DTree b v a@,
---     * @RNode b v a@, @RTree b v a@,
---     * @NullBackend@, @Renderable t b@,
---     * @D v@.
+--     * @'Annotation'@,
+--     * @'UpAnnots' b v n m@, @'DownAnnots' v n@,
+--     * @'QDiaLeaf' b v n m@, @'Measure' n@,
+--     * @'Subdiagram' b v n m@,  @'SubMap' b v n m@,
+--     * @'Prim' b v n@, @'Backend' b v n@,
+--     * @'DNode' b v n a@, @'DTree' b v n a@,
+--     * @'RNode' b v n a@, @'RTree' b v n a@,
+--     * @'NullBackend'@, @'Renderable' t b@,
+--     * @'D' v n@.
 --
 -- * "Diagrams.Core.Envelope"
 --
---     * @Envelope v@, @Enveloped v@,
---     * @OrderedField s@.
+--     * @'Envelope' v n@, @'Enveloped' a@,
+--     * @'OrderedField' s@.
 --
 -- * "Diagrams.Core.Juxtapose"
 --
---     * @Juxtaposable a@.
+--     * @'Juxtaposable' a@.
 --
 -- * "Diagrams.Core.Names"
 --
---     * @AName@, @Name@, @IsName a@,
---     * @Qualifiable q@.
+--     * @'AName'@, @'Name'@, @'IsName' a@,
+--     * @'Qualifiable' q@.
 --
 -- * "Diagrams.Core.HasOrigin"
 --
---     * @HasOrigin t@.
---
--- * "Diagrams.Core.Points"
---
---     * @Point v@.
+--     * @'HasOrigin' t@.
 --
 -- * "Diagrams.Core.Query"
 --
---     * @Query v m@.
+--     * @'Query' v n m@.
 --
 -- *  "Diagrams.Core.Style"
 --
---     * @AttributeClass a@, @Attribute v@,
---     * @Style v@, @HasStyle@.
+--     * @'AttributeClass' a@, @'Attribute' v n@,
+--     * @'Style' v n@, @'HasStyle'@.
 --
 -- * "Diagrams.Core.Trace"
 --
---     * @SortedList a@,
---     * @Trace v@, @Traced a@.
+--     * @'SortedList' a@,
+--     * @'Trace' v n@, @'Traced' a@.
 --
 -- * "Diagrams.Core.Transform"
 --
---     * @u :-: v@, @HasLinearMap@,
---     * @Transformation v@, @Transformable t@,
---     * @TransInv t@.
+--     * @u ':-:' v@, @'HasLinearMap'@, @'HasBasis'@
+--     * @'Transformation' v n@, @'Transformable' t@,
+--     * @'TransInv' t@.
 --
 -- * "Diagrams.Core.V"
 --
---     * @V a@.
+--     * @'V' a@,
+--     * @'N' a@,
+--     * @'Vn' a@,
+--     * @'InSpace' v n a@,
+--     * @'SameSpace' a b@.
 -----------------------------------------------------------------------------
 
 module Diagrams.Core
@@ -105,6 +105,7 @@ module Diagrams.Core
        , basis
        , dimension
        , determinant
+       , isReflection
 
          -- ** Invertible linear transformations
        , (:-:), (<->), linv, lapp
@@ -147,10 +148,11 @@ module Diagrams.Core
          -- * Attributes and styles
 
        , AttributeClass
-       , Attribute, mkAttr, mkTAttr, unwrapAttr
+       , Attribute (..)
 
        , Style, HasStyle(..)
-       , getAttr, combineAttr
+       , getAttr
+       , atAttr, atMAttr, atTAttr
        , applyAttr, applyMAttr, applyTAttr
 
          -- * Envelopes
@@ -196,6 +198,7 @@ module Diagrams.Core
 
        , href
        , opacityGroup
+       , groupOpacity
 
        , setEnvelope, setTrace
 
@@ -245,6 +248,7 @@ import           Diagrams.Core.Compile
 import           Diagrams.Core.Envelope
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Juxtapose
+import           Diagrams.Core.Measure
 import           Diagrams.Core.Names
 import           Diagrams.Core.Points
 import           Diagrams.Core.Query
@@ -252,7 +256,6 @@ import           Diagrams.Core.Style
 import           Diagrams.Core.Trace
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
-import           Diagrams.Core.Measure
 import           Diagrams.Core.V
 
 import           Data.Monoid.WithSemigroup (Monoid')

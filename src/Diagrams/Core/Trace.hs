@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -9,7 +10,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Trace
--- Copyright   :  (c) 2012 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2012-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -48,7 +49,9 @@ module Diagrams.Core.Trace
 
        ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative
+#endif
 import           Control.Lens
 import           Data.List               (sort)
 import qualified Data.Map                as M
@@ -162,7 +165,7 @@ deriving instance (Ord n) => Monoid (Trace v n)
 type instance V (Trace v n) = v
 type instance N (Trace v n) = n
 
-instance (Num n, Additive v) => HasOrigin (Trace v n) where
+instance (Additive v, Num n) => HasOrigin (Trace v n) where
   moveOriginTo (P u) = _Wrapping' Trace %~ \f p -> f (p .+^ u)
 
 instance Show (Trace v n) where
@@ -172,15 +175,15 @@ instance Show (Trace v n) where
 --  Transforming traces  -----------------------------------
 ------------------------------------------------------------
 
-instance (Num n, Additive v, Functor v) => Transformable (Trace v n) where
-  transform t = _Wrapped' %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
+instance (Additive v, Num n) => Transformable (Trace v n) where
+  transform t = _Wrapped %~ \f p v -> f (papply (inv t) p) (apply (inv t) v)
 
 ------------------------------------------------------------
 --  Traced class  ------------------------------------------
 ------------------------------------------------------------
 
 -- | @Traced@ abstracts over things which have a trace.
-class (Ord (N a), Additive (V a)) => Traced a where
+class (Additive (V a), Ord (N a)) => Traced a where
 
   -- | Compute the trace of an object.
   getTrace :: a -> Contextual (V a) (N a) (Trace (V a) (N a))
@@ -200,7 +203,7 @@ instance (Ord n, Additive v) => Traced (Point v n) where
 instance Traced t => Traced (TransInv t) where
   getTrace = getTrace . op TransInv
 
-instance (Traced a, Traced b, V a ~ V b, N a ~ N b) => Traced (a,b) where
+instance (Traced a, Traced b, SameSpace a b) => Traced (a,b) where
   getTrace (x,y) = getTrace x <> getTrace y
 
 instance (Traced b) => Traced [b] where
@@ -227,9 +230,9 @@ instance (Traced b) => Traced (S.Set b) where
 --   intersection, which is often more intuitive behavior.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_traceVEx.svg#diagram=traceVEx&width=600>>
-traceV :: (n ~ N a, Num n, Traced a) 
+traceV :: (n ~ N a, Num n, Traced a)
        => Point (V a) n -> V a n -> a -> Contextual (V a) (N a) (Maybe (V a n))
-traceV p v a = 
+traceV p v a =
   getTrace a >>= \tr ->
   return $ case getSortedList $ op Trace tr p v of
     (s:_) -> Just (s *^ v)
@@ -248,7 +251,7 @@ traceV p v a =
 --   intersection, which is often more intuitive behavior.
 --
 --   <<diagrams/src_Diagrams_Core_Trace_tracePEx.svg#diagram=tracePEx&width=600>>
-traceP :: (n ~ N a, Traced a, Num n) 
+traceP :: (n ~ N a, Traced a, Num n)
        => Point (V a) n -> V a n -> a -> Contextual (V a) n (Maybe (Point (V a) n))
 traceP p v a = (fmap . fmap) (p .+^) (traceV p v a)
 
@@ -262,7 +265,7 @@ traceP p v a = (fmap . fmap) (p .+^) (traceV p v a)
 --   example shown below.)
 --
 --   <<diagrams/src_Diagrams_Core_Trace_maxTraceVEx.svg#diagram=maxTraceVEx&width=600>>
-maxTraceV :: (n ~ N a, Num n, Traced a) 
+maxTraceV :: (n ~ N a, Num n, Traced a)
           => Point (V a) n -> V a n -> a -> Contextual (V a) n (Maybe (V a n))
 maxTraceV p = traceV p . negated
 
@@ -275,7 +278,7 @@ maxTraceV p = traceV p . negated
 --   vector, if all the boundary points are.)
 --
 --   <<diagrams/src_Diagrams_Core_Trace_maxTracePEx.svg#diagram=maxTracePEx&width=600>>
-maxTraceP :: (n ~ N a, Num n, Traced a) 
+maxTraceP :: (n ~ N a, Num n, Traced a)
           => Point (V a) n -> V a n -> a -> Contextual (V a) n (Maybe (Point (V a) n))
 maxTraceP p v a = (fmap . fmap) (p .+^) (maxTraceV p v a)
 
@@ -287,9 +290,9 @@ maxTraceP p v a = (fmap . fmap) (p .+^) (maxTraceV p v a)
 --   scalar multiple of the direction vector.  Note, this property
 --   will be destroyed if the resulting 'Trace' is translated at all.
 getRayTrace :: (n ~ N a, Traced a, Num n) => a -> Contextual (V a) n (Trace (V a) n)
-getRayTrace a = 
+getRayTrace a =
   getTrace a >>= \tr ->
-  return $ Trace $ \p v -> 
+  return $ Trace $ \p v ->
   unsafeOnSortedList (dropWhile (<0)) $ appTrace tr p v
 
 
@@ -437,4 +440,3 @@ maxRayTraceP p v a = (fmap . fmap) (p .+^) (maxRayTraceV p v a)
 -- >
 -- > mkTraceDiasABC :: TraceDiaOpts -> Diagram B
 -- > mkTraceDiasABC tdo = mkTraceDias (map (\p -> tdo { basePt = p }) [pointA, pointB, pointC])
-

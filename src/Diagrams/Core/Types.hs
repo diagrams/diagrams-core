@@ -1,17 +1,16 @@
-{-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE EmptyDataDecls             #-}
-{-# LANGUAGE ExistentialQuantification  #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans       #-}
 -- We have some orphan Action instances here, but since Action is a multi-param
@@ -20,7 +19,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Types
--- Copyright   :  (c) 2011-2013 diagrams-core team (see LICENSE)
+-- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
 -- License     :  BSD-style (see LICENSE)
 -- Maintainer  :  diagrams-discuss@googlegroups.com
 --
@@ -93,12 +92,18 @@ module Diagrams.Core.Types
          -- $prim
 
        , Prim(..)
+       , _Prim
 
          -- * Backends
 
        , Backend(..)
-       , RNode(..)
+
        , RTree(..), emptyRTree
+       , RNode(..)
+       , _RStyle
+       , _RAnnot
+       , _RPrim
+       , _REmpty
 
          -- ** Null backend
 
@@ -114,17 +119,20 @@ module Diagrams.Core.Types
        ) where
 
 import           Control.Arrow             (first, second, (***))
-import           Control.Lens              (Lens', Rewrapped, Wrapped (..), iso, lens, over, view,
-                                            review, _Wrapped, _Wrapping, op)
+import           Control.Lens              (Lens', Prism', Rewrapped,
+                                            Wrapped (..), iso, lens, over,
+                                            prism', view, (^.), _Wrapped,
+                                            _Wrapping, op, review)
 import           Control.Monad             (mplus)
-import           Data.Typeable
-import           Data.Functor              ((<$>))
+
 import           Data.List                 (isSuffixOf)
 import qualified Data.List.NonEmpty        as NEL
 import qualified Data.Map                  as M
 import           Data.Semigroup
 import qualified Data.Traversable          as T
 import           Data.Tree
+import           Data.Typeable
+import           Data.Functor              ((<$>))
 
 import           Data.Monoid.Action
 import           Data.Monoid.Deletable
@@ -270,7 +278,7 @@ setEnvelope e
   = applySpre (inj . toDeletable $ e)
   . applySpre (inj (deleteL :: Deletable (Envelope v n)))
   . applySpost (inj (deleteR :: Deletable (Envelope v n)))
- 
+
 -- | Get the trace of a diagram.
 trace :: (Metric v, OrderedField n, Semigroup m) =>
          Lens' (QDiagram b v n m) (Contextual v n (Trace v n))
@@ -283,6 +291,7 @@ setTrace t
   = applySpre (inj . toDeletable $ t)
   . applySpre (inj (deleteL :: Deletable (Trace v n)))
   . applySpost (inj (deleteR :: Deletable (Trace v n)))
+
 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v n m -> Contextual v n (Query v n m)
@@ -315,7 +324,7 @@ clearValue = fmap (const (Any False))
 --   trace, subdiagram map, and query function.
 mkQD :: Prim b v n -> Envelope v n -> Trace v n -> Query v n m
      -> QDiagram b v n m
-mkQD p e t q = QD . review _Wrapped' 
+mkQD p e t q = QD . review _Wrapped'
                $ const (RTree (Node (RPrim p) [])
                , toDeletable e *: toDeletable t *: q *: ())
 
@@ -421,7 +430,7 @@ instance Functor (QDiagram b v n) where
 --
 instance (Metric v, OrderedField n, Semigroup m)
       => HasStyle (QDiagram b v n m) where
-  applyStyle s = (over (_Wrapping QD) . fmap . first 
+  applyStyle s = (over (_Wrapping QD) . fmap . first
                . over (_Wrapping RTree)) (\t -> (Node (RStyle s) [t]))
 
 ---- Juxtaposable
@@ -446,7 +455,7 @@ instance (Metric v, OrderedField n, Monoid' m)
   -- Diagrams.Core.Envelope.  However, it looks like we could split
   -- the Context type and Contextual monad out into a new module;
   -- Context itself does not mention Envelope, only Summary.
-  
+
 ---- Traced
 
 instance (Metric v, OrderedField n, Semigroup m)
@@ -496,8 +505,8 @@ instance (Metric v, T.Traversable v, OrderedField n, Monoid' m)
 -- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
 -- instance (Metric v, OrderedField n, Semigroup m)
-      -- => Qualifiable (QDiagram b v n m) where
-  -- (|>) = over _Wrapped' . D.applyD . inj . toName
+--       => Qualifiable (QDiagram b v n m) where
+--   (.>>) = over _Wrapped' . D.applyD . inj . toName
 
 
 ------------------------------------------------------------
@@ -545,7 +554,7 @@ instance Functor (Subdiagram b v n) where
 instance (Metric v, OrderedField n)
       => HasOrigin (Subdiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
-  
+
 instance (Metric v, Floating n)
     => Transformable (Subdiagram b v n m) where
   transform t' (Subdiagram d t c) = Subdiagram d (t' <> t) c
@@ -563,11 +572,8 @@ instance (Metric v, Floating n)
 --   attributes.  @getSub@ simply applies the transformation and
 --   attributes to the diagram to get the corresponding \"top-level\"
 --   diagram.
--- getSub :: ( Metric v
-          -- , Floating n, Ord n
-          -- , Semigroup m
-          -- )
-       -- => Subdiagram b v n m -> QDiagram b v n m
+-- getSub :: (Metric v, OrderedField n, Semigroup m)
+--        => Subdiagram b v n m -> QDiagram b v n m
 -- getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d
 
 -- | Extract the \"raw\" content of a subdiagram, by throwing away the
@@ -625,7 +631,7 @@ instance (Metric v, Floating n)
 --   ns@ is the same 'SubMap' except with every name qualified by
 --   @a@.
 instance Qualifiable (SubMap b v n m) where
-  a |> (SubMap m) = SubMap $ M.mapKeys (a |>) m
+  a .>> (SubMap m) = SubMap $ M.mapKeys (a .>>) m
 
 -- | Construct a 'SubMap' from a list of associations between names
 --   and subdiagrams.
@@ -634,7 +640,7 @@ fromNames = SubMap . M.fromListWith (++) . map (toName *** (:[]))
 
 -- | A name acts on a name map by qualifying every name in it.
 instance Action Name (SubMap b v n m) where
-  act = (|>)
+  act = (.>>)
 
 instance Action Name a => Action Name (Deletable a) where
   act n (Deletable l a r) = Deletable l (act n a) r
@@ -673,6 +679,9 @@ lookupSub a (SubMap m)
 --   primitive which backend @b@ knows how to render in vector space @v@.
 data Prim b v n where
   Prim :: (Transformable p, Typeable p, Renderable p b) => p -> Prim b (V p) (N p)
+
+_Prim :: (Transformable p, Typeable p, Renderable p b) => Prism' (Prim b (V p) (N p)) p
+_Prim = prism' Prim (\(Prim p) -> cast p)
 
 type instance V (Prim b v n) = v
 type instance N (Prim b v n) = n
@@ -731,6 +740,22 @@ instance Semigroup (RTree b v n a) where
 -- | The empty @RTree@.
 emptyRTree :: RTree b v n a
 emptyRTree = RTree (Node REmpty [])
+
+-- | Prism onto a style of an 'RNode'.
+_RStyle :: Prism' (RNode b v n a) (Style v n)
+_RStyle = prism' RStyle $ \n -> case n of RStyle s -> Just s; _ -> Nothing
+
+-- | Prism onto an annotation of an 'RNode'.
+_RAnnot :: Prism' (RNode b v n a) a
+_RAnnot = prism' RAnnot $ \n -> case n of RAnnot a -> Just a; _ -> Nothing
+
+-- | Prism onto a 'Prim' of an 'RNode'.
+_RPrim :: Prism' (RNode b v n a) (Prim b v n)
+_RPrim = prism' RPrim $ \n -> case n of RPrim p -> Just p; _ -> Nothing
+
+-- | Prism onto an empty 'RNode'.
+_REmpty :: Prism' (RNode b v n a) ()
+_REmpty = prism' (const REmpty) $ \n -> case n of REmpty -> Just (); _ -> Nothing
 
 -- | Abstract diagrams are rendered to particular formats by
 --   /backends/.  Each backend/vector space combination must be an
@@ -844,7 +869,7 @@ class Backend b v n where
 --   @
 --
 --   There's even more ambiguity here.  Whereas 'image' always returns
---   a 'Diagram', the 'circle' function can produce any 'PathLike'
+--   a 'Diagram', the 'circle' function can produce any 'TrailLike'
 --   type, and the 'width' function can consume any 'Enveloped' type,
 --   so GHC has no idea what type to pick to go in the middle.
 --   However, the solution is the same:
