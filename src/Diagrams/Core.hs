@@ -187,7 +187,7 @@ module Diagrams.Core
 
        , Query(..)
 
-         -- * Primtives
+         -- * Primitives
 
        , Prim(..)
 
