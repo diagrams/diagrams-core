@@ -67,7 +67,8 @@ module Diagrams.Core.Types
          -- ** Combining diagrams
 
          -- | For many more ways of combining diagrams, see
-         -- "Diagrams.Combinators" from the diagrams-lib package.
+         --   "Diagrams.Combinators" and "Diagrams.TwoD.Combinators"
+         --   from the diagrams-lib package.
 
        , atop
 
