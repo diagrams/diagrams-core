@@ -25,6 +25,11 @@ import           Data.Monoid.Deletable
 import           Data.Monoid.Split
 import           Data.Semigroup
 import           Data.Set
+import           Data.IntMap
+import           Data.Tree
+import           Data.HashMap.Lazy
+import           Data.HashSet
+import           Data.Sequence
 
 import           Linear.Vector
 
@@ -41,14 +46,21 @@ type family V a :: * -> *
 
 -- Note, to use these instances one often needs a constraint of the form
 --   V a ~ V b, etc.
-type instance V (a,b)   = V a
-type instance V (a,b,c) = V a
+type instance V (a,b)     = V a
+type instance V (a,b,c  ) = V a
+type instance V (a,b,c,d) = V a
 
-type instance V (a -> b)   = V b
-type instance V [a]        = V a
-type instance V (Option a) = V a
-type instance V (Set a)    = V a
-type instance V (Map k a)  = V a
+type instance V (a -> b)      = V b
+type instance V [a]           = V a
+type instance V (Option a)    = V a
+type instance V (Set a)       = V a
+type instance V (Map k a)     = V a
+type instance V (IntMap a)    = V a
+type instance V (Seq a)       = V a
+type instance V (Tree a)      = V a
+type instance V (Maybe a)     = V a
+type instance V (HashMap k a) = V a
+type instance V (HashSet a)   = V a
 
 type instance V (Deletable m) = V m
 type instance V (Split m)     = V m
@@ -57,14 +69,21 @@ type instance V (m :+: n)     = V m
 -- | The numerical field for the object, the number type used for calculations.
 type family N a :: *
 
-type instance N (a,b)   = N a
-type instance N (a,b,c) = N a
+type instance N (a,b)     = N a
+type instance N (a,b,c)   = N a
+type instance N (a,b,c,d) = N a
 
 type instance N (a -> b)   = N b
 type instance N [a]        = N a
 type instance N (Option a) = N a
 type instance N (Set a)    = N a
 type instance N (Map k a)  = N a
+type instance N (IntMap a) = N a
+type instance N (Seq a)    = N a
+type instance N (Tree a)   = N a
+type instance N (Maybe a)  = N a
+type instance N (HashMap k a) = N a
+type instance N (HashSet a)   = N a
 
 type instance N (Deletable m) = N m
 type instance N (Split m)     = N m
