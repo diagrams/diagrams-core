@@ -90,9 +90,9 @@ foldDiaWithScales' primF aF styF g n (QD dual) = foldDUAL' lF aF mkP styF dual
     -- ignores any style before.
     mkP d w = transform t (unmeasureAttrs g n sty)
       where t        = killR d
-            (_, sty) = untangle w -- killL is BAD
+            (_, sty) = untangle w
 
--- | Simple way to fold a diagram into a monadic result.
+-- | Simple way to fold a diagram into a monoidal result.
 foldDia
   :: (HasLinearMap v, Metric v, OrderedField n, Typeable n, Monoid' m, M.Monoid r)
   => (Style v n -> Prim b v n -> r) -- ^ Fold a prim
@@ -105,11 +105,12 @@ foldDia primF annF t d = foldDiaWithScales primF annF g n d
     g = avgScale t
     n = normalizedFactor (size d)
 
--- | Fold a diagram into a monadic result. Similar to 'foldDia' but
---   gives access to the style before applying parts of a style (usually
---   'Clip') when it's going to be applied to multiple prims. This is
---   reset after each group and given as the second argument in the prim
---   rendering function.
+-- | Fold a diagram into a monoidal result. Similar to 'foldDia' but
+--   gives access to the style when it's higher up the tree. This is
+--   useful for things like clipping where you want to use the same
+--   clipping for everything below that point. This is reset after each
+--   group and given as the second argument in the prim rendering
+--   function.
 foldDia'
   :: (HasLinearMap v, Metric v, OrderedField n, Typeable n, Monoid' m, M.Monoid r)
   => (Style v n -> Prim b v n -> r)
