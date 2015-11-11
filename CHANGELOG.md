@@ -1,3 +1,9 @@
+## [v1.3.0.4](https://github.com/diagrams/diagrams-core/tree/v1.3.0.4) (2015-11-10)
+
+  - allow `semigroups-0.18`
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.3.0.3...v1.3.0.4)
+
 ## [v1.3.0.3](https://github.com/diagrams/diagrams-core/tree/v1.3.0.3) (2015-09-17)
 
   - allow `lens-4.13`
