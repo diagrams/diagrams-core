@@ -61,8 +61,7 @@ module Diagrams.Core.Types
        , mkQD, mkQD', pointDiagram
 
          -- ** Extracting information
-       , envelope, trace, subMap, names, query, sample
-       , value, resetValue, clearValue
+       , envelope, trace, subMap, names, query
 
          -- ** Combining diagrams
 
@@ -450,29 +449,6 @@ localize = over _Wrapped' ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v 
 -- | Get the query function associated with a diagram.
 query :: Monoid m => QDiagram b v n m -> Query v n m
 query = getU' . view _Wrapped'
-
--- | Sample a diagram's query function at a given point.
-sample :: Monoid m => QDiagram b v n m -> Point v n -> m
-sample = runQuery . query
-
--- | Set the query value for 'True' points in a diagram (/i.e./ points
---   \"inside\" the diagram); 'False' points will be set to 'mempty'.
-value :: Monoid m => m -> QDiagram b v n Any -> QDiagram b v n m
-value m = fmap fromAny
-  where fromAny (Any True)  = m
-        fromAny (Any False) = mempty
-
--- | Reset the query values of a diagram to @True@/@False@: any values
---   equal to 'mempty' are set to 'False'; any other values are set to
---   'True'.
-resetValue :: (Eq m, Monoid m) => QDiagram b v n m -> QDiagram b v n Any
-resetValue = fmap toAny
-  where toAny m | m == mempty = Any False
-                | otherwise   = Any True
-
--- | Set all the query values of a diagram to 'False'.
-clearValue :: QDiagram b v n m -> QDiagram b v n Any
-clearValue = fmap (const (Any False))
 
 -- | Create a diagram from a single primitive, along with an envelope,
 --   trace, subdiagram map, and query function.

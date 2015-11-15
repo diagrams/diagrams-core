@@ -194,8 +194,7 @@ module Diagrams.Core
          -- * Diagrams
 
        , QDiagram, Diagram, mkQD, pointDiagram
-       , envelope, trace, subMap, names, query, sample
-       , value, resetValue, clearValue
+       , envelope, trace, subMap, names, query
 
        , nameSub
        , withName
