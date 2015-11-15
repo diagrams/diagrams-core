@@ -88,6 +88,7 @@ import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
 import           Diagrams.Core.Points    ()
+import           Diagrams.Core.Measure
 import           Diagrams.Core.V
 
 ------------------------------------------------------------
@@ -394,6 +395,13 @@ instance HasOrigin (TransInv t) where
 instance (Num (N t), Additive (V t), Transformable t) => Transformable (TransInv t) where
   transform (Transformation a a' _) (TransInv t)
     = TransInv (transform (Transformation a a' zero) t)
+
+instance (InSpace v n t, Transformable t, HasLinearMap v, Floating n)
+    => Transformable (Measured n t) where
+  transform t = scaleLocal n . fmap (transform t')
+    where
+      t' = t <> scaling (1 / avgScale t)
+      n = avgScale t
 
 ------------------------------------------------------------
 --  Generic transformations  -------------------------------
