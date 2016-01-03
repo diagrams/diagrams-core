@@ -22,6 +22,7 @@ global:
     - HEAD_DEPS="monoid-extras dual-tree"
 
 before_install:
+  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
   - git clone http://github.com/diagrams/diagrams-travis travis
   - source travis/scripts/set_env.sh
   - ./travis/scripts/git_deps.sh
