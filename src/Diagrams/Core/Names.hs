@@ -25,7 +25,10 @@ module Diagrams.Core.Names
   , _AName
 
    -- ** Names
-  , Name(..), IsName(..), (.>)
+  , Name(..)
+  , IsName(..)
+  , (.>)
+  , eachName
 
    -- ** Qualifiable
   , Qualifiable(..)
@@ -95,13 +98,13 @@ instance IsName AName where
   toName = Name . (:[])
 
 instance Eq AName where
-  (AName a1) == (AName a2) =
+  AName a1 == AName a2 =
     case cast a2 of
       Nothing  -> False
       Just a2' -> a1 == a2'
 
 instance Ord AName where
-  (AName a1) `compare` (AName a2) =
+  AName a1 `compare` AName a2 =
     case cast a2 of
       Just a2' -> a1 `compare` a2'
       Nothing  -> typeOf a1 `compare` typeOf a2
@@ -123,9 +126,33 @@ instance Wrapped Name where
   type Unwrapped Name = [AName]
   _Wrapped' = iso (\(Name ns) -> ns) Name
 
+instance Each Name Name AName AName where
+  each = _Wrapped . traversed
+  {-# INLINE each #-}
+
+-- | Traversal over each name in a 'Name' that matches the target type.
+--
+-- @
+-- >>> toListOf eachName ('a' .> False .> 'b') :: String
+-- "ab"
+-- >>> 'a' .> True .> 'b' & eachName %~ not
+-- 'a' .> False .> 'b'
+-- @
+--
+-- Note that the type of the name is very important.
+--
+-- @
+-- >>> sumOf eachName ((1::Int) .> (2 :: Integer) .> (3 :: Int)) :: Int
+-- 4
+-- >>> sumOf eachName ((1::Int) .> (2 :: Integer) .> (3 :: Int)) :: Integer
+-- 2
+-- @
+eachName :: (Typeable a, Ord a, Show a) => Traversal' Name a
+eachName = each . _AName
+
 instance Show Name where
   showsPrec d (Name xs) = case xs of
-    []     -> showParen (d > 10) $ showString "Name []"
+    []     -> showParen (d > 10) $ showString "toName []"
     [n]    -> showParen (d > 10) $ showString "toName " . showsName 11 n
     (n:ns) -> showParen (d > 5)  $ showsName 6 n . go ns
       where

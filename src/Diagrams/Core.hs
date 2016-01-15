@@ -137,6 +137,7 @@ module Diagrams.Core
        , AName
        , Name, IsName(..)
        , Qualifiable(..), (.>)
+       , eachName
 
          -- ** Subdiagram maps
 
