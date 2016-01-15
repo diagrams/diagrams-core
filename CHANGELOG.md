@@ -1,3 +1,9 @@
+## [v1.3.0.5](https://github.com/diagrams/diagrams-core/tree/v1.3.0.5) (2016-01-14)
+
+  - allow `unordered-containers-0.2.6`
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.3.0.4...v1.3.0.5)
+
 ## [v1.3.0.4](https://github.com/diagrams/diagrams-core/tree/v1.3.0.4) (2015-11-10)
 
   - allow `semigroups-0.18`
