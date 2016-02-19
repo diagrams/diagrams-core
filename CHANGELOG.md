@@ -1,3 +1,9 @@
+## [v1.3.0.6](https://github.com/diagrams/diagrams-core/tree/v1.3.0.6) (2016-02-19)
+
+  - allow `unordered-containers-0.2.*`
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.3.0.5...v1.3.0.6)
+
 ## [v1.3.0.5](https://github.com/diagrams/diagrams-core/tree/v1.3.0.5) (2016-01-14)
 
   - allow `unordered-containers-0.2.6`
