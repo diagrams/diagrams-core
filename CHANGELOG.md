@@ -1,3 +1,9 @@
+## [v1.3.0.7](https://github.com/diagrams/diagrams-core/tree/v1.3.0.7) (2016-05-01)
+
+- allow `lens-4.14`
+
+[Full Changelog](https://github.com/diagrams/diagrams-core/compare/v1.3.0.6...v1.3.0.7)
+
 ## [v1.3.0.6](https://github.com/diagrams/diagrams-core/tree/v1.3.0.6) (2016-02-19)
 
   - allow `unordered-containers-0.2.*`
