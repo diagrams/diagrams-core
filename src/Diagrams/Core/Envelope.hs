@@ -257,7 +257,7 @@ envelopeSMay v = fmap ((* norm v) . ($ v)) . appEnvelope . getEnvelope
 --   Note that the 'envelopeV' / 'envelopeP' functions above should be
 --   preferred, as this requires a call to norm. However, it is more
 --   efficient than calling norm on the results of those functions.
-envelopeS :: (V a ~ v, N a ~ n, Enveloped a, Num n) => v n -> a -> n
+envelopeS :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> n
 envelopeS v = fromMaybe 0 . envelopeSMay v
 
 -- | Compute the diameter of a enveloped object along a particular

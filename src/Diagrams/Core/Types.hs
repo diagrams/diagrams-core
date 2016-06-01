@@ -627,7 +627,7 @@ mkSubdiagram d = Subdiagram d empty
 --   @mkSubdiagram . pointDiagram@, which would result in a subdiagram
 --   with local origin at the parent origin, rather than at the given
 --   point.
-subPoint :: (Metric v, OrderedField n, Semigroup m)
+subPoint :: (Metric v, OrderedField n)
          => Point v n -> Subdiagram b v n m
 subPoint p = Subdiagram
                (pointDiagram origin)
@@ -648,8 +648,7 @@ instance (Metric v, OrderedField n)
       => HasOrigin (Subdiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
-instance (Metric v, Floating n)
-    => Transformable (Subdiagram b v n m) where
+instance Transformable (Subdiagram b v n m) where
   transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
 
 -- | Get the location of a subdiagram; that is, the location of its
@@ -716,8 +715,7 @@ instance (OrderedField n, Metric v)
       => HasOrigin (SubMap b v n m) where
   moveOriginTo = over _Wrapped' . moveOriginTo
 
-instance (Metric v, Floating n)
-  => Transformable (SubMap b v n m) where
+instance Transformable (SubMap b v n m) where
   transform = over _Wrapped' . transform
 
 -- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a |>
@@ -777,7 +775,7 @@ lookupSub a (SubMap m)
 data Prim b v n where
   Prim :: (Transformable p, Typeable p, Renderable p b) => p -> Prim b (V p) (N p)
 
-_Prim :: (Transformable p, Typeable p, Renderable p b) => Prism' (Prim b (V p) (N p)) p
+_Prim :: (Typeable p, Renderable p b) => Prism' (Prim b (V p) (N p)) p
 _Prim = prism' Prim (\(Prim p) -> cast p)
 
 type instance V (Prim b v n) = v

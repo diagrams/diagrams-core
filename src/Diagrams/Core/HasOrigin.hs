@@ -23,11 +23,11 @@ module Diagrams.Core.HasOrigin
        ( HasOrigin(..), moveOriginBy, moveTo, place
        ) where
 
-import qualified Data.Map             as M
-import qualified Data.Set             as S
+import qualified Data.Map              as M
+import qualified Data.Set              as S
 
 import           Diagrams.Core.Measure
-import           Diagrams.Core.Points ()
+import           Diagrams.Core.Points  ()
 import           Diagrams.Core.V
 
 import           Linear.Affine
@@ -59,7 +59,7 @@ class HasOrigin t where
   moveOriginTo :: Point (V t) (N t) -> t -> t
 
 -- | Move the local origin by a relative vector.
-moveOriginBy :: (V t ~ v, N t ~ n, Num n, HasOrigin t) => v n -> t -> t
+moveOriginBy :: (V t ~ v, N t ~ n, HasOrigin t) => v n -> t -> t
 moveOriginBy = moveOriginTo . P
 
 -- | Translate the object by the translation that sends the origin to
