@@ -9,6 +9,8 @@ env:
     - GHCVER=7.10.2 CABALVER=1.22
     - GHCVER=8.0.1 CABALVER=1.24
     - GHCVER=head CABALVER=head
+  global:
+    - HEAD_DEPS="monoid-extras dual-tree"
 
 matrix:
   allow_failures:
