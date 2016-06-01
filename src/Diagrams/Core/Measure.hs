@@ -49,7 +49,7 @@ fromMeasured :: Num n => n -> n -> Measured n a -> a
 fromMeasured g n (Measured m) = m (1,g,n)
 
 -- | Output units don't change.
-output :: Num n => n -> Measure n
+output :: n -> Measure n
 output = pure
 
 -- | Local units are scaled by the average scale of a transform.
