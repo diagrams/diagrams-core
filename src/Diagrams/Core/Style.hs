@@ -139,7 +139,7 @@ instance (Additive v, Traversable v, Floating n) => Transformable (Attribute v n
 
 -- | Shows the kind of attribute and the type contained in the
 --   attribute.
-instance Typeable n => Show (Attribute v n) where
+instance Show (Attribute v n) where
   showsPrec d attr = showParen (d > 10) $ case attr of
     Attribute a  -> showString "Attribute "  . showsPrec 11 (typeOf a)
     MAttribute a -> showString "MAttribute " . showsPrec 11 (mType a)
@@ -178,7 +178,7 @@ _TAttribute = prism' TAttribute $ \t -> case t of TAttribute a -> cast a; _ -> N
 
 -- | Turn an 'MAttribute' into an 'Attribute' using the given 'global'
 --   and 'normalized' scale.
-unmeasureAttribute :: (Num n, Typeable n)
+unmeasureAttribute :: (Num n)
                    => n -> n -> Attribute v n -> Attribute v n
 unmeasureAttribute g n (MAttribute m) = Attribute (fromMeasured g n m)
 unmeasureAttribute _ _ a              = a
@@ -257,7 +257,7 @@ instance (Additive v, Traversable v, Floating n) => Transformable (Style v n) wh
 instance A.Action (Style v n) m
 
 -- | Show the attributes in the style.
-instance Typeable n => Show (Style v n) where
+instance Show (Style v n) where
   showsPrec d sty = showParen (d > 10) $
     showString "Style " . showsPrec d (sty ^.. each)
 
@@ -289,7 +289,7 @@ getAttr (Style s) = HM.lookup ty s >>= unwrapAttribute
 
 -- | Replace all 'MAttribute's with 'Attribute's using the 'global' and
 --   'normalized' scales.
-unmeasureAttrs :: (Num n, Typeable n) => n -> n -> Style v n -> Style v n
+unmeasureAttrs :: (Num n) => n -> n -> Style v n -> Style v n
 unmeasureAttrs g n = over each (unmeasureAttribute g n)
 
 -- style lenses --------------------------------------------------------
@@ -361,7 +361,7 @@ applyAttr = applyStyle . attributeToStyle . Attribute
 --   diagram or a style). If the object already has an attribute of
 --   the same type, the new attribute is combined on the left with the
 --   existing attribute, according to their semigroup structure.
-applyMAttr :: (AttributeClass a, N d ~ n, HasStyle d, Typeable n) => Measured n a -> d -> d
+applyMAttr :: (AttributeClass a, N d ~ n, HasStyle d) => Measured n a -> d -> d
 applyMAttr = applyStyle . attributeToStyle . MAttribute
 
 -- | Apply a transformable attribute to an instance of 'HasStyle'

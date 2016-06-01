@@ -87,8 +87,8 @@ import           Data.Foldable           (Foldable, toList)
 import           Data.Functor.Rep
 
 import           Diagrams.Core.HasOrigin
-import           Diagrams.Core.Points    ()
 import           Diagrams.Core.Measure
+import           Diagrams.Core.Points    ()
 import           Diagrams.Core.V
 
 ------------------------------------------------------------
@@ -220,8 +220,8 @@ fromSymmetric t = fromLinear t t
 
 -- | Get the dimension of an object whose vector space is an instance of
 --   @HasLinearMap@, e.g. transformations, paths, diagrams, etc.
-dimension :: forall a v. (V a ~ v, Additive v, Traversable v) => a -> Int
-dimension _ = length (basis :: [v Int])
+dimension :: forall a. (Additive (V a), Traversable (V a)) => a -> Int
+dimension _ = length (basis :: [V a Int])
 
 -- | Get the matrix equivalent of the linear transform,
 --   (as a list of columns) and the translation vector.  This
@@ -412,7 +412,7 @@ translation :: v n -> Transformation v n
 translation = Transformation mempty mempty
 
 -- | Translate by a vector.
-translate :: (Num (N t), Transformable t) => Vn t -> t -> t
+translate :: (Transformable t) => Vn t -> t -> t
 translate = transform . translation
 
 -- | Create a uniform scaling transformation.

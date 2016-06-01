@@ -34,7 +34,6 @@ module Diagrams.Core.Compile
   )
   where
 
-import           Data.Typeable
 import qualified Data.List.NonEmpty        as NEL
 import           Data.Maybe                (fromMaybe)
 import           Data.Monoid.Coproduct
@@ -43,13 +42,14 @@ import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
 import           Data.Tree
 import           Data.Tree.DUAL
+import           Data.Typeable
 
 import           Diagrams.Core.Envelope    (OrderedField, diameter)
+import           Diagrams.Core.Style
 import           Diagrams.Core.Transform
 import           Diagrams.Core.Types
-import           Diagrams.Core.Style
 
-import           Linear.Metric hiding (qd)
+import           Linear.Metric             hiding (qd)
 
 -- Typeable1 is a depreciated synonym in ghc > 707
 #if __GLASGOW_HASKELL__ >= 707
@@ -117,7 +117,7 @@ fromDTree :: forall b v n. (Floating n, HasLinearMap v)
           => DTree b v n Annotation -> RTree b v n Annotation
 fromDTree = fromDTree' mempty
   where
-    fromDTree' :: HasLinearMap v => Transformation v n -> DTree b v n Annotation -> RTree b v n Annotation
+    fromDTree' :: Transformation v n -> DTree b v n Annotation -> RTree b v n Annotation
     -- We put the accumulated transformation (accTr) and the prim
     -- into an RPrim node.
     fromDTree' accTr (Node (DPrim p) _)
@@ -151,7 +151,7 @@ fromDTree = fromDTree' mempty
 --   transformation used to convert the diagram from local to output
 --   units.
 toRTree
-  :: (HasLinearMap v, Metric v, Typeable1 v, Typeable n,
+  :: (HasLinearMap v, Metric v, Typeable n,
       OrderedField n, Monoid m, Semigroup m)
   => Transformation v n -> QDiagram b v n m -> RTree b v n Annotation
 toRTree globalToOutput d
@@ -183,7 +183,7 @@ onRStyle _ n          = n
 --   transformation can be used, for example, to convert output/screen
 --   coordinates back into diagram coordinates.  See also 'adjustDia'.
 renderDiaT
-  :: (Backend b v n , HasLinearMap v, Metric v, Typeable1 v,
+  :: (Backend b v n , HasLinearMap v, Metric v,
       Typeable n, OrderedField n, Monoid' m)
   => b -> Options b v n -> QDiagram b v n m -> (Transformation v n, Result b v n)
 renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
@@ -191,7 +191,7 @@ renderDiaT b opts d = (g2o, renderRTree b opts' . toRTree g2o $ d')
 
 -- | Render a diagram.
 renderDia
-  :: (Backend b v n , HasLinearMap v, Metric v, Typeable1 v,
+  :: (Backend b v n , HasLinearMap v, Metric v,
       Typeable n, OrderedField n, Monoid' m)
   => b -> Options b v n -> QDiagram b v n m -> Result b v n
 renderDia b opts d = snd (renderDiaT b opts d)
