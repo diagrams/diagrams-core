@@ -1,3 +1,8 @@
+## [v1.3.0.8](https://github.com/diagrams/diagrams-core/tree/v1.3.0.8) (2016-06-05)
+
+- allow `base-4.9`
+- build warning-free on GHC 8.0.1
+
 ## [v1.3.0.7](https://github.com/diagrams/diagrams-core/tree/v1.3.0.7) (2016-05-01)
 
 - allow `lens-4.14`
