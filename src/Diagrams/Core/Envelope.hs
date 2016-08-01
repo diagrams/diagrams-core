@@ -139,18 +139,8 @@ deriving instance Ord n => Semigroup (Envelope v n)
 --   'Monoid' instance.
 deriving instance Ord n => Monoid (Envelope v n)
 
-
---   XXX add some diagrams here to illustrate!  Note that Haddock supports
---   inline images, using a \<\<url\>\> syntax.
-
 type instance V (Envelope v n) = v
 type instance N (Envelope v n) = n
-
--- | The local origin of an envelope is the point with respect to
---   which bounding queries are made, /i.e./ the point from which the
---   input vectors are taken to originate.
-instance (Metric v, Fractional n) => HasOrigin (Envelope v n) where
-  moveOriginTo (P u) = onEnvelope $ \f v -> f v - ((u ^/ (v `dot` v)) `dot` v)
 
 instance Show (Envelope v n) where
   show _ = "<envelope>"
@@ -159,14 +149,97 @@ instance Show (Envelope v n) where
 --  Transforming envelopes  --------------------------------
 ------------------------------------------------------------
 
+-- | The local origin of an envelope is the point with respect to
+--   which bounding queries are made, /i.e./ the point from which the
+--   input vectors are taken to originate.
+instance (Metric v, Fractional n) => HasOrigin (Envelope v n) where
+  moveOriginTo (P u) = onEnvelope $ \oldEnv v -> oldEnv v - ((u ^/ (v `dot` v)) `dot` v)
+  -- For a detailed explanation of this code, see note
+  -- [Transforming Envelopes] below.
+
 instance (Metric v, Floating n) => Transformable (Envelope v n) where
   transform t = moveOriginTo (P . negated . transl $ t) . onEnvelope g
     where
-      -- XXX add lots of comments explaining this!
+
+      -- For a detailed explanation of this code, see note
+      -- [Transforming Envelopes] below.
       g f v = f v' / (v' `dot` vi)
         where
           v' = signorm $ lapp (transp t) v
           vi = apply (inv t) v
+
+{-
+
+Note [Transforming Envelopes]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We are given an envelope for some object, and want to apply an affine
+transformation, such that the new envelope will be the envelope for
+the transformed object.  The HasOrigin instance handles the
+translational component; the rest of the code in the Transformable
+instance handles the linear component.
+
+See <<diagrams/EnvHasOrigin.png>>.
+
+To implement moveOriginTo, we need to move the "base point" from which
+envelope queries are made.  We are given the old envelope @oldEnv@ (a
+function from vectors to scalars), a vector @u@ from the old origin to
+the new origin, and a query vector @v@ which we imagine to emanate
+from the new origin.  If we query the old envelope with v, it will
+find the correct perpendicular hyperplane, but the reported distance
+may be wrong (it will only be correct if the origin was moved in a
+direction perpendicular to v).  The part that needs to be subtracted
+is just the projection of u onto v, which is given by (u.v)/(v.v) *^
+v.  In fact envelopes return not a distance or vector, but a scalar
+which is taken to be a multiple of the query vector, so the scalar we
+need to subtract is just (u.v)/(v.v).
+
+We now consider how to apply a linear transformation to an envelope.
+Recall that an envelope is a function that takes a vector and returns
+a scaling factor s such that scaling the vector by s will produce a
+vector to the minimum separating hyperplane.  (So if given a unit
+vector as input, the output will be simply the distance to the minimum
+separating hyperplane.)
+
+We are given a linear transformation t and must produce a new envelope
+function.  Given an input vector v, the "obvious" thing to do is to
+transform v back into the original coordinate system using the inverse
+of t, apply the original envelope, and then adjust the resulting
+scalar according to how much the transformation scales v.
+
+However, this does not work, since linear transformations do not
+preserve angles.  Thus, in particular, given the query vector v and
+the perpendicular separating hyperplane H which we wish to find, t^-1
+v and t^-1 H are not necessarily perpendicular anymore.  So if we
+query the envelope with t^-1 v we will get information about the
+distance to some separating hyperplane, which when mapped forward
+through t will no longer be perpendicular to v.
+
+However, it turns out that if v and w are perpendicular, then t^-1 v
+will be perpendicular to t^T w, that is, the *transpose* of t (when
+considered as a matrix) applied to w.  The proof is simple: if vand w
+are perpendicular then v . w = v^T w = 0.  Thus,
+
+  (t^-1 v) . (t^T w) = (t^-1 v)^T (t^T w) = v^T t^-T t^T w = v^T w = 0.
+
+Now to explain this code:
+
+      g f v = f v' / (v' `dot` vi)
+        where
+          v' = signorm $ lapp (transp t) v
+          vi = apply (inv t) v
+
+In our case, our new envelope function (transformed by t) will be
+given a query vector v, and we suppose v is perpendicular to the
+separating hyperplane H.  Instead of querying the old envelope
+function f with t^-1 v, we query it with t^T v (after normalizing),
+since that vector will be perpendicular to t^-1 H.
+
+Finally, to scale the resulting value correctly, we divide by (t^T v
+. t^-1 v); I forget why.  Perhaps I will come back later and complete
+this explanation.
+
+-}
 
 ------------------------------------------------------------
 --  Enveloped class
