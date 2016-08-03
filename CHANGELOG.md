@@ -1,3 +1,33 @@
+## [v1.4](https://github.com/diagrams/diagrams-core/tree/v1.4) (XXX) ##
+
+* **New features**
+
+    - New `eachName` traversal, for traversing over parts of a `Name`
+      that match a given type
+
+    - More documentation explaining `HasOrigin` and `Transformable`
+      instances for `Envelope`
+
+* **Dependency/version changes**
+
+    - Many upper bounds bumped; see minor release changelogs below.
+
+* **New instances**
+
+    - `Transformable` instance for `Measured`
+
+    - A bunch more instances for `Query` (`Distributive`,
+      `Representable`, `Profunctor`, `Coseive`, `Closed`, `Costrong`,
+      `Corepresentable`)
+
+* **API changes**
+
+    - Move some `Query`-related functions to `diagrams-lib` (`sample`,
+      `value`, `resetValue`, `clearValue`)
+
+    - Remove some redundant constraints in type signatures (should not
+      actually affect API)
+
 ## [v1.3.0.8](https://github.com/diagrams/diagrams-core/tree/v1.3.0.8) (2016-06-05)
 
 - allow `base-4.9`
@@ -94,7 +124,7 @@
 
     - `Style`'s internal representation now uses a hashmap of the
       `TypeRep`.
-      
+
 **Merged pull requests:**
 
 - Pre 1.3 [\#82](https://github.com/diagrams/diagrams-core/pull/82) ([cchalmers](https://github.com/cchalmers))
