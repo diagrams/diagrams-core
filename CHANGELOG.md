@@ -10,7 +10,8 @@
 
 * **Dependency/version changes**
 
-    - Many upper bounds bumped; see minor release changelogs below.
+    - Allow `lens-4.15`
+    - Many other upper bounds bumped; see minor release changelogs below.
 
 * **New instances**
 
