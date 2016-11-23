@@ -116,16 +116,24 @@ instance Wrapped (Envelope v n) where
 
 instance Rewrapped (Envelope v n) (Envelope v' n')
 
+-- | \"Apply\" an envelope by turning it into a function.  @Nothing@
+--   is returned iff the envelope is empty.
 appEnvelope :: Envelope v n -> Maybe (v n -> n)
 appEnvelope (Envelope (Option e)) = (getMax .) <$> e
 
+-- | A convenient way to transform an envelope, by specifying a
+--   transformation on the underlying @v n -> n@ function.  The empty
+--   envelope is unaffected.
 onEnvelope :: ((v n -> n) -> v n -> n) -> Envelope v n -> Envelope v n
 onEnvelope t = over (_Wrapping' Envelope . mapped) ((Max .) . t . (getMax .))
 
+-- | Create an envelope from a @v n -> n@ function.
 mkEnvelope :: (v n -> n) -> Envelope v n
 mkEnvelope = Envelope . Option . Just . (Max .)
 
--- | Create an envelope for the given point.
+-- | Create a point envelope for the given point.  A point envelope
+--   has distance zero to a bounding hyperplane in every direction.
+--   Note this is /not/ the same as the empty envelope.
 pointEnvelope :: (Fractional n, Metric v) => Point v n -> Envelope v n
 pointEnvelope p = moveTo p (mkEnvelope $ const 0)
 
@@ -350,6 +358,7 @@ radius v = (0.5*) . diameter v
 extent :: (V a ~ v, N a ~ n, Enveloped a) => v n -> a -> Maybe (n, n)
 extent v a = (\f -> (-f (negated v), f v)) <$> (appEnvelope . getEnvelope $ a)
 
--- | The smallest positive vector that bounds the envelope of an object.
+-- | The smallest positive /axis-parallel/ vector that bounds the
+--   envelope of an object.
 size :: (V a ~ v, N a ~ n, Enveloped a, HasBasis v) => a -> v n
 size d = tabulate $ \(E l) -> diameter (zero & l .~ 1) d

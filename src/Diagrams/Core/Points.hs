@@ -30,6 +30,7 @@ import           Diagrams.Core.V
 type instance V (Point v n) = v
 type instance N (Point v n) = n
 
+-- | Reflect a point across the origin.
 mirror :: (Additive v, Num n) => Point v n -> Point v n
 mirror = reflectThrough origin
 
