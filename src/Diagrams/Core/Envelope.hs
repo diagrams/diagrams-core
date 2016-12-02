@@ -225,8 +225,8 @@ through t will no longer be perpendicular to v.
 
 However, it turns out that if v and w are perpendicular, then t^-1 v
 will be perpendicular to t^T w, that is, the *transpose* of t (when
-considered as a matrix) applied to w.  The proof is simple: if vand w
-are perpendicular then v . w = v^T w = 0.  Thus,
+considered as a matrix) applied to w.  The proof is simple. Recall
+that v and w are perpendicular if and only if v . w = v^T w = 0.  Thus,
 
   (t^-1 v) . (t^T w) = (t^-1 v)^T (t^T w) = v^T t^-T t^T w = v^T w = 0.
 
