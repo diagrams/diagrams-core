@@ -56,7 +56,8 @@ output = pure
 local :: Num n => n -> Measure n
 local x = views _1 (*x)
 
--- | Global units are ?
+-- | Global units are scaled so that they are interpreted relative to
+--   the size of the final rendered diagram.
 global :: Num n => n -> Measure n
 global x = views _2 (*x)
 
