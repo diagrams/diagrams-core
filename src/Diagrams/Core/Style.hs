@@ -1,4 +1,3 @@
-{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
@@ -106,7 +105,7 @@ import           Linear.Vector
 --   simply guarantees 'Typeable' and 'Semigroup' constraints.  The
 --   'Semigroup' instance for an attribute determines how it will combine
 --   with other attributes of the same type.
-type AttributeClass a = (Typeable a, Semigroup a)
+class (Typeable a, Semigroup a) => AttributeClass a
 
 -- | An existential wrapper type to hold attributes.  Some attributes
 --   are simply inert/static; some are affected by transformations;
