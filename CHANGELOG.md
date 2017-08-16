@@ -1,3 +1,7 @@
+## v1.4.0.1 (???)
+
+* Allow base-4.10
+
 ## [v1.4](https://github.com/diagrams/diagrams-core/tree/v1.4) (2016-10-26)
 
 * **New features**
