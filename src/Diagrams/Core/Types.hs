@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE DataKinds             #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans       #-}
 -- We have some orphan Action instances here, but since Action is a multi-param
@@ -132,13 +133,14 @@ module Diagrams.Core.Types
 import           Control.Arrow             (first, second, (***))
 import           Control.Lens              (Lens', Prism', Rewrapped,
                                             Wrapped (..), iso, lens, over,
-                                            prism', view, (^.), _Wrapped,
+                                            prism', view, (^.), (.~), _Wrapped,
                                             _Wrapping)
 import           Control.Monad             (mplus)
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
 import           Data.Semigroup
+import           Data.Semigroup.Numbered (SemigroupNo(..))
 import qualified Data.Traversable          as T
 import           Data.Tree
 import           Data.Typeable
@@ -164,6 +166,10 @@ import           Diagrams.Core.V
 import           Linear.Affine
 import           Linear.Metric
 import           Linear.Vector
+import           Linear.V1 (R1, _x)
+import           Linear.V2 (R2, _y)
+import           Linear.V3 (R3, _z)
+import           Linear.V4 (R4, _w)
 
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
@@ -491,6 +497,23 @@ instance (Metric v, OrderedField n, Semigroup m)
   (QD d1) <> (QD d2) = QD (d2 <> d1)
     -- swap order so that primitives of d2 come first, i.e. will be
     -- rendered first, i.e. will be on the bottom.
+
+-- | Lay out diagrams side-by-side. Cf. <http://hackage.haskell.org/package/diagrams-lib/docs/Diagrams-TwoD-Combinators.html#v:-124--124--124- |||>.
+instance (Metric v, R1 v, OrderedField n, Semigroup m, Monoid m)
+  => SemigroupNo 0 (QDiagram b v n m) where
+  sappendN _ d₀ d₁ = d₀ <> juxtapose (_x.~1 $ zero) d₀ d₁
+-- | Stack diagrams vertically. Cf. <http://hackage.haskell.org/package/diagrams-lib/docs/Diagrams-TwoD-Combinators.html#v:-61--61--61- ===>.
+instance (Metric v, R2 v, OrderedField n, Semigroup m, Monoid m)
+  => SemigroupNo 1 (QDiagram b v n m) where
+  sappendN _ d₀ d₁ = d₀ <> juxtapose (_y.~1 $ zero) d₀ d₁
+-- | Stack 3D-diagrams in z-direction.
+instance (Metric v, R3 v, OrderedField n, Semigroup m, Monoid m)
+  => SemigroupNo 2 (QDiagram b v n m) where
+  sappendN _ d₀ d₁ = d₀ <> juxtapose (_z.~1 $ zero) d₀ d₁
+-- | Anybody in for a game of Brockian Ultra-Cricket?
+instance (Metric v, R4 v, OrderedField n, Semigroup m, Monoid m)
+  => SemigroupNo 3 (QDiagram b v n m) where
+  sappendN _ d₀ d₁ = d₀ <> juxtapose (_w.~1 $ zero) d₀ d₁
 
 -- | A convenient synonym for 'mappend' on diagrams, designed to be
 --   used infix (to help remember which diagram goes on top of which
