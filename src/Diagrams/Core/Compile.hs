@@ -36,7 +36,7 @@ module Diagrams.Core.Compile
 
 import qualified Data.List.NonEmpty        as NEL
 import           Data.Maybe                (fromMaybe)
-import           Data.Monoid.Coproduct
+import           Data.Monoid.SemiDirectProduct
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup (Monoid')
 import           Data.Semigroup
@@ -102,7 +102,7 @@ toDTree g n (QD qd)
       (\d t -> case get d of
                  Option Nothing   -> t
                  Option (Just d') ->
-                   let (tr,sty) = untangle d'
+                   let (sty,tr) = unSemi d'
                    in  Node (DStyle sty) [Node (DTransform tr) [t]]
       )
 

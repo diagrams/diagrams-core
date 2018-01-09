@@ -144,7 +144,7 @@ import           Data.Tree
 import           Data.Typeable
 
 import           Data.Monoid.Action
-import           Data.Monoid.Coproduct
+import           Data.Monoid.SemiDirectProduct
 import           Data.Monoid.Deletable
 import           Data.Monoid.MList
 import           Data.Monoid.WithSemigroup
@@ -206,7 +206,7 @@ type UpAnnots b v n m = Deletable (Envelope v n)
 --   * styles (see "Diagrams.Core.Style")
 --
 --   * names (see "Diagrams.Core.Names")
-type DownAnnots v n = (Transformation v n :+: Style v n)
+type DownAnnots v n = Semi (Style v n) (Transformation v n)
                   ::: Name
                   ::: ()
 
@@ -216,15 +216,15 @@ type DownAnnots v n = (Transformation v n :+: Style v n)
 
 -- | Inject a transformation into a default downwards annotation
 --   value.
-transfToAnnot :: Transformation v n -> DownAnnots v n
+transfToAnnot :: forall v n. Typeable n => Transformation v n -> DownAnnots v n
 transfToAnnot
   = inj
-  . (inL :: Transformation v n -> Transformation v n :+: Style v n)
+  . (embed :: Transformation v n -> Semi (Style v n) (Transformation v n))
 
 -- | Extract the (total) transformation from a downwards annotation
 --   value.
 transfFromAnnot :: (Additive v, Num n) => DownAnnots v n -> Transformation v n
-transfFromAnnot = option mempty killR . fst
+transfFromAnnot = option mempty quotient . fst
 
 -- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
 --   @QDiagram@ which expands to a real @QDiagram@ once it learns the
@@ -256,18 +256,18 @@ data Annotation
 
 -- | Apply a static annotation at the root of a diagram.
 applyAnnotation
-  :: (Metric v, OrderedField n, Semigroup m)
+  :: (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
   => Annotation -> QDiagram b v n m -> QDiagram b v n m
 applyAnnotation an (QD dt) = QD (D.annot an dt)
 
 -- | Make a diagram into a hyperlink.  Note that only some backends
 --   will honor hyperlink annotations.
-href :: (Metric v, OrderedField n, Semigroup m)
+href :: (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
   => String -> QDiagram b v n m -> QDiagram b v n m
 href = applyAnnotation . Href
 
 -- | Change the transparency of a 'Diagram' as a group.
-opacityGroup, groupOpacity :: (Metric v, OrderedField n, Semigroup m)
+opacityGroup, groupOpacity :: (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
   => Double -> QDiagram b v n m -> QDiagram b v n m
 opacityGroup = applyAnnotation . OpacityGroup
 groupOpacity = applyAnnotation . OpacityGroup
@@ -345,12 +345,12 @@ getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
 getU' = maybe mempty (option mempty id . get) . D.getU
 
 -- | Lens onto the 'Envelope' of a 'QDiagram'.
-envelope :: (OrderedField n, Metric v, Monoid' m)
+envelope :: (Typeable n, OrderedField n, Traversable v, Metric v, Monoid' m)
          => Lens' (QDiagram b v n m) (Envelope v n)
 envelope = lens (unDelete . getU' . view _Wrapped') (flip setEnvelope)
 
 -- | Replace the envelope of a diagram.
-setEnvelope :: forall b v n m. ( OrderedField n, Metric v
+setEnvelope :: forall b v n m. ( Typeable n, OrderedField n, Traversable v, Metric v
                                , Monoid' m)
           => Envelope v n -> QDiagram b v n m -> QDiagram b v n m
 setEnvelope e =
@@ -360,12 +360,12 @@ setEnvelope e =
               )
 
 -- | Lens onto the 'Trace' of a 'QDiagram'.
-trace :: (Metric v, OrderedField n, Semigroup m) =>
+trace :: (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m) =>
          Lens' (QDiagram b v n m) (Trace v n)
 trace = lens (unDelete . getU' . view _Wrapped') (flip setTrace)
 
 -- | Replace the trace of a diagram.
-setTrace :: forall b v n m. ( OrderedField n, Metric v
+setTrace :: forall b v n m. ( Typeable n, OrderedField n, Traversable v, Metric v
                             , Semigroup m)
          => Trace v n -> QDiagram b v n m -> QDiagram b v n m
 setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
@@ -375,7 +375,7 @@ setTrace t = over _Wrapped' ( D.applyUpre (inj . toDeletable $ t)
 
 -- | Lens onto the 'SubMap' of a 'QDiagram' (/i.e./ an association from
 --   names to subdiagrams).
-subMap :: (Metric v, Semigroup m, OrderedField n)
+subMap :: forall b v n m. (Traversable v, Metric v, Semigroup m, Typeable n, OrderedField n)
        => Lens' (QDiagram b v n m) (SubMap b v n m)
 subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
   where
@@ -384,7 +384,7 @@ subMap = lens (unDelete . getU' . view _Wrapped') (flip setMap)
     setMap m = over _Wrapped' ( D.applyUpre . inj . toDeletable $ m)
 
 -- | Get a list of names of subdiagrams and their locations.
-names :: (Metric v, Semigroup m, OrderedField n)
+names :: (Traversable v, Metric v, Semigroup m, Typeable n, OrderedField n)
       => QDiagram b v n m -> [(Name, [Point v n])]
 names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 
@@ -393,14 +393,14 @@ names = (map . second . map) location . M.assocs . view (subMap . _Wrapped')
 --   included/.  The upshot of this knot-tying is that if @d' = d #
 --   named x@, then @lookupName x d' == Just d'@ (instead of @Just
 --   d@).
-nameSub :: (IsName nm , Metric v, OrderedField n, Semigroup m)
+nameSub :: (IsName nm , Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
   => (QDiagram b v n m -> Subdiagram b v n m) -> nm -> QDiagram b v n m -> QDiagram b v n m
 nameSub s n d = d'
   where d' = over _Wrapped' (D.applyUpre . inj . toDeletable $ fromNames [(n,s d')]) d
 
 -- | Lookup the most recent diagram associated with (some
 --   qualification of) the given name.
-lookupName :: (IsName nm, Metric v, Semigroup m, OrderedField n)
+lookupName :: (IsName nm, Traversable v, Metric v, Semigroup m, Typeable n, OrderedField n)
            => nm -> QDiagram b v n m -> Maybe (Subdiagram b v n m)
 lookupName n d = lookupSub (toName n) (d^.subMap) >>= listToMaybe
 
@@ -408,8 +408,8 @@ lookupName n d = lookupSub (toName n) (d^.subMap) >>= listToMaybe
 --   subdiagram, perform the transformation using the most recent
 --   subdiagram associated with (some qualification of) the name,
 --   or perform the identity transformation if the name does not exist.
-withName :: (IsName nm, Metric v
-            , Semigroup m, OrderedField n)
+withName :: (IsName nm, Traversable v, Metric v
+            , Semigroup m, Typeable n, OrderedField n)
          => nm -> (Subdiagram b v n m -> QDiagram b v n m -> QDiagram b v n m)
          -> QDiagram b v n m -> QDiagram b v n m
 withName n f d = maybe id f (lookupName n d) d
@@ -418,8 +418,8 @@ withName n f d = maybe id f (lookupName n d) d
 --   subdiagrams, perform the transformation using the
 --   collection of all such subdiagrams associated with (some
 --   qualification of) the given name.
-withNameAll :: (IsName nm, Metric v
-               , Semigroup m, OrderedField n)
+withNameAll :: (IsName nm, Traversable v, Metric v
+               , Semigroup m, Typeable n, OrderedField n)
             => nm -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
             -> QDiagram b v n m -> QDiagram b v n m
 withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (d^.subMap))) d
@@ -429,8 +429,8 @@ withNameAll n f d = f (fromMaybe [] (lookupSub (toName n) (d^.subMap))) d
 --   list of most recent subdiagrams associated with (some qualification
 --   of) each name.  Do nothing (the identity transformation) if any
 --   of the names do not exist.
-withNames :: (IsName nm, Metric v
-             , Semigroup m, OrderedField n)
+withNames :: (IsName nm, Traversable v, Metric v
+             , Semigroup m, Typeable n, OrderedField n)
           => [nm] -> ([Subdiagram b v n m] -> QDiagram b v n m -> QDiagram b v n m)
           -> QDiagram b v n m -> QDiagram b v n m
 withNames ns f d = maybe id f ns' d
@@ -440,7 +440,7 @@ withNames ns f d = maybe id f ns' d
 
 -- | \"Localize\" a diagram by hiding all the names, so they are no
 --   longer visible to the outside.
-localize :: forall b v n m. (Metric v, OrderedField n, Semigroup m)
+localize :: forall b v n m. (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
          => QDiagram b v n m -> QDiagram b v n m
 localize = over _Wrapped' ( D.applyUpre  (inj (deleteL :: Deletable (SubMap b v n m)))
                    . D.applyUpost (inj (deleteR :: Deletable (SubMap b v n m)))
@@ -481,12 +481,12 @@ mkQD' l e t n q
 --   probably only makes sense in vector spaces of dimension lower
 --   than 3, but in theory it could make sense for, say, 3-dimensional
 --   diagrams when viewed by 4-dimensional beings.
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
   => Monoid (QDiagram b v n m) where
   mempty  = QD D.empty
   mappend = (<>)
 
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
   => Semigroup (QDiagram b v n m) where
   (QD d1) <> (QD d2) = QD (d2 <> d1)
     -- swap order so that primitives of d2 come first, i.e. will be
@@ -495,7 +495,7 @@ instance (Metric v, OrderedField n, Semigroup m)
 -- | A convenient synonym for 'mappend' on diagrams, designed to be
 --   used infix (to help remember which diagram goes on top of which
 --   when combining them, namely, the first on top of the second).
-atop :: (OrderedField n, Metric v, Semigroup m)
+atop :: (Typeable n, OrderedField n, Traversable v, Metric v, Semigroup m)
      => QDiagram b v n m -> QDiagram b v n m -> QDiagram b v n m
 atop = (<>)
 
@@ -531,26 +531,26 @@ instance Functor (QDiagram b v n) where
 
 ---- HasStyle
 
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Metric v, Traversable v, Typeable n, OrderedField n, Semigroup m)
       => HasStyle (QDiagram b v n m) where
   applyStyle = over _Wrapped' . D.applyD . inj
-             . (inR :: Style v n -> Transformation v n :+: Style v n)
+             . (inject :: Style v n -> Semi (Style v n) (Transformation v n))
 
 ---- Juxtaposable
 
-instance (Metric v, OrderedField n, Monoid' m)
+instance (Traversable v, Metric v, Typeable n, OrderedField n, Monoid' m)
       => Juxtaposable (QDiagram b v n m) where
   juxtapose = juxtaposeDefault
 
 ---- Enveloped
 
-instance (Metric v, OrderedField n, Monoid' m)
+instance (Traversable v, Metric v, Typeable n, OrderedField n, Monoid' m)
          => Enveloped (QDiagram b v n m) where
   getEnvelope = view envelope
 
 ---- Traced
 
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
          => Traced (QDiagram b v n m) where
   getTrace = view trace
 
@@ -558,7 +558,7 @@ instance (Metric v, OrderedField n, Semigroup m)
 
 -- | Every diagram has an intrinsic \"local origin\" which is the
 --   basis for all combining operations.
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
       => HasOrigin (QDiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
@@ -566,7 +566,7 @@ instance (Metric v, OrderedField n, Semigroup m)
 
 -- | Diagrams can be transformed by transforming each of their
 --   components appropriately.
-instance (OrderedField n, Metric v, Semigroup m)
+instance (Typeable n, OrderedField n, Traversable v, Metric v, Semigroup m)
       => Transformable (QDiagram b v n m) where
   transform = over _Wrapped' . D.applyD . transfToAnnot
 
@@ -574,7 +574,7 @@ instance (OrderedField n, Metric v, Semigroup m)
 
 -- | Diagrams can be qualified so that all their named points can
 --   now be referred to using the qualification prefix.
-instance (Metric v, OrderedField n, Semigroup m)
+instance (Typeable n, OrderedField n, Traversable v, Metric v, Semigroup m)
       => Qualifiable (QDiagram b v n m) where
   (.>>) = over _Wrapped' . D.applyD . inj . toName
 
@@ -603,7 +603,7 @@ mkSubdiagram d = Subdiagram d empty
 --   @mkSubdiagram . pointDiagram@, which would result in a subdiagram
 --   with local origin at the parent origin, rather than at the given
 --   point.
-subPoint :: (Metric v, OrderedField n)
+subPoint :: (Metric v, Typeable n, OrderedField n)
          => Point v n -> Subdiagram b v n m
 subPoint p = Subdiagram
                (pointDiagram origin)
@@ -612,19 +612,19 @@ subPoint p = Subdiagram
 instance Functor (Subdiagram b v n) where
   fmap f (Subdiagram d a) = Subdiagram (fmap f d) a
 
-instance (OrderedField n, Metric v, Monoid' m)
+instance (Typeable n, OrderedField n, Traversable v, Metric v, Monoid' m)
       => Enveloped (Subdiagram b v n m) where
   getEnvelope (Subdiagram d a) = transform (transfFromAnnot a) $ getEnvelope d
 
-instance (OrderedField n, Metric v, Semigroup m)
+instance (Typeable n, OrderedField n, Traversable v, Metric v, Semigroup m)
       => Traced (Subdiagram b v n m) where
   getTrace (Subdiagram d a) = transform (transfFromAnnot a) $ getTrace d
 
-instance (Metric v, OrderedField n)
+instance (Traversable v, Metric v, Typeable n, OrderedField n)
       => HasOrigin (Subdiagram b v n m) where
   moveOriginTo = translate . (origin .-.)
 
-instance Transformable (Subdiagram b v n m) where
+instance (Typeable n, Floating n, Traversable v, Additive v) => Transformable (Subdiagram b v n m) where
   transform t (Subdiagram d a) = Subdiagram d (transfToAnnot t <> a)
 
 -- | Get the location of a subdiagram; that is, the location of its
@@ -640,7 +640,7 @@ location (Subdiagram _ a) = transform (transfFromAnnot a) origin
 --   attributes.  @getSub@ simply applies the transformation and
 --   attributes to the diagram to get the corresponding \"top-level\"
 --   diagram.
-getSub :: (Metric v, OrderedField n, Semigroup m)
+getSub :: (Traversable v, Metric v, Typeable n, OrderedField n, Semigroup m)
        => Subdiagram b v n m -> QDiagram b v n m
 getSub (Subdiagram d a) = over _Wrapped' (D.applyD a) d
 
@@ -687,11 +687,11 @@ instance Monoid (SubMap b v n m) where
   mempty  = SubMap M.empty
   mappend = (<>)
 
-instance (OrderedField n, Metric v)
+instance (Typeable n, OrderedField n, Traversable v, Metric v)
       => HasOrigin (SubMap b v n m) where
   moveOriginTo = over _Wrapped' . moveOriginTo
 
-instance Transformable (SubMap b v n m) where
+instance (Typeable n, Floating n, Additive v, Traversable v) => Transformable (SubMap b v n m) where
   transform = over _Wrapped' . transform
 
 -- | 'SubMap's are qualifiable: if @ns@ is a 'SubMap', then @a |>
