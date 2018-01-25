@@ -966,9 +966,14 @@ data NullBackend
 --
 -- because it overlaps with the Renderable instance for NullPrim.
 
+instance Semigroup (Render NullBackend v n) where
+  _ <> _ = NullBackendRender
+
 instance Monoid (Render NullBackend v n) where
-  mempty      = NullBackendRender
-  mappend _ _ = NullBackendRender
+  mempty  = NullBackendRender
+#if !MIN_VERSION_base(4,11,0)
+  mappend = (<>)
+#endif
 
 instance Backend NullBackend v n where
   data Render NullBackend v n = NullBackendRender
