@@ -1,5 +1,5 @@
 Name:                diagrams-core
-Version:             1.4.0.1
+Version:             1.4.0.2
 Synopsis:            Core libraries for diagrams EDSL
 Description:         The core modules underlying diagrams,
                      an embedded domain-specific language
@@ -42,7 +42,7 @@ Library
                        semigroups >= 0.8.4 && < 0.19,
                        monoid-extras >= 0.3 && < 0.5,
                        dual-tree >= 0.2 && < 0.3,
-                       lens >= 4.0 && < 4.16,
+                       lens >= 4.0 && < 5,
                        linear >= 1.11.3 && < 1.21,
                        adjunctions >= 4.0 && < 5.0,
                        distributive >=0.2.2 && < 1.0,
