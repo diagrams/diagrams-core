@@ -1,0 +1,16 @@
+Notes on updating to use semidirect product
+
+Next step is to figure out how to make an appropriate
+
+  instance Action (Semi Style Transformation) Query
+
+Not sure what the right theoretical basis for this is.  Note Style is
+not supposed to have any action on Query so basically this is about
+making the Transformation act.
+
+So maybe the right solution is to just change the code that supposedly
+needs this instance to instead project out the Transformation and have
+it act?  Hmm, no, it's embedded rather deeply in the guts of DTRee.
+
+At this point maybe just forget about this, since we'll be totally
+overhauling it anyway.
