@@ -2,6 +2,10 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
+
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+  -- for Data.Semigroup import, which becomes redundant under GHC 8.4
+
 module Diagrams.Core.Measure
   ( Measured (..)
   , Measure
