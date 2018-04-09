@@ -15,7 +15,7 @@ Build-type:          Simple
 Cabal-version:       >=1.18
 Extra-source-files:  CHANGELOG.md, README.markdown, diagrams/*.svg
 extra-doc-files:     diagrams/*.svg
-Tested-with:         GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.2, GHC == 8.0.1
+Tested-with:         GHC == 7.8.4, GHC == 7.10.2, GHC == 8.0.1, GHC == 8.2.2, GHC == 8.4.1
 Source-repository head
   type:     git
   location: git://github.com/diagrams/diagrams-core.git
