@@ -1,4 +1,10 @@
-## v1.4.0.1 (???)
+## [v1.4.1](https://github.com/diagrams/diagrams-core/tree/v1.4.1) (2018-04-09)
+
+* Allow `base-4.11`
+* Allow `lens-4.16`
+* Add `Semigroup` instance to build on GHC 8.4
+
+## v1.4.0.1
 
 * Allow base-4.10
 
