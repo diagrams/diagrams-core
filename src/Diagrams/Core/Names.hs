@@ -6,6 +6,9 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+  -- for Data.Semigroup import, which becomes redundant under GHC 8.4
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Names
