@@ -1,4 +1,4 @@
-## [v1.4.1](https://github.com/diagrams/diagrams-core/tree/v1.4.1) (2018-04-09)
+## [v1.4.1](https://github.com/diagrams/diagrams-core/tree/v1.4.1) (2018-04-10)
 
 * Allow `base-4.11`
 * Allow `lens-4.16`
