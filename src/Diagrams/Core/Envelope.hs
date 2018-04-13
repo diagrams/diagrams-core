@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP                        #-}
+{-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -255,10 +256,9 @@ this explanation.
 
 -- | When dealing with envelopes we often want scalars to be an
 --   ordered field (i.e. support all four arithmetic operations and be
---   totally ordered) so we introduce this class as a convenient
+--   totally ordered) so we introduce this constraint as a convenient
 --   shorthand.
-class (Floating s, Ord s) => OrderedField s
-instance (Floating s, Ord s) => OrderedField s
+type OrderedField s = (Floating s, Ord s)
 
 -- | @Enveloped@ abstracts over things which have an envelope.
 class (Metric (V a), OrderedField (N a)) => Enveloped a where

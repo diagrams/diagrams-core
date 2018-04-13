@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
@@ -77,11 +78,9 @@ type Vn a = V a (N a)
 
 -- | @InSpace v n a@ means the type @a@ belongs to the vector space @v n@,
 --   where @v@ is 'Additive' and @n@ is a 'Num'.
-class (V a ~ v, N a ~ n, Additive v, Num n) => InSpace v n a
-instance (V a ~ v, N a ~ n, Additive v, Num n) => InSpace v n a
+type InSpace v n a = (V a ~ v, N a ~ n, Additive v, Num n)
 
 -- | @SameSpace a b@ means the types @a@ and @b@ belong to the same
 --   vector space @v n@.
-class (V a ~ V b, N a ~ N b) => SameSpace a b
-instance (V a ~ V b, N a ~ N b) => SameSpace a b
+type SameSpace a b = (V a ~ V b, N a ~ N b)
 

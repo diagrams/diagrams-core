@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE DeriveFunctor         #-}
@@ -168,11 +169,10 @@ import           Linear.Vector
 -- XXX TODO: add lots of actual diagrams to illustrate the
 -- documentation!  Haddock supports \<\<inline image urls\>\>.
 
--- | Class of numbers that are 'RealFloat' and 'Typeable'. This class is used to
---   shorten type constraints.
-class (Typeable n, RealFloat n) => TypeableFloat n
-instance (Typeable n, RealFloat n) => TypeableFloat n
--- use class instead of type constraint so users don't need constraint kinds pragma
+-- | Constraint for numeric types that are 'RealFloat' and 'Typeable',
+--   which often occur together.  This is used to shorten shorten type
+--   constraint contexts.
+type TypeableFloat n = (Typeable n, RealFloat n)
 
 ------------------------------------------------------------
 --  Diagrams  ----------------------------------------------

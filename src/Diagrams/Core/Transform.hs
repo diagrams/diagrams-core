@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -308,14 +309,12 @@ Proofs for the specified properties:
 --  The Transformable class  -------------------------------
 ------------------------------------------------------------
 
--- | 'HasLinearMap' is a poor man's class constraint synonym, just to
+-- | 'HasLinearMap' is a constraint synonym, just to
 --   help shorten some of the ridiculously long constraint sets.
-class (HasBasis v, Traversable v) => HasLinearMap v
-instance (HasBasis v, Traversable v) => HasLinearMap v
+type HasLinearMap v = (HasBasis v, Traversable v)
 
 -- | An 'Additive' vector space whose representation is made up of basis elements.
-class (Additive v, Representable v, Rep v ~ E v) => HasBasis v
-instance (Additive v, Representable v, Rep v ~ E v) => HasBasis v
+type HasBasis v = (Additive v, Representable v, Rep v ~ E v)
 
 -- | Type class for things @t@ which can be transformed.
 class Transformable t where
