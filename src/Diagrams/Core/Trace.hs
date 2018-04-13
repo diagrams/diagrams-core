@@ -7,6 +7,9 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+  -- for Data.Semigroup import, which becomes redundant under GHC 8.4
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Diagrams.Core.Trace
