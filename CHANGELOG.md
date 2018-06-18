@@ -1,3 +1,7 @@
+## [v1.4.1.1](https://github.com/diagrams/diagrams-core/tree/v1.4.1.1) (2018-06-17)
+
+* Add some `ConstraintKinds` pragmas to allow compilation on GHC 7.8 and 7.6
+
 ## [v1.4.1](https://github.com/diagrams/diagrams-core/tree/v1.4.1) (2018-04-10)
 
 * Allow `base-4.11`
