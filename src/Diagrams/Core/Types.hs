@@ -47,8 +47,8 @@ module Diagrams.Core.Types
          -- ** Annotations
 
          -- *** Static annotations
-         Annotation(Href, OpacityGroup)
-       , applyAnnotation, href, opacityGroup, groupOpacity
+         Annotation(Href, OpacityGroup, KeyVal)
+       , applyAnnotation, href, opacityGroup, groupOpacity, keyVal
 
          -- *** Dynamic (monoidal) annotations
        , UpAnnots, DownAnnots, transfToAnnot, transfFromAnnot
@@ -252,6 +252,7 @@ withQDiaLeaf _ g (DelayedLeaf dgn) = g dgn
 data Annotation
   = Href String    -- ^ Hyperlink
   | OpacityGroup Double
+  | KeyVal (String, String)
   deriving Show
 
 -- | Apply a static annotation at the root of a diagram.
@@ -272,6 +273,10 @@ opacityGroup, groupOpacity :: (Metric v, OrderedField n, Semigroup m)
 opacityGroup = applyAnnotation . OpacityGroup
 groupOpacity = applyAnnotation . OpacityGroup
 
+-- | Apply a general Key-Value annotation
+keyVal :: (Metric v, OrderedField n, Semigroup m)
+  => (String, String) -> QDiagram b v n m -> QDiagram b v n m
+keyVal = applyAnnotation . KeyVal
 
 -- | The fundamental diagram type.  The type variables are as follows:
 --
