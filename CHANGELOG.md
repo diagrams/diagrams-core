@@ -1,3 +1,9 @@
+## [v1.4.2](https://github.com/diagrams/diagrams-core/tree/v1.4.2) (2019-10-19)
+
+* New `KeyVal` constructor for `Annotation` ([PR](https://github.com/diagrams/diagrams-core/pull/104))
+* Updates for GHC 8.8
+* Drop support for GHC 7.6 and 7.8
+
 ## [v1.4.1.1](https://github.com/diagrams/diagrams-core/tree/v1.4.1.1) (2018-06-17)
 
 * Add some `ConstraintKinds` pragmas to allow compilation on GHC 7.8 and 7.6
