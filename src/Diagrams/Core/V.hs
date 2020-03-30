@@ -71,7 +71,7 @@ type instance N (Deletable m) = N m
 type instance N (Split m)     = N m
 type instance N (m :+: n)     = N m
 
--- | Conveient type alias to retrieve the vector type associated with an
+-- | Convenient type alias to retrieve the vector type associated with an
 --   object's vector space. This is usually used as @Vn a ~ v n@ where @v@ is
 --   the vector space and @n@ is the numerical field.
 type Vn a = V a (N a)
