@@ -36,7 +36,7 @@ Library
                        Diagrams.Core.Types,
                        Diagrams.Core.V
 
-  Build-depends:       base >= 4.2 && < 4.14,
+  Build-depends:       base >= 4.2 && < 4.15,
                        containers >= 0.4.2 && < 0.7,
                        unordered-containers >= 0.2 && < 0.3,
                        semigroups >= 0.8.4 && < 0.20,
