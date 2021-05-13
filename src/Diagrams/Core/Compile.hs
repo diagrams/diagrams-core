@@ -103,8 +103,8 @@ toDTree g n (QD qd)
       -- 'untangle' we have already performed the action of the
       -- transform on the style).
       (\d t -> case get d of
-                 Option Nothing   -> t
-                 Option (Just d') ->
+                 Nothing -> t
+                 Just d' ->
                    let (tr,sty) = untangle d'
                    in  Node (DStyle sty) [Node (DTransform tr) [t]]
       )

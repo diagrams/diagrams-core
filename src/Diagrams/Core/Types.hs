@@ -224,7 +224,7 @@ transfToAnnot
 -- | Extract the (total) transformation from a downwards annotation
 --   value.
 transfFromAnnot :: (Additive v, Num n) => DownAnnots v n -> Transformation v n
-transfFromAnnot = option mempty killR . fst
+transfFromAnnot = maybe mempty killR . fst
 
 -- | A leaf in a 'QDiagram' tree is either a 'Prim', or a \"delayed\"
 --   @QDiagram@ which expands to a real @QDiagram@ once it learns the
@@ -347,7 +347,7 @@ pointDiagram p = QD $ D.leafU (inj . toDeletable $ pointEnvelope p)
 -- | A useful variant of 'getU' which projects out a certain
 --   component.
 getU' :: (Monoid u', u :>: u') => D.DUALTree d u a l -> u'
-getU' = maybe mempty (option mempty id . get) . D.getU
+getU' = maybe mempty (maybe mempty id . get) . D.getU
 
 -- | Lens onto the 'Envelope' of a 'QDiagram'.
 envelope :: (OrderedField n, Metric v, Monoid' m)

@@ -109,10 +109,10 @@ import           Linear.Vector
 --   The idea for envelopes came from
 --   Sebastian Setzer; see
 --   <http://byorgey.wordpress.com/2009/10/28/collecting-attributes/#comment-2030>.  See also Brent Yorgey, /Monoids: Theme and Variations/, published in the 2012 Haskell Symposium: <http://ozark.hendrix.edu/~yorgey/pub/monoid-pearl.pdf>; video: <http://www.youtube.com/watch?v=X-8NCkD2vOw>.
-newtype Envelope v n = Envelope (Option (v n -> Max n))
+newtype Envelope v n = Envelope (Maybe (v n -> Max n))
 
 instance Wrapped (Envelope v n) where
-  type Unwrapped (Envelope v n) = Option (v n -> Max n)
+  type Unwrapped (Envelope v n) = Maybe (v n -> Max n)
   _Wrapped' = iso (\(Envelope e) -> e) Envelope
 
 instance Rewrapped (Envelope v n) (Envelope v' n')
@@ -120,7 +120,7 @@ instance Rewrapped (Envelope v n) (Envelope v' n')
 -- | \"Apply\" an envelope by turning it into a function.  @Nothing@
 --   is returned iff the envelope is empty.
 appEnvelope :: Envelope v n -> Maybe (v n -> n)
-appEnvelope (Envelope (Option e)) = (getMax .) <$> e
+appEnvelope (Envelope e) = (getMax .) <$> e
 
 -- | A convenient way to transform an envelope, by specifying a
 --   transformation on the underlying @v n -> n@ function.  The empty
@@ -130,7 +130,7 @@ onEnvelope t = over (_Wrapping' Envelope . mapped) ((Max .) . t . (getMax .))
 
 -- | Create an envelope from a @v n -> n@ function.
 mkEnvelope :: (v n -> n) -> Envelope v n
-mkEnvelope = Envelope . Option . Just . (Max .)
+mkEnvelope = Envelope . Just . (Max .)
 
 -- | Create a point envelope for the given point.  A point envelope
 --   has distance zero to a bounding hyperplane in every direction.

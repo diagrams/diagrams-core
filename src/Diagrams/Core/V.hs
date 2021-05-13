@@ -47,7 +47,7 @@ type instance V (a,b,c) = V a
 
 type instance V (a -> b)   = V b
 type instance V [a]        = V a
-type instance V (Option a) = V a
+type instance V (Maybe a) = V a
 type instance V (Set a)    = V a
 type instance V (Map k a)  = V a
 
@@ -63,7 +63,7 @@ type instance N (a,b,c) = N a
 
 type instance N (a -> b)   = N b
 type instance N [a]        = N a
-type instance N (Option a) = N a
+type instance N (Maybe a) = N a
 type instance N (Set a)    = N a
 type instance N (Map k a)  = N a
 
