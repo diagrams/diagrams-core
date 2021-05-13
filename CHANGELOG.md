@@ -1,3 +1,14 @@
+## [v1.5.0](https://github.com/diagrams/diagrams-core/tree/v1.5.0) (2021-05-13)
+
+* Updates for GHC 8.10 and 9.0
+* Drop support for GHC < 8.4
+* Remove deprecated `Option` type in favor of `Maybe`.  This is a
+  breaking API change.
+
+## [v1.4.2-r1](https://github.com/diagrams/diagrams-core/tree/v1.4.2-r1) (2020-02-10)
+
+* Allow `lens-4.19` and `linear-1.21`
+
 ## [v1.4.2](https://github.com/diagrams/diagrams-core/tree/v1.4.2) (2019-10-19)
 
 * New `KeyVal` constructor for `Annotation` ([PR](https://github.com/diagrams/diagrams-core/pull/104))
