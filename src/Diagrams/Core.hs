@@ -26,7 +26,7 @@
 --
 -- The best place to start when learning
 -- about diagrams\' types is the user manual:
--- <http://projects.haskell.org/diagrams/doc/manual.html#type-reference>
+-- <https://diagrams.github.io/doc/manual.html#type-reference>
 -- The following list shows which types are contained in each module of
 -- "Diagrams.Core".
 --
