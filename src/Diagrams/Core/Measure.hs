@@ -78,11 +78,11 @@ normalised x = views _3 (*x)
 scaleLocal :: Num n => n -> Measured n a -> Measured n a
 scaleLocal s = R.local (_1 *~ s)
 
--- | Calculate the smaller of two measures.
+-- | Calculate the larger of two measures.
 atLeast :: Ord n => Measure n -> Measure n -> Measure n
 atLeast = liftA2 max
 
--- | Calculate the larger of two measures.
+-- | Calculate the smaller of two measures.
 atMost :: Ord n => Measure n -> Measure n -> Measure n
 atMost = liftA2 min
 
