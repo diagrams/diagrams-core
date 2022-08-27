@@ -1,3 +1,9 @@
+## [v1.5.0.1](https://github.com/diagrams/diagrams-core/tree/v1.5.0.1) (2022-08-27)
+
+* Test with up to `base-4.17` and GHC 9.4
+* Allow `lens-5.2`
+* Fix documentation for `atLeast` and `atMost` (thanks to Igor Moreno)
+
 ## [v1.5.0](https://github.com/diagrams/diagrams-core/tree/v1.5.0) (2021-05-13)
 
 * Updates for GHC 8.10 and 9.0
