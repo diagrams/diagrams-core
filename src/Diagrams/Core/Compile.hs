@@ -113,7 +113,7 @@ toDTree g n (QD qd)
       (\a t -> Node (DAnnot a) [t])
       qd
 
--- | Convert a @DTree@ to an @RTree@ which can be used dirctly by backends.
+-- | Convert a @DTree@ to an @RTree@ which can be used directly by backends.
 --   A @DTree@ includes nodes of type @DTransform (Transformation v)@;
 --   in the @RTree@ transform is pushed down until it reaches a primitive node.
 fromDTree :: forall b v n. (Floating n, HasLinearMap v)
