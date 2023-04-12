@@ -69,6 +69,7 @@ import           Control.Applicative
 import           Control.Arrow           ((***))
 import           Control.Lens            hiding (transform)
 import qualified Data.HashMap.Strict     as HM
+import           Data.Kind               (Type)
 import qualified Data.Map                as M
 import           Data.Monoid.Action      as A
 import           Data.Semigroup
@@ -111,7 +112,7 @@ class (Typeable a, Semigroup a) => AttributeClass a
 --   are simply inert/static; some are affected by transformations;
 --   and some are affected by transformations and can be modified
 --   generically.
-data Attribute (v :: * -> *) n :: * where
+data Attribute (v :: Type -> Type) n :: Type where
   Attribute  :: AttributeClass a => a -> Attribute v n
   MAttribute :: AttributeClass a => Measured n a -> Attribute v n
   TAttribute :: (AttributeClass a, Transformable a, V a ~ v, N a ~ n) => a -> Attribute v n

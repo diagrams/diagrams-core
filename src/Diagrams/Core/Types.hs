@@ -136,6 +136,7 @@ import           Control.Lens              (Lens', Prism', Rewrapped,
                                             prism', view, (^.), _Wrapped,
                                             _Wrapping)
 import           Control.Monad             (mplus)
+import           Data.Kind                 (Type)
 import           Data.List                 (isSuffixOf)
 import qualified Data.Map                  as M
 import           Data.Maybe                (fromMaybe, listToMaybe)
@@ -841,13 +842,13 @@ class Backend b v n where
   --   able to convert primitives into this type; how these rendered
   --   primitives are combined into an ultimate 'Result' is completely
   --   up to the backend.
-  data Render b v n :: *
+  data Render b v n :: Type
 
   -- | The result of running/interpreting a rendering operation.
-  type Result b v n :: *
+  type Result b v n :: Type
 
   -- | Backend-specific rendering options.
-  data Options b v n :: *
+  data Options b v n :: Type
 
   -- | 'adjustDia' allows the backend to make adjustments to the final
   --   diagram (e.g. to adjust the size based on the options) before
