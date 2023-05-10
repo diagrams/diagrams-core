@@ -20,6 +20,7 @@ module Diagrams.Core.V
   , InSpace, SameSpace
   ) where
 
+import           Data.Kind (Type)
 import           Data.Map
 import           Data.Monoid.Coproduct
 import           Data.Monoid.Deletable
@@ -38,7 +39,7 @@ import           Linear.Vector
 --   the associated vector space. The resulting vector space has kind @* -> *@
 --   which means it takes another value (a number) and returns a concrete
 --   vector. For example 'V2' has kind @* -> *@ and @V2 Double@ is a vector.
-type family V a :: * -> *
+type family V a :: Type -> Type
 
 -- Note, to use these instances one often needs a constraint of the form
 --   V a ~ V b, etc.
@@ -56,7 +57,7 @@ type instance V (Split m)     = V m
 type instance V (m :+: n)     = V m
 
 -- | The numerical field for the object, the number type used for calculations.
-type family N a :: *
+type family N a :: Type
 
 type instance N (a,b)   = N a
 type instance N (a,b,c) = N a
