@@ -13,8 +13,8 @@ Bug-reports:         https://github.com/diagrams/diagrams-core/issues
 Category:            Graphics
 Build-type:          Simple
 Cabal-version:       1.18
-Extra-source-files:  CHANGELOG.md, README.markdown, diagrams/*.svg
-extra-doc-files:     diagrams/*.svg
+Extra-source-files:  diagrams/*.svg
+extra-doc-files:     diagrams/*.svg, CHANGELOG.md, README.markdown
 Tested-with:         GHC ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.4 || ==9.4.1
 Source-repository head
   type:     git
