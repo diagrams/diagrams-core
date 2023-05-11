@@ -1,3 +1,9 @@
+## [v1.5.1](https://github.com/diagrams/diagrams-core/tree/v1.5.1) (2023-05-11)
+
+* Allow `base-4.18` and test on GHC 9.6 (thanks to @sergv)
+* Fix some warnings (thanks to @sergv)
+* Fix some documentation typos (thanks to @mchav)
+
 ## [v1.5.0.1-r1](https://github.com/diagrams/diagrams-core/tree/v1.5.0.1-r1) (2022-11-30)
 
 * Allow `linear-1.22`
