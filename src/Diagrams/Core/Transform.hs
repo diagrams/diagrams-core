@@ -192,7 +192,7 @@ instance (Additive v, Num n) => Monoid (Transformation v n) where
   mappend = (<>)
 
 -- | Transformations can act on transformable things.
-instance (Transformable a, V a ~ v, N a ~ n) => Action (Transformation v n) a where
+instance (Transformable a, Additive v, Num n, V a ~ v, N a ~ n) => Action (Transformation v n) a where
   act = transform
 
 -- | Apply a transformation to a vector.  Note that any translational

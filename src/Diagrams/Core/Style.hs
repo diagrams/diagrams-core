@@ -255,7 +255,7 @@ instance (Additive v, Traversable v, Floating n) => Transformable (Style v n) wh
   transform t = over each (transform t)
 
 -- | Styles have no action on other monoids.
-instance A.Action (Style v n) m
+instance Typeable n => A.Action (Style v n) m
 
 -- | Show the attributes in the style.
 instance Show (Style v n) where
