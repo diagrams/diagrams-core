@@ -126,7 +126,6 @@ instance Semigroup a => Semigroup (Measured n a) where
 
 instance Monoid a => Monoid (Measured n a) where
   mempty  = pure mempty
-  mappend = liftA2 mappend
 
 instance Distributive (Measured n) where
   distribute a = Measured $ \x -> fmap (\(Measured m) -> m x) a
