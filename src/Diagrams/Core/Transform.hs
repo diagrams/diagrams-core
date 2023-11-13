@@ -6,10 +6,9 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports       #-}
------------------------------------------------------------------------------
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
 -- |
 -- Module      :  Diagrams.Core.Transform
 -- Copyright   :  (c) 2011-2015 diagrams-core team (see LICENSE)
@@ -232,21 +231,20 @@ onBasis (Transformation (f :-: _) _ t) = (map f basis, t)
 
 -- Remove the nth element from a list
 remove :: Int -> [a] -> [a]
-remove n xs = ys ++ tail zs
+remove n xs = ys ++ zs
   where
-    (ys, zs) = splitAt n xs
+    (ys, _ : zs) = splitAt n xs
 
--- Minor matrix of cofactore C(i,j)
+-- Minor matrix of cofactor C(i,j)
 minor :: Int -> Int -> [[a]] -> [[a]]
 minor i j xs = remove j $ map (remove i) xs
 
 -- The determinant of a square matrix represented as a list of lists
 -- representing column vectors, that is [column].
 det :: Num a => [[a]] -> a
-det (a:[]) = head a
-det m = sum [(-1)^i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n-1)]]
+det [a : _] = a
+det m@(c1 : _) = sum [(-1) ^ i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n - 1)]]
   where
-    c1 = head m
     n = length m
 
 -- | Convert a vector v to a list of scalars.
