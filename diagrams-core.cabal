@@ -36,18 +36,18 @@ Library
                        Diagrams.Core.Types,
                        Diagrams.Core.V
 
-  Build-depends:       base >= 4.11 && < 4.20,
-                       containers >= 0.4.2 && < 0.7,
-                       unordered-containers >= 0.2 && < 0.3,
-                       semigroups >= 0.8.4 && < 0.21,
-                       monoid-extras >= 0.6 && < 0.7,
-                       dual-tree >= 0.2 && < 0.3,
-                       lens >= 4.0 && < 5.3,
-                       linear >= 1.11.3 && < 1.23,
-                       adjunctions >= 4.0 && < 5.0,
-                       distributive >=0.2.2 && < 1.0,
-                       profunctors >= 5.0 && < 6.0,
-                       mtl >= 2.2 && < 2.4
+  Build-depends:       base >=4.11 && <4.20,
+                       containers >=0.4.2 && <0.7 || ^>=0.7,
+                       unordered-containers >=0.2 && <0.3,
+                       semigroups >=0.8.4 && <0.21,
+                       monoid-extras >=0.6 && <0.7,
+                       dual-tree >=0.2 && <0.3,
+                       lens >=4.0 && <5.3,
+                       linear >=1.11.3 && <1.23,
+                       adjunctions >=4.0 && <5.0,
+                       distributive >=0.2.2 && <1.0,
+                       profunctors >=5.0 && <6.0,
+                       mtl >=2.2 && <2.4
   hs-source-dirs:      src
 
   Other-extensions:    DeriveDataTypeable
