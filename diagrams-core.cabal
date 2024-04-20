@@ -43,7 +43,7 @@ Library
                        monoid-extras >= 0.6 && < 0.7,
                        dual-tree >= 0.2 && < 0.3,
                        lens >= 4.0 && < 5.3,
-                       linear >= 1.11.3 && < 1.23,
+                       linear >= 1.11.3 && < 1.24,
                        adjunctions >= 4.0 && < 5.0,
                        distributive >=0.2.2 && < 1.0,
                        profunctors >= 5.0 && < 6.0,
