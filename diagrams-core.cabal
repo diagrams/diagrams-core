@@ -15,7 +15,7 @@ Build-type:          Simple
 Cabal-version:       1.18
 Extra-source-files:  diagrams/*.svg
 extra-doc-files:     diagrams/*.svg, CHANGELOG.md, README.markdown
-Tested-with:         GHC ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.7 || ==9.6.3 || ==9.8.1
+Tested-with:         GHC ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.5 || ==9.8.2 || ==9.10.1
 Source-repository head
   type:     git
   location: git://github.com/diagrams/diagrams-core.git
@@ -36,13 +36,13 @@ Library
                        Diagrams.Core.Types,
                        Diagrams.Core.V
 
-  Build-depends:       base >= 4.11 && < 4.20,
-                       containers >= 0.4.2 && < 0.7,
+  Build-depends:       base >= 4.11 && < 4.21,
+                       containers >= 0.4.2 && < 0.8,
                        unordered-containers >= 0.2 && < 0.3,
                        semigroups >= 0.8.4 && < 0.21,
                        monoid-extras >= 0.6 && < 0.7,
                        dual-tree >= 0.2 && < 0.3,
-                       lens >= 4.0 && < 5.3,
+                       lens >= 4.0 && < 5.4,
                        linear >= 1.11.3 && < 1.24,
                        adjunctions >= 4.0 && < 5.0,
                        distributive >=0.2.2 && < 1.0,
