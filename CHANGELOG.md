@@ -1,3 +1,11 @@
+## [v1.5.1.1-r2](https://github.com/diagrams/diagrams-core/tree/v1.5.1.1-r2) (2024-05-20)
+
+- Allow:
+  - `base-4.20` (GHC 9.10)
+  - `lens-5.3`
+  - `containers-0.7`
+- Test on GHC 9.10
+
 ## [v1.5.1.1-r1](https://github.com/diagrams/diagrams-core/tree/v1.5.1.1-r1) (2024-04-20)
 
 * Allow `linear-1.23`
