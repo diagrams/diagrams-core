@@ -1,3 +1,7 @@
+## [v1.5.1.1-r3](https://github.com/diagrams/diagrams-core/tree/v1.5.1.1-r3) (2025-01-30)
+
+- Allow `base-4.21` (GHC 9.12)
+
 ## [v1.5.1.1-r2](https://github.com/diagrams/diagrams-core/tree/v1.5.1.1-r2) (2024-05-20)
 
 - Allow:
