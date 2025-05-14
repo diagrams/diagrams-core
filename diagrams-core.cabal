@@ -18,7 +18,7 @@ extra-doc-files:     diagrams/*.svg, CHANGELOG.md, README.markdown
 Tested-with:         GHC ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.6 || ==9.8.2 || ==9.10.1 || ==9.12.1
 Source-repository head
   type:     git
-  location: git://github.com/diagrams/diagrams-core.git
+  location: https://github.com/diagrams/diagrams-core.git
 
 Library
   Exposed-modules:     Diagrams.Core,
