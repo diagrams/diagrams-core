@@ -1,3 +1,7 @@
+## [v1.5.1.1-r4](https://github.com/diagrams/diagrams-core/tree/v1.5.1.1-r4) (2025-05-16)
+
+- Allow `monoid-extras-0.7`
+
 ## [v1.5.1.1-r3](https://github.com/diagrams/diagrams-core/tree/v1.5.1.1-r3) (2025-01-30)
 
 - Allow `base-4.21` (GHC 9.12)
