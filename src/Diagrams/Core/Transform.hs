@@ -231,21 +231,23 @@ onBasis (Transformation (f :-: _) _ t) = (map f basis, t)
 
 -- Remove the nth element from a list
 remove :: Int -> [a] -> [a]
-remove n xs = ys ++ zs
-  where
-    (ys, _ : zs) = splitAt n xs
+remove n xs | n < 0 = xs
+remove n xs = ys ++ drop 1 zs
+ where
+  (ys, zs) = splitAt n xs
 
 -- Minor matrix of cofactor C(i,j)
 minor :: Int -> Int -> [[a]] -> [[a]]
 minor i j xs = remove j $ map (remove i) xs
 
--- The determinant of a square matrix represented as a list of lists
+-- The determinant of a square matrix represented as a nonempty list of lists
 -- representing column vectors, that is [column].
 det :: Num a => [[a]] -> a
+det [] = error "determinant of empty matrix!"
 det [a : _] = a
 det m@(c1 : _) = sum [(-1) ^ i * (c1 !! i) * det (minor i 0 m) | i <- [0 .. (n - 1)]]
-  where
-    n = length m
+ where
+  n = length m
 
 -- | Convert a vector v to a list of scalars.
 listRep :: Foldable v => v n -> [n]
