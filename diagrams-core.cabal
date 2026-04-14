@@ -39,7 +39,6 @@ Library
   Build-depends:       base >= 4.11 && < 4.23,
                        containers >= 0.4.2 && < 0.9,
                        unordered-containers >= 0.2 && < 0.3,
-                       semigroups >= 0.8.4 && < 0.21,
                        monoid-extras >= 0.6 && < 0.8,
                        dual-tree >= 0.2 && < 0.3,
                        lens >= 4.0 && < 5.4,
