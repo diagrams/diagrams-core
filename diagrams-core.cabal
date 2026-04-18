@@ -43,9 +43,9 @@ Library
                        dual-tree >= 0.2 && < 0.3,
                        lens >= 4.0 && < 5.4,
                        linear >= 1.11.3 && < 1.24,
-                       adjunctions >= 4.0 && < 5.0,
-                       distributive >=0.2.2 && < 1.0,
-                       profunctors >= 5.0 && < 6.0,
+                       adjunctions >= 4.0 && < 5,
+                       distributive >=0.2.2 && < 1,
+                       profunctors >= 5.0 && < 6,
                        mtl >= 2.2 && < 2.4
   hs-source-dirs:      src
 
