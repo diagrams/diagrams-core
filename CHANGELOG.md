@@ -1,3 +1,9 @@
+## [v1.5.1.2](https://github.com/diagrams/diagrams-core/tree/v1.5.1.2) (2026-04-18)
+
+- Allow `base-4.22`, `containers-0.8`, and test on GHC 9.14
+- Fix some pattern match warnings
+- Remove `semigroups` dependency
+
 ## [v1.5.1.1-r4](https://github.com/diagrams/diagrams-core/tree/v1.5.1.1-r4) (2025-05-16)
 
 - Allow `monoid-extras-0.7`
